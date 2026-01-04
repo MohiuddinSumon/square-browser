@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useBrowser } from '../context/BrowserContext';
 
 const PrivacyPolicyScreen = ({ navigation }) => {
   const { isDarkMode } = useBrowser();

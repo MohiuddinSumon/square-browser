@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,15 +22,18 @@ const BrowserScreen = () => {
     closeTab,
     setActiveTabIndex,
     updateTabState,
+    addHistoryEntry,
     showTabSwitcher,
     setShowTabSwitcher,
     isDarkMode,
   } = useBrowser();
   const webView = useRef(null);
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Memoize search source to avoid unnecessary reloads
+  const webViewSource = useMemo(() => ({ uri: currentUrl }), [currentUrl]);
 
   // No need for separate useEffect for webViewRef if using callback ref
-  // But let's keep it clean by updating context when the webview mounts
   const webViewCallbackRef = useCallback((node) => {
     if (node) {
       webView.current = node;
@@ -38,17 +41,21 @@ const BrowserScreen = () => {
     }
   }, [setWebViewRef]);
 
-  const handleNavigationStateChange = (navState) => {
+  const handleNavigationStateChange = useCallback((navState) => {
     console.log('Navigation state changed:', navState.url);
-    // Only update if the URL or navigation state actually changed
-    updateTabState(activeTabIndex, {
-      canGoBack: navState.canGoBack,
-      canGoForward: navState.canGoForward,
-      url: navState.url
-    });
-  };
+    // CRITICAL: Only update if anything actually changed to avoid infinite cycles
+    if (navState.url !== tabs[activeTabIndex].url || 
+        navState.canGoBack !== tabs[activeTabIndex].canGoBack || 
+        navState.canGoForward !== tabs[activeTabIndex].canGoForward) {
+      updateTabState(activeTabIndex, {
+        canGoBack: navState.canGoBack,
+        canGoForward: navState.canGoForward,
+        url: navState.url
+      });
+    }
+  }, [activeTabIndex, tabs, updateTabState]);
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     if (webView.current) {
       webView.current.reload();
@@ -58,19 +65,11 @@ const BrowserScreen = () => {
 
   const handleLoadEnd = (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
-    console.log('Page load ended:', nativeEvent.url, nativeEvent.title);
-    
-    // Log to history when page finishes loading
+    // ...
     if (nativeEvent.url && nativeEvent.url !== 'about:blank' && !nativeEvent.url.startsWith('file://')) {
-      // Use title from nativeEvent, or extract from URL if not available
       const title = nativeEvent.title || nativeEvent.url.split('/')[2] || nativeEvent.url;
-      console.log('Adding to history:', nativeEvent.url, title);
       addHistoryEntry(nativeEvent.url, title);
     }
-  };
-
-  const handleLoad = (syntheticEvent) => {
-    // Handled by handleNavigationStateChange
   };
 
   const adBlockScript = adBlockEnabled ? `
@@ -99,7 +98,7 @@ const BrowserScreen = () => {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
       <KeyboardAvoidingView 
         style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={[styles.topBar, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff', borderBottomColor: isDarkMode ? '#333' : '#eee' }]}>
@@ -112,7 +111,7 @@ const BrowserScreen = () => {
           <View style={styles.webviewContainer}>
             <WebView
               ref={webViewCallbackRef}
-              source={{ uri: currentUrl }}
+              source={webViewSource}
               style={styles.webview}
               onNavigationStateChange={handleNavigationStateChange}
               onLoadEnd={handleLoadEnd}

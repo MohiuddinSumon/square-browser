@@ -15,44 +15,35 @@ const AddressBar = () => {
     secure: '#4CAF50',
     warning: '#FF9800'
   };
-  const [urlInput, setUrlInput] = useState(currentUrl);
+  const [urlInput, setUrlInput] = useState(currentUrl === 'about:blank' ? '' : currentUrl);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => {
-        setKeyboardVisible(true);
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardVisible(false);
-      }
-    );
-
+    const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
+      showSubscription.remove();
+      hideSubscription.remove();
     };
   }, []);
 
+  // Sync with currentUrl ONLY when not focused or when URL is about:blank
   useEffect(() => {
     const normalizedTarget = currentUrl === 'about:blank' ? '' : currentUrl;
-    // Only update input if we aren't currently typing or if the URL change is significant
-    if (!keyboardVisible || (urlInput !== normalizedTarget && normalizedTarget !== '')) {
+    if (!isFocused || currentUrl === 'about:blank') {
       setUrlInput(normalizedTarget);
     }
-    
-    // Check if current URL is bookmarked
+  }, [currentUrl, isFocused]);
+
+  useEffect(() => {
     if (currentUrl !== 'about:blank') {
       checkIsBookmarked(currentUrl).then(setIsBookmarked);
     } else {
       setIsBookmarked(false);
     }
-  }, [currentUrl, checkIsBookmarked, keyboardVisible]);
+  }, [currentUrl, checkIsBookmarked]);
 
   const handleGo = () => {
     if (urlInput.trim()) {
@@ -95,6 +86,8 @@ const AddressBar = () => {
             value={urlInput}
             onChangeText={setUrlInput}
             onSubmitEditing={handleGo}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             placeholder="Enter URL or search"
             placeholderTextColor={isDarkMode ? '#666' : '#999'}
             autoCapitalize="none"

@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
@@ -15,7 +16,7 @@ const SettingsScreen = ({ navigation }) => {
     toggleDarkMode
   } = useBrowser();
 
-  const [appVersion, setAppVersion] = React.useState(Constants.expoConfig?.version || '1.0.0');
+  const [appVersion, setAppVersion] = useState(Constants.expoConfig?.version || '1.0.0');
 
   // Colors based on theme
   const colors = {
@@ -28,20 +29,20 @@ const SettingsScreen = ({ navigation }) => {
     success: '#4CAF50', // Added for the Status info row
   };
 
-  const handleExportHistory = () => {
+  const handleExportHistory = useCallback(() => {
     // Future: Implement export functionality
     alert('Export functionality will be available in a future update');
-  };
+  }, []);
 
   // handleAbout is no longer used in the new UI, but kept as per instruction format
-  const handleAbout = () => {
+  const handleAbout = useCallback(() => {
     alert(
       'OpenBrowser\n\n' +
       'A mobile internet browser built for accountability and digital self-care.\n\n' +
       'Version: ' + appVersion + '\n\n' +
       'All browsing activity is logged and cannot be cleared or hidden.'
     );
-  };
+  }, [appVersion]);
 
   // handleViewHistory and handleViewBookmarks are now directly in onPress
   // const handleViewHistory = () => {

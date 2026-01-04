@@ -124,12 +124,8 @@ const HomeScreen = () => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
       <View style={[styles.lifeHeader, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.logoAndDramatic}>
-          <Ionicons name="hourglass-outline" size={48} color={isDarkMode ? '#555' : '#333'} />
-          <Text style={[styles.dramaticQuestion, { color: colors.text }]}>How much life remains?</Text>
-        </View>
-
         <Text style={[styles.quoteText, { color: colors.text }]}>"{randomQuote}"</Text>
+
         
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
@@ -138,7 +134,7 @@ const HomeScreen = () => {
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statBox}>
-            <Text style={[styles.statLabel, { color: colors.subtext }]} numberOfLines={1}>Life Spent Yesterday</Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]} numberOfLines={1}>Yesterday's Loss</Text>
             <Text style={[styles.statValue, { color: colors.subtext }]}>{formatDuration(totalYesterday)}</Text>
           </View>
         </View>
@@ -264,14 +260,15 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 14,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 5,
+    letterSpacing: 1.5,
+    marginBottom: 10,
     textAlign: 'center',
+    fontWeight: '600',
   },
   statValue: {
-    fontSize: 22,
+    fontSize: 32,
     fontWeight: 'bold',
   },
   statDivider: {
