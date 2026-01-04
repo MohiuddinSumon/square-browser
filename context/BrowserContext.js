@@ -35,8 +35,12 @@ export const BrowserProvider = ({ children }) => {
    */
   const addHistoryEntry = useCallback(async (url, title) => {
     try {
+      console.log('[BrowserContext] addHistoryEntry called with:', url, title);
+      
       // Load current history to calculate visit count accurately
       const currentHistory = await loadHistory();
+      console.log('[BrowserContext] Current history length:', currentHistory.length);
+      
       const visitCount = currentHistory.filter(h => h.url === url).length + 1;
 
       const entry = {
@@ -47,10 +51,14 @@ export const BrowserProvider = ({ children }) => {
         visitCount,
       };
 
+      console.log('[BrowserContext] Saving history entry:', entry);
       const success = await saveHistory(entry);
+      console.log('[BrowserContext] Save success:', success);
+      
       if (success) {
         // Reload history from storage to ensure consistency
         const updatedHistory = await loadHistory();
+        console.log('[BrowserContext] Updated history length:', updatedHistory.length);
         setHistory(updatedHistory);
       }
     } catch (error) {

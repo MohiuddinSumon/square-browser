@@ -1,81 +1,134 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BrowserProvider } from './context/BrowserContext';
+import { BrowserProvider, useBrowser } from './context/BrowserContext';
 import BrowserScreen from './screens/BrowserScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import BookmarksScreen from './screens/BookmarksScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import { StatusBar } from 'expo-status-bar';
 
-const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Custom Bottom Navigation Bar Component
+const CustomBottomNav = () => {
+  const navigation = useNavigation();
+  const { canGoBack, canGoForward, goBack, goForward, refresh, navigateTo } = useBrowser();
+
+  const handleHome = () => {
+    navigation.navigate('Browser');
+    navigateTo('https://www.google.com');
+  };
+
+  const handleSettings = () => {
+    navigation.navigate('Settings');
+  };
+
+  return (
+    <View style={styles.bottomNav}>
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={handleHome}
+      >
+        <Ionicons name="home" size={24} color="#2196F3" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.navButton, !canGoBack && styles.navButtonDisabled]}
+        onPress={goBack}
+        disabled={!canGoBack}
+      >
+        <Ionicons 
+          name="arrow-back" 
+          size={24} 
+          color={canGoBack ? '#2196F3' : '#ccc'} 
+        />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.navButton, !canGoForward && styles.navButtonDisabled]}
+        onPress={goForward}
+        disabled={!canGoForward}
+      >
+        <Ionicons 
+          name="arrow-forward" 
+          size={24} 
+          color={canGoForward ? '#2196F3' : '#ccc'} 
+        />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={refresh}
+      >
+        <Ionicons name="refresh" size={24} color="#2196F3" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.navButton}
+        onPress={handleSettings}
+      >
+        <Ionicons name="settings" size={24} color="#2196F3" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// Main App Component
+function AppNavigator() {
+  return (
+    <>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+        }}
+        initialRouteName="Browser"
+      >
+        <Stack.Screen name="Browser" component={BrowserScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
+      </Stack.Navigator>
+      <CustomBottomNav />
+    </>
+  );
+}
 
 export default function App() {
   return (
     <BrowserProvider>
       <NavigationContainer>
         <StatusBar style="auto" />
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
-              let iconName;
-
-              if (route.name === 'Browser') {
-                iconName = focused ? 'globe' : 'globe-outline';
-              } else if (route.name === 'History') {
-                iconName = focused ? 'time' : 'time-outline';
-              } else if (route.name === 'Bookmarks') {
-                iconName = focused ? 'bookmark' : 'bookmark-outline';
-              } else if (route.name === 'Settings') {
-                iconName = focused ? 'settings' : 'settings-outline';
-              }
-
-              return <Ionicons name={iconName} size={size} color={color} />;
-            },
-            tabBarActiveTintColor: '#2196F3',
-            tabBarInactiveTintColor: '#999',
-            headerShown: false,
-            tabBarStyle: {
-              backgroundColor: '#fff',
-              borderTopWidth: 1,
-              borderTopColor: '#e0e0e0',
-              paddingBottom: 4,
-              paddingTop: 4,
-              height: 60,
-            },
-          })}
-        >
-          <Tab.Screen 
-            name="Browser" 
-            component={BrowserScreen}
-            options={{
-              tabBarLabel: 'Browser',
-            }}
-          />
-          <Tab.Screen 
-            name="History" 
-            component={HistoryScreen}
-            options={{
-              tabBarLabel: 'History',
-            }}
-          />
-          <Tab.Screen 
-            name="Bookmarks" 
-            component={BookmarksScreen}
-            options={{
-              tabBarLabel: 'Bookmarks',
-            }}
-          />
-          <Tab.Screen 
-            name="Settings" 
-            component={SettingsScreen}
-            options={{
-              tabBarLabel: 'Settings',
-            }}
-          />
-        </Tab.Navigator>
+        <AppNavigator />
       </NavigationContainer>
     </BrowserProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingVertical: 8,
+    paddingBottom: 12,
+    height: 60,
+  },
+  navButton: {
+    padding: 8,
+    minWidth: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navButtonDisabled: {
+    opacity: 0.5,
+  },
+});

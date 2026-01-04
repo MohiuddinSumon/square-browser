@@ -1,10 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
-import NavigationControls from '../components/NavigationControls';
 
 const BrowserScreen = () => {
   const {
@@ -23,37 +21,43 @@ const BrowserScreen = () => {
   }, [setWebViewRef]);
 
   const handleNavigationStateChange = (navState) => {
+    console.log('Navigation state changed:', navState.url);
     setCanGoBack(navState.canGoBack);
     setCanGoForward(navState.canGoForward);
     setCurrentUrl(navState.url);
   };
 
-  const handleLoadEnd = (navState) => {
+  const handleLoadEnd = (syntheticEvent) => {
+    const { nativeEvent } = syntheticEvent;
+    console.log('Page load ended:', nativeEvent.url, nativeEvent.title);
+    
     // Log to history when page finishes loading
-    if (navState.url && navState.url !== 'about:blank' && !navState.url.startsWith('file://')) {
-      // Use title from navState, or extract from URL if not available
-      const title = navState.title || navState.url.split('/')[2] || navState.url;
-      addHistoryEntry(navState.url, title);
+    if (nativeEvent.url && nativeEvent.url !== 'about:blank' && !nativeEvent.url.startsWith('file://')) {
+      // Use title from nativeEvent, or extract from URL if not available
+      const title = nativeEvent.title || nativeEvent.url.split('/')[2] || nativeEvent.url;
+      console.log('Adding to history:', nativeEvent.url, title);
+      addHistoryEntry(nativeEvent.url, title);
     }
   };
 
-  const handleLoad = (navState) => {
+  const handleLoad = (syntheticEvent) => {
+    const { nativeEvent } = syntheticEvent;
     // Also update URL on load start
-    if (navState.url && navState.url !== 'about:blank') {
-      setCurrentUrl(navState.url);
+    if (nativeEvent.url && nativeEvent.url !== 'about:blank') {
+      setCurrentUrl(nativeEvent.url);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      <View style={styles.topBar}>
-        <NavigationControls />
-        <AddressBar />
-      </View>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={styles.topBar}>
+          <AddressBar />
+        </View>
       <WebView
         ref={webView}
         source={{ uri: currentUrl }}
@@ -80,10 +84,15 @@ const BrowserScreen = () => {
         // No incognito mode - all navigation is tracked
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

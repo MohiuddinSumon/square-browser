@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 
-const SettingsScreen = () => {
+const SettingsScreen = ({ navigation }) => {
   const { history, bookmarks } = useBrowser();
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
@@ -23,10 +23,41 @@ const SettingsScreen = () => {
     );
   };
 
+  const handleViewHistory = () => {
+    navigation.navigate('History');
+  };
+
+  const handleViewBookmarks = () => {
+    navigation.navigate('Bookmarks');
+  };
+
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Access</Text>
+        
+        <TouchableOpacity style={styles.button} onPress={handleViewHistory}>
+          <Ionicons name="time" size={20} color="#2196F3" />
+          <Text style={styles.buttonText}>Browsing History</Text>
+          <View style={styles.buttonBadge}>
+            <Text style={styles.buttonBadgeText}>{history.length}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.button} onPress={handleViewBookmarks}>
+          <Ionicons name="bookmark" size={20} color="#2196F3" />
+          <Text style={styles.buttonText}>Bookmarks</Text>
+          <View style={styles.buttonBadge}>
+            <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -97,10 +128,15 @@ const SettingsScreen = () => {
         </Text>
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -169,6 +205,18 @@ const styles = StyleSheet.create({
   buttonText: {
     flex: 1,
     fontSize: 16,
+    color: '#2196F3',
+  },
+  buttonBadge: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 8,
+  },
+  buttonBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#2196F3',
   },
   footer: {

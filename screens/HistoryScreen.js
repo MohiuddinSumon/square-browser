@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
-const HistoryScreen = () => {
+const HistoryScreen = ({ navigation }) => {
   const { history, navigateTo } = useBrowser();
 
   // Group history by date
@@ -40,6 +40,7 @@ const HistoryScreen = () => {
   };
 
   const handleHistoryItemPress = (url) => {
+    navigation.navigate('Browser');
     navigateTo(url);
   };
 
@@ -91,12 +92,21 @@ const HistoryScreen = () => {
   ]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Browsing History</Text>
-        <Text style={styles.headerSubtitle}>
-          {history.length} {history.length === 1 ? 'entry' : 'entries'}
-        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#2196F3" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Browsing History</Text>
+          <Text style={styles.headerSubtitle}>
+            {history.length} {history.length === 1 ? 'entry' : 'entries'}
+          </Text>
+        </View>
       </View>
       <FlatList
         data={flatListData}
@@ -116,20 +126,34 @@ const HistoryScreen = () => {
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 24,

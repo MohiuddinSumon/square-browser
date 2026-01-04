@@ -1,12 +1,13 @@
 import React from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
-const BookmarksScreen = () => {
+const BookmarksScreen = ({ navigation }) => {
   const { bookmarks, navigateTo, toggleBookmark } = useBrowser();
 
   const handleBookmarkPress = (url) => {
+    navigation.navigate('Browser');
     navigateTo(url);
   };
 
@@ -61,12 +62,21 @@ const BookmarksScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bookmarks</Text>
-        <Text style={styles.headerSubtitle}>
-          {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
-        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#2196F3" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Bookmarks</Text>
+          <Text style={styles.headerSubtitle}>
+            {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
+          </Text>
+        </View>
       </View>
       <FlatList
         data={bookmarks}
@@ -75,20 +85,34 @@ const BookmarksScreen = () => {
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={styles.listContent}
       />
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 24,
