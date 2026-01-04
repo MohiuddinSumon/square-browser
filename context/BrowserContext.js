@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Platform, AppState } from 'react-native';
+import { Platform, AppState, useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage } from '../utils/storage';
 
 const BrowserContext = createContext();
@@ -29,6 +30,8 @@ export const BrowserProvider = ({ children }) => {
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
   const [todayStats, setTodayStats] = useState({});
   const [yesterdayStats, setYesterdayStats] = useState({});
+  const systemColorScheme = useColorScheme();
+  const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
   
   const activityTracker = React.useRef({
     startTime: Date.now(),
@@ -63,26 +66,42 @@ export const BrowserProvider = ({ children }) => {
       const yStats = await loadUsage(yesterday);
       setTodayStats(tStats);
       setYesterdayStats(yStats);
+
+      // Load theme preference
+      const savedTheme = await AsyncStorage.getItem('@openbrowser_theme');
+      if (savedTheme) {
+        setIsDarkMode(savedTheme === 'dark');
+      }
     };
     loadInitialData();
   }, []);
+
+  const toggleDarkMode = async () => {
+    const newMode = !isDarkMode;
+    setIsDarkMode(newMode);
+    await AsyncStorage.setItem('@openbrowser_theme', newMode ? 'dark' : 'light');
+  };
   // Tracking Logic
   const recordCurrentActivity = useCallback(async () => {
     const { startTime, currentUrl: trackingUrl } = activityTracker.current;
     if (trackingUrl === 'about:blank') return;
     
     try {
-      const domain = new URL(trackingUrl).hostname;
+      // Ensure trackingUrl is a valid absolute URL for parsing
+      let urlToParse = trackingUrl;
+      if (!urlToParse.includes('://')) {
+        urlToParse = 'https://' + urlToParse;
+      }
+      const domain = new URL(urlToParse).hostname;
       const duration = Date.now() - startTime;
       const today = new Date().toISOString().split('T')[0];
       
       await saveUsage(today, domain, duration);
       
-      // Update local state for real-time dashboard
       const updatedStats = await loadUsage(today);
       setTodayStats(updatedStats);
     } catch (e) {
-      // Ignore URL parsing errors for about:blank etc
+      console.warn('[BrowserContext] Usage tracking error:', e.message);
     }
     
     // Reset tracker for next period
@@ -268,7 +287,7 @@ export const BrowserProvider = ({ children }) => {
     }
   }, [webViewRef]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     history,
     bookmarks,
     tabs,
@@ -298,9 +317,17 @@ export const BrowserProvider = ({ children }) => {
     setShowTabSwitcher,
     todayStats,
     yesterdayStats,
+    isDarkMode,
+    toggleDarkMode,
     userAgent,
     navigateTo,
-  };
+  }), [
+    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, closeTab,
+    setActiveTabIndex, updateTabState, currentUrl, navigateTo, webViewRef,
+    addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
+    adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
+    isDarkMode
+  ]);
 
   return (
     <BrowserContext.Provider value={value}>

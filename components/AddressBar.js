@@ -4,7 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const AddressBar = () => {
-  const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked } = useBrowser();
+  const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode } = useBrowser();
+  
+  const colors = {
+    bg: isDarkMode ? '#1e1e1e' : '#fff',
+    inputBg: isDarkMode ? '#2c2c2c' : '#fff',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    border: isDarkMode ? '#333' : '#e0e0e0',
+    accent: '#2196F3',
+    secure: '#4CAF50',
+    warning: '#FF9800'
+  };
   const [urlInput, setUrlInput] = useState(currentUrl);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -30,14 +40,19 @@ const AddressBar = () => {
   }, []);
 
   useEffect(() => {
-    setUrlInput(currentUrl === 'about:blank' ? '' : currentUrl);
+    const normalizedTarget = currentUrl === 'about:blank' ? '' : currentUrl;
+    // Only update input if we aren't currently typing or if the URL change is significant
+    if (!keyboardVisible || (urlInput !== normalizedTarget && normalizedTarget !== '')) {
+      setUrlInput(normalizedTarget);
+    }
+    
     // Check if current URL is bookmarked
     if (currentUrl !== 'about:blank') {
       checkIsBookmarked(currentUrl).then(setIsBookmarked);
     } else {
       setIsBookmarked(false);
     }
-  }, [currentUrl, checkIsBookmarked]);
+  }, [currentUrl, checkIsBookmarked, keyboardVisible]);
 
   const handleGo = () => {
     if (urlInput.trim()) {
@@ -61,23 +76,27 @@ const AddressBar = () => {
     return 'lock-open';
   };
 
+  const currentIconColor = currentUrl === 'about:blank' 
+    ? colors.accent 
+    : (currentUrl.startsWith('https://') ? colors.secure : colors.warning);
+
   return (
-    <View style={[styles.container, keyboardVisible && styles.containerKeyboardVisible]}>
+    <View style={[styles.container, keyboardVisible && styles.containerKeyboardVisible, { borderTopColor: colors.border, borderTopWidth: isDarkMode ? 0 : 1 }]}>
       <View style={styles.addressBarContainer}>
-        <View style={styles.urlContainer}>
+        <View style={[styles.urlContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
           <Ionicons 
             name={getSecureIcon()} 
             size={14} 
-            color={currentUrl === 'about:blank' ? '#2196F3' : (currentUrl.startsWith('https://') ? '#4CAF50' : '#FF9800')} 
+            color={currentIconColor} 
             style={styles.lockIcon}
           />
           <TextInput
-            style={styles.urlInput}
+            style={[styles.urlInput, { color: colors.text }]}
             value={urlInput}
             onChangeText={setUrlInput}
             onSubmitEditing={handleGo}
             placeholder="Enter URL or search"
-            placeholderTextColor="#999"
+            placeholderTextColor={isDarkMode ? '#666' : '#999'}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -93,14 +112,14 @@ const AddressBar = () => {
               <Ionicons 
                 name={isBookmarked ? 'bookmark' : 'bookmark-outline'} 
                 size={20} 
-                color={isBookmarked ? '#FFD700' : '#666'} 
+                color={isBookmarked ? '#FFD700' : (isDarkMode ? '#999' : '#666')} 
               />
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.goButton}
               onPress={handleGo}
             >
-              <Ionicons name="arrow-forward" size={20} color="#2196F3" />
+              <Ionicons name="arrow-forward" size={20} color={colors.accent} />
             </TouchableOpacity>
           </>
         )}
@@ -129,6 +148,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
       },
+      web: {
+        boxShadow: '0 -1px 2px rgba(0,0,0,0.1)',
+      }
     }),
   },
   addressBarContainer: {

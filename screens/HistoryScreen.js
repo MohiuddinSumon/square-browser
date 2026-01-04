@@ -4,7 +4,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const HistoryScreen = ({ navigation }) => {
-  const { history, navigateTo } = useBrowser();
+  const { history, navigateTo, isDarkMode } = useBrowser();
+
+  const colors = {
+    bg: isDarkMode ? '#121212' : '#fff',
+    card: isDarkMode ? '#1e1e1e' : '#fff',
+    headerBg: isDarkMode ? '#1e1e1e' : '#f5f5f5',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    subtext: isDarkMode ? '#999' : '#666',
+    border: isDarkMode ? '#333' : '#e0e0e0',
+    itemBorder: isDarkMode ? '#2c2c2c' : '#f0f0f0',
+    sectionHeader: isDarkMode ? '#1a1a1a' : '#f9f9f9',
+    accent: '#2196F3',
+  };
 
   // Group history by date
   const groupedHistory = useMemo(() => {
@@ -92,18 +104,18 @@ const HistoryScreen = ({ navigation }) => {
   ]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#2196F3" />
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Browsing History</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Browsing History</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.subtext }]}>
             {history.length} {history.length === 1 ? 'entry' : 'entries'}
           </Text>
         </View>
@@ -116,19 +128,56 @@ const HistoryScreen = ({ navigation }) => {
         renderItem={({ item }) => {
           if (item.type === 'header') {
             return (
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderText}>{item.date}</Text>
+              <View style={[styles.sectionHeader, { backgroundColor: colors.sectionHeader, borderBottomColor: colors.border }]}>
+                <Text style={[styles.sectionHeaderText, { color: colors.subtext }]}>{item.date}</Text>
               </View>
             );
           }
-          return renderHistoryItem({ item });
+          return (
+            <TouchableOpacity
+              style={[styles.historyItem, { backgroundColor: colors.card, borderBottomColor: colors.itemBorder }]}
+              onPress={() => handleHistoryItemPress(item.url)}
+            >
+              <View style={styles.historyItemContent}>
+                <View style={styles.historyItemHeader}>
+                  <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.historyTime, { color: colors.subtext }]}>{formatDurationLabel(item.timestamp)}</Text>
+                </View>
+                <Text style={[styles.historyUrl, { color: colors.subtext }]} numberOfLines={1}>
+                  {item.url}
+                </Text>
+                {item.visitCount > 1 && (
+                  <Text style={[styles.visitCount, { color: colors.subtext }]}>
+                    Visited {item.visitCount} times
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={isDarkMode ? '#555' : '#ccc'} />
+            </TouchableOpacity>
+          );
         }}
-        ListEmptyComponent={renderEmpty}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="time-outline" size={64} color={isDarkMode ? '#333' : '#ccc'} />
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>No browsing history yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>
+              Your browsing history will appear here
+            </Text>
+          </View>
+        )}
         contentContainerStyle={styles.listContent}
       />
       </View>
     </SafeAreaView>
   );
+};
+
+// Helper for relative time (not really needed but lets fix the missing formatTime label usage)
+const formatDurationLabel = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 };
 
 const styles = StyleSheet.create({

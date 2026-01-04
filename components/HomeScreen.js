@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const HomeScreen = () => {
-  const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats } = useBrowser();
+  const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats, isDarkMode } = useBrowser();
 
   const lifeQuotes = [
     "You are the sum of your time. Don't throw yourself away.",
@@ -12,8 +12,21 @@ const HomeScreen = () => {
     "Your life is leaking through your screen. Are these sites worth your soul?",
     "Every minute you spend here is a minute you aren't living out there.",
     "Time is the only currency you can't earn back. You are spending it right now.",
-    "You are a human being, not a data point. Reclaim your time."
+    "You are a human being, not a data point. Reclaim your time.",
+    "Each click is a tick of your life's clock. Make it count."
   ];
+
+  // Colors based on theme
+  const colors = {
+    bg: isDarkMode ? '#121212' : '#fff',
+    card: isDarkMode ? '#1e1e1e' : '#fff',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    subtext: isDarkMode ? '#999' : '#666',
+    border: isDarkMode ? '#333' : '#eee',
+    accent: '#2196F3',
+    danger: '#F44336',
+    success: '#4CAF50',
+  };
 
   const randomQuote = useMemo(() => {
     return lifeQuotes[Math.floor(Math.random() * lifeQuotes.length)];
@@ -109,38 +122,41 @@ const HomeScreen = () => {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.lifeHeader}>
-        <Text style={styles.quoteText}>"{randomQuote}"</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} contentContainerStyle={styles.content}>
+      <View style={[styles.lifeHeader, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.logoAndDramatic}>
+          <Ionicons name="hourglass-outline" size={48} color={isDarkMode ? '#555' : '#333'} />
+          <Text style={[styles.dramaticQuestion, { color: colors.text }]}>How much life remains?</Text>
+        </View>
+
+        <Text style={[styles.quoteText, { color: colors.text }]}>"{randomQuote}"</Text>
         
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Life Spent Today</Text>
-            <Text style={styles.statValue}>{formatDuration(totalToday)}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]} numberOfLines={1}>Life Spent Today</Text>
+            <Text style={[styles.statValue, { color: colors.accent }]}>{formatDuration(totalToday)}</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Life Spent Yesterday</Text>
-            <Text style={[styles.statValue, { color: '#666' }]}>{formatDuration(totalYesterday)}</Text>
+            <Text style={[styles.statLabel, { color: colors.subtext }]} numberOfLines={1}>Life Spent Yesterday</Text>
+            <Text style={[styles.statValue, { color: colors.subtext }]}>{formatDuration(totalYesterday)}</Text>
           </View>
         </View>
 
         {totalToday > 0 && (
           <View style={styles.usageComparison}>
-            <View style={styles.barContainer}>
-              <View style={[styles.bar, { width: '100%', backgroundColor: '#eee' }]}>
-                <View style={[styles.barActive, { 
-                  width: `${Math.min(100, (totalToday / (totalYesterday || totalToday)) * 100)}%`,
-                  backgroundColor: totalToday > totalYesterday && totalYesterday > 0 ? '#F44336' : '#4CAF50'
-                }]} />
-              </View>
+            <View style={[styles.barContainer, { backgroundColor: isDarkMode ? '#333' : '#eee' }]}>
+              <View style={[styles.barActive, { 
+                width: `${Math.min(100, (totalToday / (totalYesterday || totalToday)) * 100)}%`,
+                backgroundColor: totalToday > totalYesterday && totalYesterday > 0 ? colors.danger : colors.success
+              }]} />
             </View>
-            <Text style={styles.comparisonText}>
+            <Text style={[styles.comparisonText, { color: colors.subtext }]}>
               {totalYesterday > 0 
                 ? (totalToday > totalYesterday 
                   ? `You are consuming life ${Math.round((totalToday/totalYesterday - 1) * 100)}% faster than yesterday.`
                   : `You are reclaiming your life today. Well done.`)
-                : "Your life journey continues through these pages."}
+                : "The clock of your life continues its silent ticking."}
             </Text>
           </View>
         )}
@@ -148,11 +164,11 @@ const HomeScreen = () => {
 
       {topSinks.length > 0 && (
         <View style={styles.sinkSection}>
-          <Text style={styles.sinkTitle}>Where your life went today:</Text>
+          <Text style={[styles.sinkTitle, { color: colors.text }]}>Where your life went today:</Text>
           {topSinks.map(([domain, duration]) => (
-            <View key={domain} style={styles.sinkItem}>
-              <Text style={styles.sinkDomain}>{domain}</Text>
-              <Text style={styles.sinkDuration}>{formatDuration(duration)}</Text>
+            <View key={domain} style={[styles.sinkItem, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.sinkDomain, { color: colors.subtext }]}>{domain}</Text>
+              <Text style={[styles.sinkDuration, { color: colors.text }]}>{formatDuration(duration)}</Text>
             </View>
           ))}
         </View>
@@ -160,8 +176,8 @@ const HomeScreen = () => {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="trending-up" size={20} color="#333" />
-          <Text style={styles.sectionTitle}>Most Visited</Text>
+          <Ionicons name="trending-up" size={20} color={colors.text} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Most Visited</Text>
         </View>
         <View style={styles.grid}>
           {mostVisited.length > 0 ? (
@@ -169,15 +185,15 @@ const HomeScreen = () => {
               <SiteItem key={site.id} url={site.url} title={site.title} />
             ))
           ) : (
-            <Text style={styles.emptyText}>Start browsing to see your most visited sites.</Text>
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>Start browsing to see your most visited sites.</Text>
           )}
         </View>
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Ionicons name="bookmark" size={20} color="#333" />
-          <Text style={styles.sectionTitle}>Bookmarks</Text>
+          <Ionicons name="bookmark" size={20} color={colors.text} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bookmarks</Text>
         </View>
         <View style={styles.grid}>
           {recentBookmarks.length > 0 ? (
@@ -185,16 +201,16 @@ const HomeScreen = () => {
               <SiteItem key={site.id} url={site.url} title={site.title} />
             ))
           ) : (
-            <Text style={styles.emptyText}>No bookmarks yet.</Text>
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>No bookmarks yet.</Text>
           )}
         </View>
       </View>
 
-      <View style={styles.accountabilityCard}>
-        <Ionicons name="eye" size={24} color="#F44336" />
-        <Text style={styles.cardTitle}>Accountability Reminder</Text>
-        <Text style={styles.cardText}>
-          Everything is recorded. You cannot hide from your own time. Spend it on what matters.
+      <View style={[styles.accountabilityCard, { backgroundColor: isDarkMode ? '#2c1e1e' : '#FFF5F5', borderColor: isDarkMode ? '#4a2b2b' : '#FFEBEE' }]}>
+        <Ionicons name="eye" size={24} color={colors.danger} />
+        <Text style={[styles.cardTitle, { color: isDarkMode ? '#ff8a80' : '#D32F2F' }]}>Accountability Reminder</Text>
+        <Text style={[styles.cardText, { color: isDarkMode ? '#ffcdd2' : '#C62828' }]}>
+          Every second is carved into eternity. You cannot hide from your own time. Spend it on what matters.
         </Text>
       </View>
     </ScrollView>
@@ -211,26 +227,28 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   lifeHeader: {
-    backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#eee',
-    // Premium shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+  },
+  logoAndDramatic: {
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 10,
+  },
+  dramaticQuestion: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   quoteText: {
-    fontSize: 18,
+    fontSize: 16,
     fontStyle: 'italic',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 25,
-    lineHeight: 26,
+    lineHeight: 24,
     fontWeight: '300',
   },
   statsContainer: {
@@ -238,22 +256,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: 20,
+    gap: 10,
   },
   statBox: {
     alignItems: 'center',
     flex: 1,
+    minWidth: 120,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 10,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: 5,
+    textAlign: 'center',
   },
   statValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2196F3',
   },
   statDivider: {
     width: 1,
@@ -340,12 +359,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
-    // Shadow for premium feel
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    // Shadow/Elevation for premium feel
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      }
+    }),
   },
   favicon: {
     width: 32,

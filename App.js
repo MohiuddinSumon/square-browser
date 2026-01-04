@@ -17,28 +17,37 @@ const Stack = createStackNavigator();
 // Custom Bottom Navigation Bar Component
 const CustomBottomNav = () => {
   const navigation = useNavigation();
-  const { tabs, setShowTabSwitcher, navigateTo } = useBrowser();
+  const { tabs, setShowTabSwitcher, navigateTo, isDarkMode } = useBrowser();
 
   const handleHome = () => {
-    navigation.navigate('Browser');
     navigateTo('about:blank');
-  };
-
-  const handleSettings = () => {
-    navigation.navigate('Settings');
+    navigation.navigate('Browser');
   };
 
   const handleTabs = () => {
     setShowTabSwitcher(true);
   };
 
+  const handleSettings = () => {
+    navigation.navigate('Settings');
+  };
+
+  const colors = {
+    bg: isDarkMode ? '#1e1e1e' : '#fff',
+    border: isDarkMode ? '#333' : '#e0e0e0',
+    icon: isDarkMode ? '#999' : '#2196F3',
+    badge: '#2196F3',
+    badgeText: '#fff',
+    badgeBorder: isDarkMode ? '#1e1e1e' : '#fff',
+  };
+
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
       <TouchableOpacity
         style={styles.navButton}
         onPress={handleHome}
       >
-        <Ionicons name="home" size={24} color="#2196F3" />
+        <Ionicons name="home-outline" size={24} color={colors.icon} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -46,9 +55,9 @@ const CustomBottomNav = () => {
         onPress={handleTabs}
       >
         <View style={styles.tabsIconContainer}>
-          <Ionicons name="copy-outline" size={24} color="#2196F3" />
-          <View style={styles.tabCountBadge}>
-            <Text style={styles.tabCountText}>{tabs.length}</Text>
+          <Ionicons name="copy-outline" size={24} color={colors.icon} />
+          <View style={[styles.tabCountBadge, { backgroundColor: colors.badge, borderColor: colors.badgeBorder }]}>
+            <Text style={[styles.tabCountText, { color: colors.badgeText }]}>{tabs.length}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -57,7 +66,7 @@ const CustomBottomNav = () => {
         style={styles.navButton}
         onPress={handleSettings}
       >
-        <Ionicons name="settings" size={24} color="#2196F3" />
+        <Ionicons name="settings-outline" size={24} color={colors.icon} />
       </TouchableOpacity>
     </View>
   );

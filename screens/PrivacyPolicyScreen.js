@@ -3,42 +3,53 @@ import { ScrollView, Text, StyleSheet, View, TouchableOpacity, SafeAreaView } fr
 import { Ionicons } from '@expo/vector-icons';
 
 const PrivacyPolicyScreen = ({ navigation }) => {
+  const { isDarkMode } = useBrowser();
+
+  const colors = {
+    bg: isDarkMode ? '#121212' : '#fff',
+    card: isDarkMode ? '#1e1e1e' : '#fff',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    subtext: isDarkMode ? '#999' : '#666',
+    border: isDarkMode ? '#333' : '#eee',
+    accent: '#2196F3',
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#2196F3" />
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Privacy Policy</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Privacy Policy</Text>
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Privacy Policy</Text>
-        <Text style={styles.date}>Last Updated: January 4, 2026</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Privacy Policy</Text>
+        <Text style={[styles.date, { color: colors.subtext }]}>Last Updated: January 4, 2026</Text>
         
-        <Text style={styles.sectionTitle}>1. Introduction</Text>
-        <Text style={styles.text}>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>1. Introduction</Text>
+        <Text style={[styles.text, { color: colors.text }]}>
           OpenBrowser is committed to your privacy. This policy explains how we handle your data.
         </Text>
 
-        <Text style={styles.sectionTitle}>2. Local Storage Only</Text>
-        <Text style={styles.text}>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>2. Local Storage Only</Text>
+        <Text style={[styles.text, { color: colors.text }]}>
           All your browsing history, bookmarks, and usage statistics are stored **locally on your device**. We do not use any external servers to store your personal browsing data.
         </Text>
 
-        <Text style={styles.sectionTitle}>3. Accountability Focus</Text>
-        <Text style={styles.text}>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>3. Accountability Focus</Text>
+        <Text style={[styles.text, { color: colors.text }]}>
           To promote mindful browsing, history is permanent and cannot be deleted within the app. No incognito mode is provided.
         </Text>
 
-        <Text style={styles.sectionTitle}>4. Data Collection</Text>
-        <Text style={styles.text}>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>4. Data Collection</Text>
+        <Text style={[styles.text, { color: colors.text }]}>
           We do not collect or sell your data to third parties. Your data is yours, kept on your device for your own accountability.
         </Text>
 
-        <Text style={styles.footer}>
+        <Text style={[styles.footer, { color: colors.subtext }]}>
           By using OpenBrowser, you agree to this local-first privacy approach.
         </Text>
       </ScrollView>

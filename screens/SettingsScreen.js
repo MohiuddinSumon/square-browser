@@ -1,19 +1,39 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 
 const SettingsScreen = ({ navigation }) => {
-  const { history, bookmarks, desktopMode, setDesktopMode, adBlockEnabled, setAdBlockEnabled } = useBrowser();
+  const { 
+    history, 
+    bookmarks, 
+    desktopMode, 
+    setDesktopMode,
+    adBlockEnabled,
+    setAdBlockEnabled,
+    isDarkMode,
+    toggleDarkMode
+  } = useBrowser();
 
-  const appVersion = Constants.expoConfig?.version || '1.0.0';
+  const [appVersion, setAppVersion] = React.useState(Constants.expoConfig?.version || '1.0.0');
+
+  // Colors based on theme
+  const colors = {
+    bg: isDarkMode ? '#121212' : '#fff',
+    card: isDarkMode ? '#1e1e1e' : '#fff',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    subtext: isDarkMode ? '#999' : '#666',
+    border: isDarkMode ? '#333' : '#eee',
+    accent: '#2196F3',
+    success: '#4CAF50', // Added for the Status info row
+  };
 
   const handleExportHistory = () => {
     // Future: Implement export functionality
     alert('Export functionality will be available in a future update');
   };
 
+  // handleAbout is no longer used in the new UI, but kept as per instruction format
   const handleAbout = () => {
     alert(
       'OpenBrowser\n\n' +
@@ -23,164 +43,150 @@ const SettingsScreen = ({ navigation }) => {
     );
   };
 
-  const handleViewHistory = () => {
-    navigation.navigate('History');
-  };
+  // handleViewHistory and handleViewBookmarks are now directly in onPress
+  // const handleViewHistory = () => {
+  //   navigation.navigate('History');
+  // };
 
-  const handleViewBookmarks = () => {
-    navigation.navigate('Bookmarks');
-  };
+  // const handleViewBookmarks = () => {
+  //   navigation.navigate('Bookmarks');
+  // };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
+      </View>
+
       <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Settings</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Browser Settings</Text>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Browser Settings</Text>
         
-        <View style={styles.infoRow}>
-          <View style={styles.rowLead}>
-            <Ionicons name="desktop" size={20} color="#2196F3" />
-            <Text style={styles.infoLabel}>Desktop Mode</Text>
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="desktop-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Desktop Mode</Text>
           </View>
-          <Switch
-            value={desktopMode}
+          <Switch 
+            value={desktopMode} 
             onValueChange={setDesktopMode}
-            trackColor={{ false: '#767577', true: '#2196F3' }}
-            thumbColor={desktopMode ? '#f4f3f4' : '#f4f3f4'}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={desktopMode ? colors.accent : "#f4f3f4"}
           />
         </View>
 
-        <View style={styles.infoRow}>
-          <View style={styles.rowLead}>
-            <Ionicons name="shield-checkmark" size={20} color="#2196F3" />
-            <Text style={styles.infoLabel}>Ad Blocker</Text>
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="shield-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Ad Blocker</Text>
           </View>
-          <Switch
-            value={adBlockEnabled}
+          <Switch 
+            value={adBlockEnabled} 
             onValueChange={setAdBlockEnabled}
-            trackColor={{ false: '#767577', true: '#2196F3' }}
-            thumbColor={adBlockEnabled ? '#f4f3f4' : '#f4f3f4'}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={adBlockEnabled ? colors.accent : "#f4f3f4"}
           />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Access</Text>
-        
-        <TouchableOpacity style={styles.button} onPress={handleViewHistory}>
-          <Ionicons name="time" size={20} color="#2196F3" />
-          <Text style={styles.buttonText}>Browsing History</Text>
-          <View style={styles.buttonBadge}>
-            <Text style={styles.buttonBadgeText}>{history.length}</Text>
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name={isDarkMode ? "moon" : "sunny-outline"} size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={handleViewBookmarks}>
-          <Ionicons name="bookmark" size={20} color="#2196F3" />
-          <Text style={styles.buttonText}>Bookmarks</Text>
-          <View style={styles.buttonBadge}>
-            <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App Information</Text>
-        
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>App Name</Text>
-          <Text style={styles.infoValue}>OpenBrowser</Text>
+          <Switch 
+            value={isDarkMode} 
+            onValueChange={toggleDarkMode}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={isDarkMode ? colors.accent : "#f4f3f4"}
+          />
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Version</Text>
-          <Text style={styles.infoValue}>{appVersion}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>History Entries</Text>
-          <Text style={styles.infoValue}>{history.length}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Bookmarks</Text>
-          <Text style={styles.infoValue}>{bookmarks.length}</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Features</Text>
-        
-        <View style={styles.featureItem}>
-          <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-          <Text style={styles.featureText}>Uneditable browsing history</Text>
-        </View>
-
-        <View style={styles.featureItem}>
-          <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-          <Text style={styles.featureText}>No incognito mode</Text>
-        </View>
-
-        <View style={styles.featureItem}>
-          <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-          <Text style={styles.featureText}>Complete transparency</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About & Legal</Text>
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Quick Access</Text>
         
         <TouchableOpacity 
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('History')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="time-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Browsing History</Text>
+          </View>
+          <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
+            <Text style={styles.buttonBadgeText}>{history.length}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('Bookmarks')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="bookmark-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Bookmarks</Text>
+          </View>
+          <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
+            <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
+          </View>
+        </TouchableOpacity>
+
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>About & Legal</Text>
+        
+        <TouchableOpacity 
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('PrivacyPolicy')}
         >
           <View style={styles.menuItemLeft}>
-            <Ionicons name="shield-outline" size={24} color="#666" />
-            <Text style={styles.menuItemText}>Privacy Policy</Text>
+            <Ionicons name="shield-half-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy Policy</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          <Ionicons name="chevron-forward" size={20} color={colors.border} />
         </TouchableOpacity>
 
         <TouchableOpacity 
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('TermsOfService')}
         >
           <View style={styles.menuItemLeft}>
-            <Ionicons name="document-text-outline" size={24} color="#666" />
-            <Text style={styles.menuItemText}>Terms of Service</Text>
+            <Ionicons name="document-text-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Terms of Service</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          <Ionicons name="chevron-forward" size={20} color={colors.border} />
         </TouchableOpacity>
 
-        <Text style={styles.aboutText}>
-          OpenBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits. 
-          With no incognito or hidden modes, OpenBrowser ensures complete transparency in all your online activity.
-        </Text>
-        <Text style={styles.aboutText}>
-          Every site you visit is tracked and stored—helping you become more accountable and aware.
-        </Text>
-      </View>
+        <View style={styles.aboutContainer}>
+          <Text style={[styles.aboutText, { color: colors.subtext }]}>
+            OpenBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits. 
+            With no incognito or hidden modes, OpenBrowser ensures complete transparency in all your online activity.
+          </Text>
+          <Text style={[styles.aboutText, { color: colors.subtext }]}>
+            Your history is permanent and your time is precious. Every minute you spend here is recorded for your own accountability.
+          </Text>
+        </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.button} onPress={handleAbout}>
-          <Ionicons name="information-circle" size={20} color="#2196F3" />
-          <Text style={styles.buttonText}>About OpenBrowser</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
-      </View>
+        <View style={[styles.infoSection, { borderTopColor: colors.border }]}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.subtext }]}>App Name</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>OpenBrowser</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Version</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{appVersion}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Status</Text>
+            <Text style={[styles.infoValue, { color: colors.success || '#4CAF50' }]}>Active Accountability</Text>
+          </View>
+        </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          All browsing history is stored locally on your device and cannot be deleted.
+        <Text style={[styles.footerText, { color: colors.subtext }]}>
+          OpenBrowser v{appVersion} • Created for Mindfulness
         </Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -188,105 +194,92 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    paddingTop: Platform.OS === 'android' ? 40 : 16,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginTop: 24,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  menuItemText: {
+    fontSize: 16,
+  },
+  buttonBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  buttonBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  aboutContainer: {
+    padding: 16,
+    marginTop: 20,
+  },
+  aboutText: {
+    fontSize: 14,
+    lineHeight: 22,
     marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  infoSection: {
+    marginTop: 20,
+    padding: 16,
+    borderTopWidth: 1,
   },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-  },
-  rowLead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    paddingVertical: 8,
   },
   infoLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
   },
   infoValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 12,
-  },
-  featureText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  aboutText: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 12,
-  },
-  buttonText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#2196F3',
-  },
-  buttonBadge: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  buttonBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2196F3',
-  },
-  footer: {
-    padding: 16,
-    marginTop: 16,
-    marginBottom: 32,
+    fontWeight: 'bold',
   },
   footerText: {
     fontSize: 12,
-    color: '#999',
     textAlign: 'center',
-    fontStyle: 'italic',
+    marginTop: 30,
+    marginBottom: 40,
   },
 });
 

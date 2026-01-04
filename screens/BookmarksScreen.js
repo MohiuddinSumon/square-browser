@@ -4,7 +4,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const BookmarksScreen = ({ navigation }) => {
-  const { bookmarks, navigateTo, toggleBookmark } = useBrowser();
+  const { bookmarks, navigateTo, toggleBookmark, isDarkMode } = useBrowser();
+
+  const colors = {
+    bg: isDarkMode ? '#121212' : '#fff',
+    card: isDarkMode ? '#1e1e1e' : '#fff',
+    headerBg: isDarkMode ? '#1e1e1e' : '#f5f5f5',
+    text: isDarkMode ? '#e0e0e0' : '#333',
+    subtext: isDarkMode ? '#999' : '#666',
+    border: isDarkMode ? '#333' : '#e0e0e0',
+    itemBorder: isDarkMode ? '#2c2c2c' : '#f0f0f0',
+    accent: '#2196F3',
+  };
 
   const handleBookmarkPress = (url) => {
     navigation.navigate('Browser');
@@ -28,17 +39,17 @@ const BookmarksScreen = ({ navigation }) => {
 
   const renderBookmarkItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.bookmarkItem}
+      style={[styles.bookmarkItem, { backgroundColor: colors.card, borderBottomColor: colors.itemBorder }]}
       onPress={() => handleBookmarkPress(item.url)}
     >
       <View style={styles.bookmarkIcon}>
         <Ionicons name="bookmark" size={24} color="#FFD700" />
       </View>
       <View style={styles.bookmarkContent}>
-        <Text style={styles.bookmarkTitle} numberOfLines={1}>
+        <Text style={[styles.bookmarkTitle, { color: colors.text }]} numberOfLines={1}>
           {item.title}
         </Text>
-        <Text style={styles.bookmarkUrl} numberOfLines={1}>
+        <Text style={[styles.bookmarkUrl, { color: colors.subtext }]} numberOfLines={1}>
           {item.url}
         </Text>
       </View>
@@ -46,7 +57,7 @@ const BookmarksScreen = ({ navigation }) => {
         style={styles.removeButton}
         onPress={() => handleBookmarkRemove(item)}
       >
-        <Ionicons name="close-circle" size={24} color="#999" />
+        <Ionicons name="close-circle" size={24} color={isDarkMode ? '#555' : '#999'} />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -62,18 +73,18 @@ const BookmarksScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.headerBg }]}>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#2196F3" />
+          <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Bookmarks</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Bookmarks</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.subtext }]}>
             {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
           </Text>
         </View>
@@ -82,7 +93,15 @@ const BookmarksScreen = ({ navigation }) => {
         data={bookmarks}
         keyExtractor={(item) => item.id}
         renderItem={renderBookmarkItem}
-        ListEmptyComponent={renderEmpty}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bookmark-outline" size={64} color={isDarkMode ? '#333' : '#ccc'} />
+            <Text style={[styles.emptyText, { color: colors.subtext }]}>No bookmarks yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.subtext }]}>
+              Tap the bookmark icon in the address bar to save pages
+            </Text>
+          </View>
+        )}
         contentContainerStyle={styles.listContent}
       />
       </View>

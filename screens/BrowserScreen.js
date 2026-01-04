@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,22 +24,28 @@ const BrowserScreen = () => {
     updateTabState,
     showTabSwitcher,
     setShowTabSwitcher,
+    isDarkMode,
   } = useBrowser();
   const webView = useRef(null);
   const [refreshing, setRefreshing] = React.useState(false);
 
-  useEffect(() => {
-    setWebViewRef(webView.current);
+  // No need for separate useEffect for webViewRef if using callback ref
+  // But let's keep it clean by updating context when the webview mounts
+  const webViewCallbackRef = useCallback((node) => {
+    if (node) {
+      webView.current = node;
+      setWebViewRef(node);
+    }
   }, [setWebViewRef]);
 
   const handleNavigationStateChange = (navState) => {
     console.log('Navigation state changed:', navState.url);
+    // Only update if the URL or navigation state actually changed
     updateTabState(activeTabIndex, {
       canGoBack: navState.canGoBack,
       canGoForward: navState.canGoForward,
       url: navState.url
     });
-    setCurrentUrl(navState.url);
   };
 
   const onRefresh = React.useCallback(() => {
@@ -64,11 +70,7 @@ const BrowserScreen = () => {
   };
 
   const handleLoad = (syntheticEvent) => {
-    const { nativeEvent } = syntheticEvent;
-    // Also update URL on load start
-    if (nativeEvent.url && nativeEvent.url !== 'about:blank') {
-      setCurrentUrl(nativeEvent.url);
-    }
+    // Handled by handleNavigationStateChange
   };
 
   const adBlockScript = adBlockEnabled ? `
@@ -94,37 +96,26 @@ const BrowserScreen = () => {
   ` : '';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
       <KeyboardAvoidingView 
-        style={styles.container}
+        style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff', borderBottomColor: isDarkMode ? '#333' : '#eee' }]}>
           <AddressBar />
         </View>
         
         {currentUrl === 'about:blank' ? (
           <HomeScreen />
         ) : (
-          <ScrollView
-            contentContainerStyle={{ flex: 1 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
-          >
+          <View style={styles.webviewContainer}>
             <WebView
-              ref={webView}
+              ref={webViewCallbackRef}
               source={{ uri: currentUrl }}
               style={styles.webview}
               onNavigationStateChange={handleNavigationStateChange}
-              onLoad={handleLoad}
               onLoadEnd={handleLoadEnd}
-              onLoadStart={(navState) => {
-                if (navState.nativeEvent.url) {
-                  setCurrentUrl(navState.nativeEvent.url);
-                }
-              }}
               startInLoadingState={true}
               renderLoading={() => (
                 <View style={styles.loadingContainer}>
@@ -136,12 +127,12 @@ const BrowserScreen = () => {
               javaScriptEnabled={true}
               domStorageEnabled={true}
               allowsBackForwardNavigationGestures={true}
-              sharedCookiesEnabled={true}
-              thirdPartyCookiesEnabled={true}
+              sharedCookiesEnabled={Platform.OS !== 'web'}
+              thirdPartyCookiesEnabled={Platform.OS !== 'web'}
               javaScriptCanOpenWindowsAutomatically={true}
               mixedContentMode="never"
             />
-          </ScrollView>
+          </View>
         )}
       </KeyboardAvoidingView>
 
@@ -233,7 +224,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
       },
+      web: {
+        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+      }
     }),
+  },
+  webviewContainer: {
+    flex: 1,
   },
   webview: {
     flex: 1,
