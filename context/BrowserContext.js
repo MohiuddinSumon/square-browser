@@ -32,6 +32,7 @@ export const BrowserProvider = ({ children }) => {
   const [yesterdayStats, setYesterdayStats] = useState({});
   const systemColorScheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
+  const [exitConfirmationEnabled, setExitConfirmationEnabled] = useState(true);
   
   const activityTracker = React.useRef({
     startTime: Date.now(),
@@ -72,6 +73,11 @@ export const BrowserProvider = ({ children }) => {
       if (savedTheme) {
         setIsDarkMode(savedTheme === 'dark');
       }
+
+      const savedExitConfirm = await AsyncStorage.getItem('@openbrowser_exit_confirm');
+      if (savedExitConfirm !== null) {
+        setExitConfirmationEnabled(savedExitConfirm === 'true');
+      }
     };
     loadInitialData();
   }, []);
@@ -80,6 +86,11 @@ export const BrowserProvider = ({ children }) => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
     await AsyncStorage.setItem('@openbrowser_theme', newMode ? 'dark' : 'light');
+  };
+
+  const setExitConfirmation = async (enabled) => {
+    setExitConfirmationEnabled(enabled);
+    await AsyncStorage.setItem('@openbrowser_exit_confirm', enabled ? 'true' : 'false');
   };
   // Tracking Logic
   const recordCurrentActivity = useCallback(async () => {
@@ -319,6 +330,8 @@ export const BrowserProvider = ({ children }) => {
     yesterdayStats,
     isDarkMode,
     toggleDarkMode,
+    exitConfirmationEnabled,
+    setExitConfirmation,
     userAgent,
     navigateTo,
   }), [
@@ -326,7 +339,7 @@ export const BrowserProvider = ({ children }) => {
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
-    isDarkMode
+    isDarkMode, exitConfirmationEnabled
   ]);
 
   return (

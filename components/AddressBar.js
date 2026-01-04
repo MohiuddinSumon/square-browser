@@ -92,8 +92,9 @@ const AddressBar = () => {
             placeholderTextColor={isDarkMode ? '#666' : '#999'}
             autoCapitalize="none"
             autoCorrect={false}
-            keyboardType="url"
+            selectTextOnFocus={true}
             returnKeyType="go"
+            blurOnSubmit={true}
           />
         </View>
         {!keyboardVisible && (
