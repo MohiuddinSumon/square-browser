@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const HomeScreen = () => {
-  const { history, bookmarks, navigateTo } = useBrowser();
+  const { history, bookmarks, navigateTo, addTab } = useBrowser();
 
   // Get top 6 most visited sites
   const mostVisited = useMemo(() => {
@@ -52,10 +52,27 @@ const HomeScreen = () => {
     );
   };
 
+  const handleSitePress = (url) => {
+    navigateTo(url);
+  };
+
+  const handleSiteLongPress = (url) => {
+    Alert.alert(
+      'Site Options',
+      url,
+      [
+        { text: 'Open in Current Tab', onPress: () => navigateTo(url) },
+        { text: 'Open in New Tab', onPress: () => addTab(url) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
   const SiteItem = ({ url, title }) => (
     <TouchableOpacity 
       style={styles.siteItem} 
-      onPress={() => navigateTo(url)}
+      onPress={() => handleSitePress(url)}
+      onLongPress={() => handleSiteLongPress(url)}
     >
       {renderSiteIcon(url, title)}
       <Text style={styles.siteTitle} numberOfLines={1}>{title || url}</Text>

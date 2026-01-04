@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BrowserProvider, useBrowser } from './context/BrowserContext';
 import BrowserScreen from './screens/BrowserScreen';
@@ -15,7 +15,7 @@ const Stack = createStackNavigator();
 // Custom Bottom Navigation Bar Component
 const CustomBottomNav = () => {
   const navigation = useNavigation();
-  const { canGoBack, canGoForward, goBack, goForward, refresh, navigateTo } = useBrowser();
+  const { tabs, setShowTabSwitcher, navigateTo } = useBrowser();
 
   const handleHome = () => {
     navigation.navigate('Browser');
@@ -24,6 +24,10 @@ const CustomBottomNav = () => {
 
   const handleSettings = () => {
     navigation.navigate('Settings');
+  };
+
+  const handleTabs = () => {
+    setShowTabSwitcher(true);
   };
 
   return (
@@ -36,34 +40,15 @@ const CustomBottomNav = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={[styles.navButton, !canGoBack && styles.navButtonDisabled]}
-        onPress={goBack}
-        disabled={!canGoBack}
-      >
-        <Ionicons 
-          name="arrow-back" 
-          size={24} 
-          color={canGoBack ? '#2196F3' : '#ccc'} 
-        />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.navButton, !canGoForward && styles.navButtonDisabled]}
-        onPress={goForward}
-        disabled={!canGoForward}
-      >
-        <Ionicons 
-          name="arrow-forward" 
-          size={24} 
-          color={canGoForward ? '#2196F3' : '#ccc'} 
-        />
-      </TouchableOpacity>
-
-      <TouchableOpacity
         style={styles.navButton}
-        onPress={refresh}
+        onPress={handleTabs}
       >
-        <Ionicons name="refresh" size={24} color="#2196F3" />
+        <View style={styles.tabsIconContainer}>
+          <Ionicons name="copy-outline" size={24} color="#2196F3" />
+          <View style={styles.tabCountBadge}>
+            <Text style={styles.tabCountText}>{tabs.length}</Text>
+          </View>
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -127,6 +112,28 @@ const styles = StyleSheet.create({
     minWidth: 50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabsIconContainer: {
+    position: 'relative',
+    padding: 2,
+  },
+  tabCountBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fff',
+  },
+  tabCountText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   navButtonDisabled: {
     opacity: 0.5,

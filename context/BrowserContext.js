@@ -15,12 +15,18 @@ export const useBrowser = () => {
 export const BrowserProvider = ({ children }) => {
   const [history, setHistory] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
-  const [currentUrl, setCurrentUrl] = useState('about:blank');
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
+  
+  // Tab Management
+  const [tabs, setTabs] = useState([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+
+  const activeTab = tabs[activeTabIndex] || tabs[0];
+  const currentUrl = activeTab.url;
+
   const [webViewRef, setWebViewRef] = useState(null);
   const [desktopMode, setDesktopMode] = useState(false);
   const [adBlockEnabled, setAdBlockEnabled] = useState(true);
+  const [showTabSwitcher, setShowTabSwitcher] = useState(false);
 
   // User Agents
   const MOBILE_UA = Platform.OS === 'ios' 
@@ -93,7 +99,48 @@ export const BrowserProvider = ({ children }) => {
         formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(url);
       }
     }
-    setCurrentUrl(formattedUrl);
+    
+    const updatedTabs = [...tabs];
+    updatedTabs[activeTabIndex] = { ...updatedTabs[activeTabIndex], url: formattedUrl };
+    setTabs(updatedTabs);
+  }, [tabs, activeTabIndex]);
+
+  /**
+   * Tab Operations
+   */
+  const addTab = useCallback((url = 'about:blank') => {
+    const newTab = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      url: url,
+      canGoBack: false,
+      canGoForward: false
+    };
+    setTabs(prev => [...prev, newTab]);
+    setActiveTabIndex(tabs.length);
+  }, [tabs.length]);
+
+  const closeTab = useCallback((index) => {
+    if (tabs.length === 1) {
+      // Don't close the last tab, just reset it
+      setTabs([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+      setActiveTabIndex(0);
+      return;
+    }
+    const newTabs = tabs.filter((_, i) => i !== index);
+    setTabs(newTabs);
+    if (activeTabIndex >= index && activeTabIndex > 0) {
+      setActiveTabIndex(activeTabIndex - 1);
+    }
+  }, [tabs, activeTabIndex]);
+
+  const updateTabState = useCallback((index, state) => {
+    setTabs(prev => {
+      const newTabs = [...prev];
+      if (newTabs[index]) {
+        newTabs[index] = { ...newTabs[index], ...state };
+      }
+      return newTabs;
+    });
   }, []);
 
   /**
@@ -136,19 +183,19 @@ export const BrowserProvider = ({ children }) => {
    * Go back in browser history
    */
   const goBack = useCallback(() => {
-    if (webViewRef && canGoBack) {
+    if (webViewRef && activeTab.canGoBack) {
       webViewRef.goBack();
     }
-  }, [webViewRef, canGoBack]);
+  }, [webViewRef, activeTab.canGoBack]);
 
   /**
    * Go forward in browser history
    */
   const goForward = useCallback(() => {
-    if (webViewRef && canGoForward) {
+    if (webViewRef && activeTab.canGoForward) {
       webViewRef.goForward();
     }
-  }, [webViewRef, canGoForward]);
+  }, [webViewRef, activeTab.canGoForward]);
 
   /**
    * Refresh current page
@@ -162,26 +209,33 @@ export const BrowserProvider = ({ children }) => {
   const value = {
     history,
     bookmarks,
+    tabs,
+    activeTabIndex,
+    activeTab,
+    addTab,
+    closeTab,
+    setActiveTabIndex,
+    updateTabState,
     currentUrl,
-    setCurrentUrl,
-    canGoBack,
-    setCanGoBack,
-    canGoForward,
-    setCanGoForward,
+    setCurrentUrl: (url) => navigateTo(url),
+    canGoBack: activeTab.canGoBack,
+    canGoForward: activeTab.canGoForward,
+    setCanGoBack: (val) => updateTabState(activeTabIndex, { canGoBack: val }),
+    setCanGoForward: (val) => updateTabState(activeTabIndex, { canGoForward: val }),
     webViewRef,
     setWebViewRef,
     addHistoryEntry,
-    navigateTo,
     toggleBookmark,
     checkIsBookmarked,
-    goBack,
-    goForward,
     refresh,
     desktopMode,
     setDesktopMode,
     adBlockEnabled,
     setAdBlockEnabled,
+    showTabSwitcher,
+    setShowTabSwitcher,
     userAgent,
+    navigateTo,
   };
 
   return (
