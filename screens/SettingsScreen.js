@@ -16,7 +16,7 @@ const SettingsScreen = ({ navigation }) => {
     toggleDarkMode
   } = useBrowser();
 
-  const [appVersion, setAppVersion] = useState(Constants.expoConfig?.version || '1.0.0');
+  const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
 
   // Colors based on theme
   const colors = {

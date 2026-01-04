@@ -29,11 +29,25 @@ const BrowserScreen = () => {
   } = useBrowser();
   const webView = useRef(null);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Track the last URL the WebView told us about to avoid loops
+  const lastReportedUrl = useRef(currentUrl);
 
-  // Memoize search source to avoid unnecessary reloads
-  const webViewSource = useMemo(() => ({ uri: currentUrl }), [currentUrl]);
+  // We only want to update the source if the URL change came from "outside" (e.g. Address Bar)
+  // or if we just switched tabs.
+  const [sourceUrl, setSourceUrl] = useState(currentUrl);
 
-  // No need for separate useEffect for webViewRef if using callback ref
+  useEffect(() => {
+    // If the context URL changed to something different than what the WebView last reported,
+    // it means a user-initiated navigation (like typing in AddressBar or clicking Home)
+    if (currentUrl !== lastReportedUrl.current) {
+      setSourceUrl(currentUrl);
+      lastReportedUrl.current = currentUrl;
+    }
+  }, [currentUrl]);
+
+  const webViewSource = useMemo(() => ({ uri: sourceUrl }), [sourceUrl]);
+
   const webViewCallbackRef = useCallback((node) => {
     if (node) {
       webView.current = node;
@@ -42,11 +56,16 @@ const BrowserScreen = () => {
   }, [setWebViewRef]);
 
   const handleNavigationStateChange = useCallback((navState) => {
-    console.log('Navigation state changed:', navState.url);
-    // CRITICAL: Only update if anything actually changed to avoid infinite cycles
+    // Update internal tracker
+    const prevUrl = lastReportedUrl.current;
+    lastReportedUrl.current = navState.url;
+
+    // Only update context if something actually changed
+    // IMPORTANT: We compare with the tab's url to prevent infinite loops
     if (navState.url !== tabs[activeTabIndex].url || 
         navState.canGoBack !== tabs[activeTabIndex].canGoBack || 
         navState.canGoForward !== tabs[activeTabIndex].canGoForward) {
+      
       updateTabState(activeTabIndex, {
         canGoBack: navState.canGoBack,
         canGoForward: navState.canGoForward,
@@ -65,7 +84,6 @@ const BrowserScreen = () => {
 
   const handleLoadEnd = (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
-    // ...
     if (nativeEvent.url && nativeEvent.url !== 'about:blank' && !nativeEvent.url.startsWith('file://')) {
       const title = nativeEvent.title || nativeEvent.url.split('/')[2] || nativeEvent.url;
       addHistoryEntry(nativeEvent.url, title);
@@ -74,23 +92,14 @@ const BrowserScreen = () => {
 
   const adBlockScript = adBlockEnabled ? `
     (function() {
-      const adSelectors = [
-        '.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', 
-        '.ad-wrapper', '.banner-ad', '.sidebar-ad', '.video-ads',
-        '.facebook-ads', '.sponsor-message', '.promoted-content'
-      ];
+      const adSelectors = ['.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', '.banner-ad', '.video-ads'];
       const removeAds = () => {
         adSelectors.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => {
-            el.style.display = 'none';
-            el.remove();
-          });
+          document.querySelectorAll(selector).forEach(el => el.remove());
         });
       };
       removeAds();
-      setTimeout(removeAds, 1000);
-      setTimeout(removeAds, 3000);
-      setInterval(removeAds, 5000);
+      setTimeout(removeAds, 2000);
     })();
   ` : '';
 
@@ -99,7 +108,6 @@ const BrowserScreen = () => {
       <KeyboardAvoidingView 
         style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         <View style={[styles.topBar, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff', borderBottomColor: isDarkMode ? '#333' : '#eee' }]}>
           <AddressBar />
@@ -128,8 +136,8 @@ const BrowserScreen = () => {
               allowsBackForwardNavigationGestures={true}
               sharedCookiesEnabled={Platform.OS !== 'web'}
               thirdPartyCookiesEnabled={Platform.OS !== 'web'}
-              javaScriptCanOpenWindowsAutomatically={true}
-              mixedContentMode="never"
+              javaScriptCanOpenWindowsAutomatically={false}
+              mixedContentMode="compatibility"
             />
           </View>
         )}

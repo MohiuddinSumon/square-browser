@@ -29,10 +29,10 @@ const AddressBar = () => {
     };
   }, []);
 
-  // Sync with currentUrl ONLY when not focused or when URL is about:blank
+  // Sync with currentUrl ONLY when not focused
   useEffect(() => {
-    const normalizedTarget = currentUrl === 'about:blank' ? '' : currentUrl;
-    if (!isFocused || currentUrl === 'about:blank') {
+    if (!isFocused) {
+      const normalizedTarget = currentUrl === 'about:blank' ? '' : currentUrl;
       setUrlInput(normalizedTarget);
     }
   }, [currentUrl, isFocused]);
