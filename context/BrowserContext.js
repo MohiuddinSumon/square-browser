@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Platform } from 'react-native';
-import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked } from '../utils/storage';
+import { Platform, AppState } from 'react-native';
+import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage } from '../utils/storage';
 
 const BrowserContext = createContext();
 
@@ -27,6 +27,14 @@ export const BrowserProvider = ({ children }) => {
   const [desktopMode, setDesktopMode] = useState(false);
   const [adBlockEnabled, setAdBlockEnabled] = useState(true);
   const [showTabSwitcher, setShowTabSwitcher] = useState(false);
+  const [todayStats, setTodayStats] = useState({});
+  const [yesterdayStats, setYesterdayStats] = useState({});
+  
+  const activityTracker = React.useRef({
+    startTime: Date.now(),
+    currentUrl: 'about:blank',
+    lastSaved: Date.now()
+  });
 
   // User Agents
   const MOBILE_UA = Platform.OS === 'ios' 
@@ -44,9 +52,63 @@ export const BrowserProvider = ({ children }) => {
       const loadedBookmarks = await loadBookmarks();
       setHistory(loadedHistory);
       setBookmarks(loadedBookmarks);
+
+      // Load usage stats
+      const today = new Date().toISOString().split('T')[0];
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = yesterdayDate.toISOString().split('T')[0];
+
+      const tStats = await loadUsage(today);
+      const yStats = await loadUsage(yesterday);
+      setTodayStats(tStats);
+      setYesterdayStats(yStats);
     };
     loadInitialData();
   }, []);
+  // Tracking Logic
+  const recordCurrentActivity = useCallback(async () => {
+    const { startTime, currentUrl: trackingUrl } = activityTracker.current;
+    if (trackingUrl === 'about:blank') return;
+    
+    try {
+      const domain = new URL(trackingUrl).hostname;
+      const duration = Date.now() - startTime;
+      const today = new Date().toISOString().split('T')[0];
+      
+      await saveUsage(today, domain, duration);
+      
+      // Update local state for real-time dashboard
+      const updatedStats = await loadUsage(today);
+      setTodayStats(updatedStats);
+    } catch (e) {
+      // Ignore URL parsing errors for about:blank etc
+    }
+    
+    // Reset tracker for next period
+    activityTracker.current.startTime = Date.now();
+  }, []);
+
+  useEffect(() => {
+    // URL Change Tracking
+    if (currentUrl !== activityTracker.current.currentUrl) {
+      recordCurrentActivity();
+      activityTracker.current.currentUrl = currentUrl;
+      activityTracker.current.startTime = Date.now();
+    }
+  }, [currentUrl, recordCurrentActivity]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        recordCurrentActivity();
+      } else if (nextAppState === 'active') {
+        activityTracker.current.startTime = Date.now();
+      }
+    });
+
+    return () => subscription.remove();
+  }, [recordCurrentActivity]);
 
   /**
    * Add a history entry (append-only, cannot be deleted)
@@ -234,6 +296,8 @@ export const BrowserProvider = ({ children }) => {
     setAdBlockEnabled,
     showTabSwitcher,
     setShowTabSwitcher,
+    todayStats,
+    yesterdayStats,
     userAgent,
     navigateTo,
   };

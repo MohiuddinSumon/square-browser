@@ -105,3 +105,52 @@ export const isBookmarked = async (url) => {
   }
 };
 
+const USAGE_KEY = '@openbrowser_usage';
+
+/**
+ * Save usage duration for a domain on a specific date
+ * @param {string} date - Date string (YYYY-MM-DD)
+ * @param {string} domain - Domain name
+ * @param {number} duration - Duration in milliseconds to add
+ */
+export const saveUsage = async (date, domain, duration) => {
+  try {
+    const usageDataJson = await AsyncStorage.getItem(USAGE_KEY);
+    const usageData = usageDataJson ? JSON.parse(usageDataJson) : {};
+    
+    if (!usageData[date]) {
+      usageData[date] = {};
+    }
+    
+    if (!usageData[date][domain]) {
+      usageData[date][domain] = 0;
+    }
+    
+    usageData[date][domain] += duration;
+    
+    await AsyncStorage.setItem(USAGE_KEY, JSON.stringify(usageData));
+    return true;
+  } catch (error) {
+    console.error('Error saving usage:', error);
+    return false;
+  }
+};
+
+/**
+ * Load usage statistics for a specific date
+ * @param {string} date - Date string (YYYY-MM-DD)
+ * @returns {Object} Object with domain keys and duration values
+ */
+export const loadUsage = async (date) => {
+  try {
+    const usageDataJson = await AsyncStorage.getItem(USAGE_KEY);
+    if (usageDataJson) {
+      const usageData = JSON.parse(usageDataJson);
+      return usageData[date] || {};
+    }
+    return {};
+  } catch (error) {
+    console.error('Error loading usage:', error);
+    return {};
+  }
+};

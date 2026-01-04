@@ -4,11 +4,41 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 
 const HomeScreen = () => {
-  const { history, bookmarks, navigateTo, addTab } = useBrowser();
+  const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats } = useBrowser();
 
-  // Get top 6 most visited sites
+  const lifeQuotes = [
+    "You are the sum of your time. Don't throw yourself away.",
+    "Yesterday is a part of your life that is gone forever. Look at what you gave it to.",
+    "Your life is leaking through your screen. Are these sites worth your soul?",
+    "Every minute you spend here is a minute you aren't living out there.",
+    "Time is the only currency you can't earn back. You are spending it right now.",
+    "You are a human being, not a data point. Reclaim your time."
+  ];
+
+  const randomQuote = useMemo(() => {
+    return lifeQuotes[Math.floor(Math.random() * lifeQuotes.length)];
+  }, []);
+
+  const formatDuration = (ms) => {
+    const mins = Math.floor(ms / 60000);
+    const hours = Math.floor(mins / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins % 60}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const totalToday = useMemo(() => Object.values(todayStats).reduce((a, b) => a + b, 0), [todayStats]);
+  const totalYesterday = useMemo(() => Object.values(yesterdayStats).reduce((a, b) => a + b, 0), [yesterdayStats]);
+
+  const topSinks = useMemo(() => {
+    return Object.entries(todayStats)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+  }, [todayStats]);
+
+  // Existing mostVisited and bookmarks logic...
   const mostVisited = useMemo(() => {
-    // Group by URL and sum visitCount or just take unique URLs with highest visitCount
     const uniqueSites = {};
     history.forEach(item => {
       if (!uniqueSites[item.url] || uniqueSites[item.url].visitCount < item.visitCount) {
@@ -21,7 +51,6 @@ const HomeScreen = () => {
       .slice(0, 8);
   }, [history]);
 
-  // Get recent bookmarks
   const recentBookmarks = useMemo(() => {
     return [...bookmarks].reverse().slice(0, 8);
   }, [bookmarks]);
@@ -81,11 +110,53 @@ const HomeScreen = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Ionicons name="shield-checkmark" size={48} color="#2196F3" />
-        <Text style={styles.welcomeText}>Mindful Browsing</Text>
-        <Text style={styles.subtitleText}>Your activity is your accountability.</Text>
+      <View style={styles.lifeHeader}>
+        <Text style={styles.quoteText}>"{randomQuote}"</Text>
+        
+        <View style={styles.statsContainer}>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Life Spent Today</Text>
+            <Text style={styles.statValue}>{formatDuration(totalToday)}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Life Spent Yesterday</Text>
+            <Text style={[styles.statValue, { color: '#666' }]}>{formatDuration(totalYesterday)}</Text>
+          </View>
+        </View>
+
+        {totalToday > 0 && (
+          <View style={styles.usageComparison}>
+            <View style={styles.barContainer}>
+              <View style={[styles.bar, { width: '100%', backgroundColor: '#eee' }]}>
+                <View style={[styles.barActive, { 
+                  width: `${Math.min(100, (totalToday / (totalYesterday || totalToday)) * 100)}%`,
+                  backgroundColor: totalToday > totalYesterday && totalYesterday > 0 ? '#F44336' : '#4CAF50'
+                }]} />
+              </View>
+            </View>
+            <Text style={styles.comparisonText}>
+              {totalYesterday > 0 
+                ? (totalToday > totalYesterday 
+                  ? `You are consuming life ${Math.round((totalToday/totalYesterday - 1) * 100)}% faster than yesterday.`
+                  : `You are reclaiming your life today. Well done.`)
+                : "Your life journey continues through these pages."}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {topSinks.length > 0 && (
+        <View style={styles.sinkSection}>
+          <Text style={styles.sinkTitle}>Where your life went today:</Text>
+          {topSinks.map(([domain, duration]) => (
+            <View key={domain} style={styles.sinkItem}>
+              <Text style={styles.sinkDomain}>{domain}</Text>
+              <Text style={styles.sinkDuration}>{formatDuration(duration)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -121,9 +192,9 @@ const HomeScreen = () => {
 
       <View style={styles.accountabilityCard}>
         <Ionicons name="eye" size={24} color="#F44336" />
-        <Text style={styles.cardTitle}>Mindfulness Reminder</Text>
+        <Text style={styles.cardTitle}>Accountability Reminder</Text>
         <Text style={styles.cardText}>
-          Remember: Every site you visit is recorded permanently. This browser is designed to help you stay focused on what matters.
+          Everything is recorded. You cannot hide from your own time. Spend it on what matters.
         </Text>
       </View>
     </ScrollView>
@@ -137,22 +208,105 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 20,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
+  lifeHeader: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#eee',
+    // Premium shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
+  quoteText: {
+    fontSize: 18,
+    fontStyle: 'italic',
     color: '#333',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 26,
+    fontWeight: '300',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 5,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2196F3',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#eee',
+  },
+  usageComparison: {
     marginTop: 10,
   },
-  subtitleText: {
-    fontSize: 16,
+  barContainer: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  bar: {
+    height: '100%',
+  },
+  barActive: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  comparisonText: {
+    fontSize: 13,
     color: '#666',
-    marginTop: 5,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  sinkSection: {
+    marginBottom: 30,
+    paddingHorizontal: 10,
+  },
+  sinkTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  sinkItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f9f9f9',
+  },
+  sinkDomain: {
+    fontSize: 14,
+    color: '#555',
+  },
+  sinkDuration: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
   section: {
     marginBottom: 30,

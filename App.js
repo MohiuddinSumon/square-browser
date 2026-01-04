@@ -8,6 +8,8 @@ import BrowserScreen from './screens/BrowserScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import BookmarksScreen from './screens/BookmarksScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from './screens/TermsOfServiceScreen';
 import { StatusBar } from 'expo-status-bar';
 
 const Stack = createStackNavigator();
@@ -72,7 +74,9 @@ function AppNavigator() {
         initialRouteName="Browser"
       >
         <Stack.Screen name="Browser" component={BrowserScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: false }} />
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
       </Stack.Navigator>

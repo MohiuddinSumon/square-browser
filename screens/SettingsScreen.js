@@ -134,7 +134,30 @@ const SettingsScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.sectionTitle}>About & Legal</Text>
+        
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('PrivacyPolicy')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="shield-outline" size={24} color="#666" />
+            <Text style={styles.menuItemText}>Privacy Policy</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('TermsOfService')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="document-text-outline" size={24} color="#666" />
+            <Text style={styles.menuItemText}>Terms of Service</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        </TouchableOpacity>
+
         <Text style={styles.aboutText}>
           OpenBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits. 
           With no incognito or hidden modes, OpenBrowser ensures complete transparency in all your online activity.
