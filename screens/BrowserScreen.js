@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
+import HomeScreen from '../components/HomeScreen';
 
 const BrowserScreen = () => {
   const {
@@ -13,6 +14,8 @@ const BrowserScreen = () => {
     webViewRef,
     setWebViewRef,
     addHistoryEntry,
+    adBlockEnabled,
+    userAgent,
   } = useBrowser();
   const webView = useRef(null);
 
@@ -48,6 +51,28 @@ const BrowserScreen = () => {
     }
   };
 
+  const adBlockScript = adBlockEnabled ? `
+    (function() {
+      const adSelectors = [
+        '.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', 
+        '.ad-wrapper', '.banner-ad', '.sidebar-ad', '.video-ads',
+        '.facebook-ads', '.sponsor-message', '.promoted-content'
+      ];
+      const removeAds = () => {
+        adSelectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            el.style.display = 'none';
+            el.remove();
+          });
+        });
+      };
+      removeAds();
+      setTimeout(removeAds, 1000);
+      setTimeout(removeAds, 3000);
+      setInterval(removeAds, 5000);
+    })();
+  ` : '';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
@@ -58,32 +83,40 @@ const BrowserScreen = () => {
         <View style={styles.topBar}>
           <AddressBar />
         </View>
-      <WebView
-        ref={webView}
-        source={{ uri: currentUrl }}
-        style={styles.webview}
-        onNavigationStateChange={handleNavigationStateChange}
-        onLoad={handleLoad}
-        onLoadEnd={handleLoadEnd}
-        onLoadStart={(navState) => {
-          if (navState.nativeEvent.url) {
-            setCurrentUrl(navState.nativeEvent.url);
-          }
-        }}
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2196F3" />
-          </View>
+        
+        {currentUrl === 'about:blank' ? (
+          <HomeScreen />
+        ) : (
+          <WebView
+            ref={webView}
+            source={{ uri: currentUrl }}
+            style={styles.webview}
+            onNavigationStateChange={handleNavigationStateChange}
+            onLoad={handleLoad}
+            onLoadEnd={handleLoadEnd}
+            onLoadStart={(navState) => {
+              if (navState.nativeEvent.url) {
+                setCurrentUrl(navState.nativeEvent.url);
+              }
+            }}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2196F3" />
+              </View>
+            )}
+            userAgent={userAgent}
+            injectedJavaScript={adBlockScript}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            allowsBackForwardNavigationGestures={true}
+            sharedCookiesEnabled={true}
+            thirdPartyCookiesEnabled={true}
+            javaScriptCanOpenWindowsAutomatically={true}
+            mixedContentMode="never"
+          />
         )}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        allowsBackForwardNavigationGestures={true}
-        // Security: prefer HTTPS
-        mixedContentMode="never"
-        // No incognito mode - all navigation is tracked
-      />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -101,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingTop: Platform.OS === 'ios' ? 0 : 0,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     ...Platform.select({
       android: {
         elevation: 2,

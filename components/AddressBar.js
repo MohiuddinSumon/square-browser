@@ -30,9 +30,13 @@ const AddressBar = () => {
   }, []);
 
   useEffect(() => {
-    setUrlInput(currentUrl);
+    setUrlInput(currentUrl === 'about:blank' ? '' : currentUrl);
     // Check if current URL is bookmarked
-    checkIsBookmarked(currentUrl).then(setIsBookmarked);
+    if (currentUrl !== 'about:blank') {
+      checkIsBookmarked(currentUrl).then(setIsBookmarked);
+    } else {
+      setIsBookmarked(false);
+    }
   }, [currentUrl, checkIsBookmarked]);
 
   const handleGo = () => {
@@ -48,6 +52,9 @@ const AddressBar = () => {
   };
 
   const getSecureIcon = () => {
+    if (currentUrl === 'about:blank') {
+      return 'home';
+    }
     if (currentUrl.startsWith('https://')) {
       return 'lock-closed';
     }
@@ -61,7 +68,7 @@ const AddressBar = () => {
           <Ionicons 
             name={getSecureIcon()} 
             size={14} 
-            color={currentUrl.startsWith('https://') ? '#4CAF50' : '#FF9800'} 
+            color={currentUrl === 'about:blank' ? '#2196F3' : (currentUrl.startsWith('https://') ? '#4CAF50' : '#FF9800')} 
             style={styles.lockIcon}
           />
           <TextInput

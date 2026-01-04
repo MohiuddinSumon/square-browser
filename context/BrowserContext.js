@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Platform } from 'react-native';
 import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked } from '../utils/storage';
 
 const BrowserContext = createContext();
@@ -14,10 +15,21 @@ export const useBrowser = () => {
 export const BrowserProvider = ({ children }) => {
   const [history, setHistory] = useState([]);
   const [bookmarks, setBookmarks] = useState([]);
-  const [currentUrl, setCurrentUrl] = useState('https://www.google.com');
+  const [currentUrl, setCurrentUrl] = useState('about:blank');
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [webViewRef, setWebViewRef] = useState(null);
+  const [desktopMode, setDesktopMode] = useState(false);
+  const [adBlockEnabled, setAdBlockEnabled] = useState(true);
+
+  // User Agents
+  const MOBILE_UA = Platform.OS === 'ios' 
+    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    : 'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36';
+  
+  const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+  const userAgent = desktopMode ? DESKTOP_UA : MOBILE_UA;
 
   // Load initial data from storage
   useEffect(() => {
@@ -72,7 +84,7 @@ export const BrowserProvider = ({ children }) => {
   const navigateTo = useCallback((url) => {
     // Ensure URL has protocol
     let formattedUrl = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (!url.startsWith('http://') && !url.startsWith('https://') && url !== 'about:blank') {
       // Check if it looks like a domain
       if (url.includes('.') && !url.includes(' ')) {
         formattedUrl = 'https://' + url;
@@ -165,6 +177,11 @@ export const BrowserProvider = ({ children }) => {
     goBack,
     goForward,
     refresh,
+    desktopMode,
+    setDesktopMode,
+    adBlockEnabled,
+    setAdBlockEnabled,
+    userAgent,
   };
 
   return (

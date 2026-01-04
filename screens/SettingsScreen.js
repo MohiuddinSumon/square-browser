@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 
 const SettingsScreen = ({ navigation }) => {
-  const { history, bookmarks } = useBrowser();
+  const { history, bookmarks, desktopMode, setDesktopMode, adBlockEnabled, setAdBlockEnabled } = useBrowser();
 
   const appVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -36,6 +36,36 @@ const SettingsScreen = ({ navigation }) => {
       <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Browser Settings</Text>
+        
+        <View style={styles.infoRow}>
+          <View style={styles.rowLead}>
+            <Ionicons name="desktop" size={20} color="#2196F3" />
+            <Text style={styles.infoLabel}>Desktop Mode</Text>
+          </View>
+          <Switch
+            value={desktopMode}
+            onValueChange={setDesktopMode}
+            trackColor={{ false: '#767577', true: '#2196F3' }}
+            thumbColor={desktopMode ? '#f4f3f4' : '#f4f3f4'}
+          />
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.rowLead}>
+            <Ionicons name="shield-checkmark" size={20} color="#2196F3" />
+            <Text style={styles.infoLabel}>Ad Blocker</Text>
+          </View>
+          <Switch
+            value={adBlockEnabled}
+            onValueChange={setAdBlockEnabled}
+            trackColor={{ false: '#767577', true: '#2196F3' }}
+            thumbColor={adBlockEnabled ? '#f4f3f4' : '#f4f3f4'}
+          />
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -170,6 +200,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f5f5f5',
+  },
+  rowLead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   infoLabel: {
     fontSize: 16,

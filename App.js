@@ -19,7 +19,7 @@ const CustomBottomNav = () => {
 
   const handleHome = () => {
     navigation.navigate('Browser');
-    navigateTo('https://www.google.com');
+    navigateTo('about:blank');
   };
 
   const handleSettings = () => {
