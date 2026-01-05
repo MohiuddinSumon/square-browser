@@ -6,13 +6,99 @@ import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
 
+// --- BrowserTab Component ---
+// Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management
+const BrowserTab = ({ 
+  tab, 
+  isActive, 
+  userAgent, 
+  adBlockEnabled, 
+  onUpdateState, 
+  onLoadEnd, 
+  onRegisterRef 
+}) => {
+  // Track the last URL the WebView told us about to avoid loops
+  const lastReportedUrl = useRef(tab.url);
+  const [sourceUrl, setSourceUrl] = useState(tab.url);
+  const webViewRef = useRef(null);
+
+  // Sync sourceUrl ONLY when tab.url changes EXTERNALLY (e.g. address bar)
+  // and differs from what we last reported.
+  useEffect(() => {
+    if (tab.url !== lastReportedUrl.current) {
+      setSourceUrl(tab.url);
+      lastReportedUrl.current = tab.url;
+    }
+  }, [tab.url]);
+
+  const webViewSource = useMemo(() => ({ uri: sourceUrl }), [sourceUrl]);
+
+  const handleNavigationStateChange = useCallback((navState) => {
+    // Update internal tracker
+    lastReportedUrl.current = navState.url;
+    // Notify parent to update context/tab state
+    onUpdateState(navState);
+  }, [onUpdateState]);
+
+  // Stable ref handler to prevent infinite render loops
+  const handleWebViewRef = useCallback((node) => {
+    webViewRef.current = node;
+  }, []);
+
+  // Register ref with parent only when active status changes
+  useEffect(() => {
+    if (isActive && webViewRef.current) {
+      onRegisterRef(webViewRef.current);
+    }
+  }, [isActive, onRegisterRef]);
+
+  const adBlockScript = adBlockEnabled ? `
+    (function() {
+      const adSelectors = ['.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', '.banner-ad', '.video-ads'];
+      const removeAds = () => {
+        adSelectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => el.remove());
+        });
+      };
+      removeAds();
+      setTimeout(removeAds, 2000);
+    })();
+  ` : '';
+
+  return (
+    <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
+      <WebView
+        ref={handleWebViewRef}
+        source={webViewSource}
+        style={styles.webview}
+        onNavigationStateChange={handleNavigationStateChange}
+        onLoadEnd={(e) => onLoadEnd(e, tab.id)}
+        startInLoadingState={true}
+        renderLoading={() => (
+           <View style={styles.loadingContainer}>
+             <ActivityIndicator size="large" color="#2196F3" />
+           </View>
+        )}
+        userAgent={userAgent}
+        injectedJavaScript={adBlockScript}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        allowsBackForwardNavigationGestures={true}
+        sharedCookiesEnabled={Platform.OS !== 'web'}
+        thirdPartyCookiesEnabled={Platform.OS !== 'web'}
+        javaScriptCanOpenWindowsAutomatically={false}
+        mixedContentMode="compatibility"
+        pullToRefreshEnabled={true}
+      />
+    </View>
+  );
+};
+
+
 const BrowserScreen = () => {
   const {
     currentUrl,
     setCurrentUrl,
-    setCanGoBack,
-    setCanGoForward,
-    webViewRef,
     setWebViewRef,
     adBlockEnabled,
     userAgent,
@@ -29,17 +115,44 @@ const BrowserScreen = () => {
     exitConfirmationEnabled,
     setExitConfirmation,
   } = useBrowser();
-  const webView = useRef(null);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
   
-  // Track the last URL the WebView told us about to avoid loops
-  const lastReportedUrl = useRef(currentUrl);
+  // Refs to track WebViews for all tabs
+  const activeWebViewRef = useRef(null);
 
-  // We only want to update the source if the URL change came from "outside" (e.g. Address Bar)
-  // or if we just switched tabs.
-  const [sourceUrl, setSourceUrl] = useState(currentUrl);
+  // Update global ref when active tab changes.
+  // CRITICAL: Check for equality to prevent infinite context updates
+  const handleRegisterRef = useCallback((ref) => {
+    if (activeWebViewRef.current !== ref) {
+      activeWebViewRef.current = ref;
+      setWebViewRef(ref);
+    }
+  }, [setWebViewRef]);
+
+  // Navigation State Handler (Multi-tab aware)
+  const handleTabUpdate = useCallback((navState, index) => {
+    if (navState.url !== tabs[index].url || 
+        navState.canGoBack !== tabs[index].canGoBack || 
+        navState.canGoForward !== tabs[index].canGoForward) {
+      
+      updateTabState(index, {
+        canGoBack: navState.canGoBack,
+        canGoForward: navState.canGoForward,
+        url: navState.url
+      });
+    }
+  }, [tabs, updateTabState]);
+
+  const handleLoadEnd = useCallback((syntheticEvent, tabId) => {
+    const { nativeEvent } = syntheticEvent;
+    if (nativeEvent.url && nativeEvent.url !== 'about:blank' && !nativeEvent.url.startsWith('file://')) {
+      const title = nativeEvent.title || nativeEvent.url.split('/')[2] || nativeEvent.url;
+      addHistoryEntry(nativeEvent.url, title);
+    }
+  }, [addHistoryEntry]);
+
 
   useEffect(() => {
     // Handle Android hardware back button
@@ -49,19 +162,20 @@ const BrowserScreen = () => {
         return true;
       }
       
-      if (currentUrl !== 'about:blank' && webView.current) {
-        // If we are in the webview, let it handle back if it can
-        if (tabs[activeTabIndex].canGoBack) {
-          webView.current.goBack();
+      // If we have an active webview, try to go back
+      if (currentUrl !== 'about:blank' && activeWebViewRef.current) {
+        const activeTab = tabs[activeTabIndex];
+        if (activeTab && activeTab.canGoBack) {
+          activeWebViewRef.current.goBack();
           return true;
         } else {
-          // If we can't go back in webview, return to home
+          // Return to home
           setCurrentUrl('about:blank');
           return true;
         }
       }
 
-      // If we are on Home page, ask to exit
+      // If we are on Home page (about:blank), ask to exit
       if (currentUrl === 'about:blank') {
         if (!exitConfirmationEnabled) {
           return false; // Exit app
@@ -79,73 +193,7 @@ const BrowserScreen = () => {
     );
 
     return () => backHandler.remove();
-  }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, exitConfirmationEnabled]);
-
-  useEffect(() => {
-    // If the context URL changed to something different than what the WebView last reported,
-    // it means a user-initiated navigation (like typing in AddressBar or clicking Home)
-    if (currentUrl !== lastReportedUrl.current) {
-      setSourceUrl(currentUrl);
-      lastReportedUrl.current = currentUrl;
-    }
-  }, [currentUrl]);
-
-  const webViewSource = useMemo(() => ({ uri: sourceUrl }), [sourceUrl]);
-
-  const webViewCallbackRef = useCallback((node) => {
-    if (node) {
-      webView.current = node;
-      setWebViewRef(node);
-    }
-  }, [setWebViewRef]);
-
-  const handleNavigationStateChange = useCallback((navState) => {
-    // Update internal tracker
-    const prevUrl = lastReportedUrl.current;
-    lastReportedUrl.current = navState.url;
-
-    // Only update context if something actually changed
-    // IMPORTANT: We compare with the tab's url to prevent infinite loops
-    if (navState.url !== tabs[activeTabIndex].url || 
-        navState.canGoBack !== tabs[activeTabIndex].canGoBack || 
-        navState.canGoForward !== tabs[activeTabIndex].canGoForward) {
-      
-      updateTabState(activeTabIndex, {
-        canGoBack: navState.canGoBack,
-        canGoForward: navState.canGoForward,
-        url: navState.url
-      });
-    }
-  }, [activeTabIndex, tabs, updateTabState]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    if (webView.current) {
-      webView.current.reload();
-    }
-    setTimeout(() => setRefreshing(false), 2000);
-  }, []);
-
-  const handleLoadEnd = (syntheticEvent) => {
-    const { nativeEvent } = syntheticEvent;
-    if (nativeEvent.url && nativeEvent.url !== 'about:blank' && !nativeEvent.url.startsWith('file://')) {
-      const title = nativeEvent.title || nativeEvent.url.split('/')[2] || nativeEvent.url;
-      addHistoryEntry(nativeEvent.url, title);
-    }
-  };
-
-  const adBlockScript = adBlockEnabled ? `
-    (function() {
-      const adSelectors = ['.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', '.banner-ad', '.video-ads'];
-      const removeAds = () => {
-        adSelectors.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => el.remove());
-        });
-      };
-      removeAds();
-      setTimeout(removeAds, 2000);
-    })();
-  ` : '';
+  }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
@@ -157,36 +205,33 @@ const BrowserScreen = () => {
           <AddressBar />
         </View>
         
-        {currentUrl === 'about:blank' ? (
-          <HomeScreen />
-        ) : (
-          <View style={styles.webviewContainer}>
-            <WebView
-              ref={webViewCallbackRef}
-              source={webViewSource}
-              style={styles.webview}
-              onNavigationStateChange={handleNavigationStateChange}
-              onLoadEnd={handleLoadEnd}
-              startInLoadingState={true}
-              renderLoading={() => (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#2196F3" />
-                </View>
-              )}
-              userAgent={userAgent}
-              injectedJavaScript={adBlockScript}
-              javaScriptEnabled={true}
-              domStorageEnabled={true}
-              allowsBackForwardNavigationGestures={true}
-              sharedCookiesEnabled={Platform.OS !== 'web'}
-              thirdPartyCookiesEnabled={Platform.OS !== 'web'}
-              javaScriptCanOpenWindowsAutomatically={false}
-              mixedContentMode="compatibility"
-              pullToRefreshEnabled={true}
-              onRefresh={onRefresh}
-            />
-          </View>
-        )}
+        {/* Render Content */}
+        <View style={{ flex: 1 }}>
+          {tabs.map((tab, index) => {
+            const isActive = index === activeTabIndex;
+
+            // 1. If it's about:blank and active: Show HomeScreen
+            if (tab.url === 'about:blank') {
+              if (isActive) return <HomeScreen key={tab.id} />;
+              return null; // Don't persist blank tabs
+            }
+
+            // 2. If it's a real URL: Render BrowserTab (Persistent)
+            return (
+              <BrowserTab
+                key={tab.id}
+                tab={tab}
+                isActive={isActive}
+                userAgent={userAgent}
+                adBlockEnabled={adBlockEnabled}
+                onUpdateState={(state) => handleTabUpdate(state, index)}
+                onLoadEnd={handleLoadEnd}
+                onRegisterRef={handleRegisterRef}
+              />
+            );
+          })}
+        </View>
+
       </KeyboardAvoidingView>
 
       <ExitModal 
@@ -314,7 +359,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    paddingTop: Platform.OS === 'android' ? 0 : 0, // Removed redundant paddingTop, SafeAreaView handles this
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     ...Platform.select({
       android: {
         elevation: 2,

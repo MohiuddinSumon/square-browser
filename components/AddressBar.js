@@ -134,7 +134,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     ...Platform.select({
       android: {
-        elevation: 4,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
       },
       ios: {
         shadowColor: '#000',
