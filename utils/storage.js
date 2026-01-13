@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025 OpenBrowser Contributors
+ * 
+ * storage.js - Local storage utilities for history, bookmarks, and usage statistics
+ * All data is stored locally on the device using AsyncStorage
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HISTORY_KEY = '@openbrowser_history';

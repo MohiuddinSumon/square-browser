@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025 OpenBrowser Contributors
+ * 
+ * BrowserContext - Main context provider for browser state management
+ * Handles tabs, history, bookmarks, and app-wide browser functionality
+ */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -92,7 +98,11 @@ export const BrowserProvider = ({ children }) => {
     setExitConfirmationEnabled(enabled);
     await AsyncStorage.setItem('@openbrowser_exit_confirm', enabled ? 'true' : 'false');
   };
-  // Tracking Logic
+  /**
+   * Tracking Logic - Records browsing activity for usage statistics
+   * Tracks time spent on each domain and updates daily statistics
+   * This runs automatically when URL changes or app goes to background
+   */
   const recordCurrentActivity = useCallback(async () => {
     const { startTime, currentUrl: trackingUrl } = activityTracker.current;
     if (trackingUrl === 'about:blank') return;

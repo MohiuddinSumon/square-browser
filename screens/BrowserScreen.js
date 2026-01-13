@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2025 OpenBrowser Contributors
+ * 
+ * BrowserScreen - Main browser interface component
+ * Handles tab management, WebView rendering, and navigation
+ */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
@@ -6,8 +12,11 @@ import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
 
-// --- BrowserTab Component ---
-// Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management
+/**
+ * BrowserTab Component
+ * Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management.
+ * Each tab maintains its own WebView instance for proper navigation history.
+ */
 const BrowserTab = ({ 
   tab, 
   isActive, 

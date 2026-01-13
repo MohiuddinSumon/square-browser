@@ -1,8 +1,15 @@
-import React from 'react';
+/**
+ * Copyright (c) 2025 OpenBrowser Contributors
+ * 
+ * App.js - Main application entry point
+ * Sets up navigation and provides browser context to all screens
+ */
+import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { BrowserProvider, useBrowser } from './context/BrowserContext';
 import BrowserScreen from './screens/BrowserScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -72,10 +79,42 @@ const CustomBottomNav = () => {
   );
 };
 
+// Component to handle incoming URLs
+const UrlHandler = () => {
+  const { navigateTo } = useBrowser();
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    // Handle URL when app is opened from a link
+    const handleInitialUrl = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        navigation.navigate('Browser');
+        navigateTo(initialUrl);
+      }
+    };
+
+    // Handle URL when app is already running
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      navigation.navigate('Browser');
+      navigateTo(url);
+    });
+
+    handleInitialUrl();
+
+    return () => {
+      subscription.remove();
+    };
+  }, [navigateTo, navigation]);
+
+  return null;
+};
+
 // Main App Component
 function AppNavigator() {
   return (
     <>
+      <UrlHandler />
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
