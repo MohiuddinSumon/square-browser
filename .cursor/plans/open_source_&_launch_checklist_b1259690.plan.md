@@ -112,9 +112,6 @@ OpenBrowser is a React Native/Expo mobile browser app focused on accountability 
       cd android && ./gradlew bundleRelease
   ```
 
-
-
-
 - [ ] Test release build thoroughly
 - [ ] Update version code and version name in `app.json` and `build.gradle`
 
