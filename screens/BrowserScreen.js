@@ -175,6 +175,20 @@ const BrowserScreen = () => {
   const navbarTranslateY = useRef(new Animated.Value(0)).current;
   const isNavbarVisible = useRef(true);
   const lastScrollDirection = useRef(null);
+
+  // Animated value for content padding
+  const contentPadding = useRef(new Animated.Value(0)).current;
+
+  // Calculate URL bar height for content padding (approximately 50-60px)
+  const URL_BAR_HEIGHT = Platform.OS === 'ios' ? 60 : 55;
+  const statusBarHeight = Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0;
+  const totalTopBarHeight = URL_BAR_HEIGHT + statusBarHeight;
+
+  // Initialize content padding based on URL bar position
+  useEffect(() => {
+    const initialPadding = urlBarPosition === 'top' ? totalTopBarHeight : 0;
+    contentPadding.setValue(initialPadding);
+  }, []); // Only run once on mount
   
   // Refs to track WebViews for all tabs
   const activeWebViewRef = useRef(null);
@@ -222,33 +236,49 @@ const BrowserScreen = () => {
     // For top bar: hide by sliding up (negative Y), show at 0
     // For bottom bar: hide by sliding down (positive Y), show at 0
     const hideValue = urlBarPosition === 'bottom' ? 100 : -100;
+    const targetPadding = urlBarPosition === 'top' && shouldHide ? statusBarHeight : (urlBarPosition === 'top' ? totalTopBarHeight : 0);
 
     if (shouldHide && isNavbarVisible.current) {
       isNavbarVisible.current = false;
-      Animated.timing(navbarTranslateY, {
-        toValue: hideValue,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(navbarTranslateY, {
+          toValue: hideValue,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentPadding, {
+          toValue: urlBarPosition === 'top' ? statusBarHeight : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+      ]).start();
     } else if (shouldShow && !isNavbarVisible.current) {
       isNavbarVisible.current = true;
-      Animated.timing(navbarTranslateY, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(navbarTranslateY, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentPadding, {
+          toValue: urlBarPosition === 'top' ? totalTopBarHeight : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+      ]).start();
     }
 
     lastScrollDirection.current = direction;
-  }, [autoHideNavBar, navbarTranslateY, urlBarPosition]);
+  }, [autoHideNavBar, navbarTranslateY, urlBarPosition, contentPadding, totalTopBarHeight, statusBarHeight]);
 
   // Reset navbar visibility when URL changes
   useEffect(() => {
     if (autoHideNavBar) {
       isNavbarVisible.current = true;
       navbarTranslateY.setValue(0);
+      contentPadding.setValue(urlBarPosition === 'top' ? totalTopBarHeight : 0);
     }
-  }, [currentUrl, autoHideNavBar, navbarTranslateY]);
+  }, [currentUrl, autoHideNavBar, navbarTranslateY, contentPadding, urlBarPosition, totalTopBarHeight]);
 
 
   useEffect(() => {
@@ -315,7 +345,7 @@ const BrowserScreen = () => {
         )}
 
         {/* Render Content */}
-        <View style={{ flex: 1 }}>
+        <Animated.View style={{ flex: 1, paddingTop: contentPadding }}>
           {tabs.map((tab, index) => {
             const isActive = index === activeTabIndex;
 
@@ -341,7 +371,7 @@ const BrowserScreen = () => {
               />
             );
           })}
-        </View>
+        </Animated.View>
 
         {/* Address Bar - Bottom position */}
         {urlBarPosition === 'bottom' && (

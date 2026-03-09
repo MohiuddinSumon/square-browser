@@ -55,6 +55,7 @@ android/keystore.properties
 debug.keystore
 release.keystore
 openbrowser-release.keystore
+keystore.properties
 
 # IDE files
 .idea/
