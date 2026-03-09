@@ -81,7 +81,7 @@ const CustomBottomNav = () => {
 
 // Component to handle incoming URLs
 const UrlHandler = () => {
-  const { navigateTo } = useBrowser();
+  const { navigateToNewTab } = useBrowser();
   const navigation = useNavigation();
 
   useEffect(() => {
@@ -93,7 +93,7 @@ const UrlHandler = () => {
           console.log('[UrlHandler] Initial URL:', initialUrl);
           navigation.navigate('Browser');
           // Small delay to ensure Browser screen is mounted
-          setTimeout(() => navigateTo(initialUrl), 100);
+          setTimeout(() => navigateToNewTab(initialUrl), 100);
         }
       } catch (error) {
         console.error('[UrlHandler] Error handling initial URL:', error);
@@ -105,7 +105,7 @@ const UrlHandler = () => {
       console.log('[UrlHandler] Received URL:', url);
       navigation.navigate('Browser');
       // Small delay to ensure Browser screen is mounted
-      setTimeout(() => navigateTo(url), 100);
+      setTimeout(() => navigateToNewTab(url), 100);
     });
 
     handleInitialUrl();
@@ -113,7 +113,7 @@ const UrlHandler = () => {
     return () => {
       subscription.remove();
     };
-  }, [navigateTo, navigation]);
+  }, [navigateToNewTab, navigation]);
 
   return null;
 };

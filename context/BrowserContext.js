@@ -240,7 +240,7 @@ export const BrowserProvider = ({ children }) => {
   }, []);
 
   /**
-   * Navigate to a URL
+   * Navigate to a URL in the current tab
    */
   const navigateTo = useCallback((url) => {
     // Ensure URL has protocol
@@ -272,6 +272,46 @@ export const BrowserProvider = ({ children }) => {
         return updatedTabs;
       }
       return prev;
+    });
+  }, []);
+
+  /**
+   * Navigate to a URL in a new tab (for external links)
+   */
+  const navigateToNewTab = useCallback((url) => {
+    // Ensure URL has protocol
+    let formattedUrl = url.trim();
+
+    // Handle about:blank
+    if (formattedUrl === 'about:blank' || formattedUrl === '') {
+      formattedUrl = 'about:blank';
+    }
+    // Already has protocol
+    else if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
+      // Keep as is
+    }
+    // Check if it looks like a domain (has dots, no spaces)
+    else if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+    // Treat as search query
+    else {
+      formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
+    }
+
+    // Create new tab with the URL
+    const newTab = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      url: formattedUrl,
+      canGoBack: false,
+      canGoForward: false
+    };
+
+    setTabs(prev => {
+      const newIndex = prev.length;
+      activeTabIndexRef.current = newIndex;
+      setActiveTabIndex(newIndex);
+      return [...prev, newTab];
     });
   }, []);
 
@@ -425,9 +465,10 @@ export const BrowserProvider = ({ children }) => {
     setAutoHideNavBarPref,
     userAgent,
     navigateTo,
+    navigateToNewTab,
   }), [
     history, bookmarks, tabs, activeTabIndex, activeTab, addTab, closeTab,
-    setActiveTabIndex, updateTabState, currentUrl, navigateTo, webViewRef,
+    setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar
