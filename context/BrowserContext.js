@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage } from '../utils/storage';
+import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex } from '../utils/storage';
 
 const BrowserContext = createContext();
 
@@ -24,11 +24,12 @@ export const BrowserProvider = ({ children }) => {
   const [bookmarks, setBookmarks] = useState([]);
   
   // Tab Management
-  const [tabs, setTabs] = useState([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+  const [tabs, setTabs] = useState([]);
   const [activeTabIndex, setActiveTabIndex] = useState(0);
+  const [tabsInitialized, setTabsInitialized] = useState(false);
 
-  const activeTab = tabs[activeTabIndex] || tabs[0];
-  const currentUrl = activeTab.url;
+  const activeTab = tabsInitialized && tabs.length > 0 ? tabs[activeTabIndex] || tabs[0] : { url: 'about:blank', canGoBack: false, canGoForward: false };
+  const currentUrl = tabsInitialized ? activeTab.url : 'about:blank';
 
   const [webViewRef, setWebViewRef] = useState(null);
   const [desktopMode, setDesktopMode] = useState(false);
@@ -39,12 +40,22 @@ export const BrowserProvider = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [isDarkMode, setIsDarkMode] = useState(systemColorScheme === 'dark');
   const [exitConfirmationEnabled, setExitConfirmationEnabled] = useState(true);
-  
+  const [urlBarPosition, setUrlBarPosition] = useState('top');
+  const [autoHideNavBar, setAutoHideNavBar] = useState(false);
+
   const activityTracker = React.useRef({
     startTime: Date.now(),
     currentUrl: 'about:blank',
     lastSaved: Date.now()
   });
+
+  // Ref to track the current active tab index for navigateTo
+  const activeTabIndexRef = React.useRef(activeTabIndex);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeTabIndexRef.current = activeTabIndex;
+  }, [activeTabIndex]);
 
   // User Agents
   const MOBILE_UA = Platform.OS === 'ios' 
@@ -84,6 +95,24 @@ export const BrowserProvider = ({ children }) => {
       if (savedExitConfirm !== null) {
         setExitConfirmationEnabled(savedExitConfirm === 'true');
       }
+
+      const savedUrlBarPosition = await AsyncStorage.getItem('@openbrowser_urlbar_position');
+      if (savedUrlBarPosition) {
+        setUrlBarPosition(savedUrlBarPosition);
+      }
+
+      const savedAutoHideNavBar = await AsyncStorage.getItem('@openbrowser_autohide_navbar');
+      if (savedAutoHideNavBar !== null) {
+        setAutoHideNavBar(savedAutoHideNavBar === 'true');
+      }
+
+      // Load tab state
+      const loadedTabs = await loadTabs();
+      const loadedActiveTabIndex = await loadActiveTabIndex();
+      setTabs(loadedTabs);
+      activeTabIndexRef.current = Math.min(loadedActiveTabIndex, loadedTabs.length - 1);
+      setActiveTabIndex(Math.min(loadedActiveTabIndex, loadedTabs.length - 1));
+      setTabsInitialized(true);
     };
     loadInitialData();
   }, []);
@@ -98,6 +127,17 @@ export const BrowserProvider = ({ children }) => {
     setExitConfirmationEnabled(enabled);
     await AsyncStorage.setItem('@openbrowser_exit_confirm', enabled ? 'true' : 'false');
   };
+
+  const setUrlBarPositionPref = async (position) => {
+    setUrlBarPosition(position);
+    await AsyncStorage.setItem('@openbrowser_urlbar_position', position);
+  };
+
+  const setAutoHideNavBarPref = async (enabled) => {
+    setAutoHideNavBar(enabled);
+    await AsyncStorage.setItem('@openbrowser_autohide_navbar', enabled ? 'true' : 'false');
+  };
+
   /**
    * Tracking Logic - Records browsing activity for usage statistics
    * Tracks time spent on each domain and updates daily statistics
@@ -142,13 +182,26 @@ export const BrowserProvider = ({ children }) => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         recordCurrentActivity();
+        // Save tabs when app goes to background
+        if (tabsInitialized) {
+          saveTabs(tabs);
+          saveActiveTabIndex(activeTabIndex);
+        }
       } else if (nextAppState === 'active') {
         activityTracker.current.startTime = Date.now();
       }
     });
 
     return () => subscription.remove();
-  }, [recordCurrentActivity]);
+  }, [recordCurrentActivity, tabs, activeTabIndex, tabsInitialized]);
+
+  // Save tabs whenever they change (after initialization)
+  useEffect(() => {
+    if (tabsInitialized) {
+      saveTabs(tabs);
+      saveActiveTabIndex(activeTabIndex);
+    }
+  }, [tabs, activeTabIndex, tabsInitialized]);
 
   /**
    * Add a history entry (append-only, cannot be deleted)
@@ -191,21 +244,36 @@ export const BrowserProvider = ({ children }) => {
    */
   const navigateTo = useCallback((url) => {
     // Ensure URL has protocol
-    let formattedUrl = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://') && url !== 'about:blank') {
-      // Check if it looks like a domain
-      if (url.includes('.') && !url.includes(' ')) {
-        formattedUrl = 'https://' + url;
-      } else {
-        // Treat as search query
-        formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-      }
+    let formattedUrl = url.trim();
+
+    // Handle about:blank
+    if (formattedUrl === 'about:blank' || formattedUrl === '') {
+      formattedUrl = 'about:blank';
     }
-    
-    const updatedTabs = [...tabs];
-    updatedTabs[activeTabIndex] = { ...updatedTabs[activeTabIndex], url: formattedUrl };
-    setTabs(updatedTabs);
-  }, [tabs, activeTabIndex]);
+    // Already has protocol
+    else if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
+      // Keep as is
+    }
+    // Check if it looks like a domain (has dots, no spaces)
+    else if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+    // Treat as search query
+    else {
+      formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
+    }
+
+    // Use functional update and ref to get current active index
+    setTabs(prev => {
+      const currentIndex = activeTabIndexRef.current;
+      if (currentIndex >= 0 && currentIndex < prev.length) {
+        const updatedTabs = [...prev];
+        updatedTabs[currentIndex] = { ...updatedTabs[currentIndex], url: formattedUrl };
+        return updatedTabs;
+      }
+      return prev;
+    });
+  }, []);
 
   /**
    * Tab Operations
@@ -217,23 +285,32 @@ export const BrowserProvider = ({ children }) => {
       canGoBack: false,
       canGoForward: false
     };
-    setTabs(prev => [...prev, newTab]);
-    setActiveTabIndex(tabs.length);
-  }, [tabs.length]);
+    setTabs(prev => {
+      const newIndex = prev.length;
+      activeTabIndexRef.current = newIndex;
+      setActiveTabIndex(newIndex);
+      return [...prev, newTab];
+    });
+  }, []);
 
   const closeTab = useCallback((index) => {
-    if (tabs.length === 1) {
-      // Don't close the last tab, just reset it
-      setTabs([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
-      setActiveTabIndex(0);
-      return;
-    }
-    const newTabs = tabs.filter((_, i) => i !== index);
-    setTabs(newTabs);
-    if (activeTabIndex >= index && activeTabIndex > 0) {
-      setActiveTabIndex(activeTabIndex - 1);
-    }
-  }, [tabs, activeTabIndex]);
+    setTabs(prev => {
+      if (prev.length === 1) {
+        // Don't close the last tab, just reset it
+        activeTabIndexRef.current = 0;
+        setActiveTabIndex(0);
+        return [{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }];
+      }
+      const newTabs = prev.filter((_, i) => i !== index);
+      const currentActiveIndex = activeTabIndexRef.current;
+      // Adjust active tab index if needed
+      if (currentActiveIndex > index || (currentActiveIndex === index && currentActiveIndex === newTabs.length)) {
+        activeTabIndexRef.current = Math.max(0, currentActiveIndex - 1);
+        setActiveTabIndex(Math.max(0, currentActiveIndex - 1));
+      }
+      return newTabs;
+    });
+  }, []);
 
   const updateTabState = useCallback((index, state) => {
     setTabs(prev => {
@@ -342,6 +419,10 @@ export const BrowserProvider = ({ children }) => {
     toggleDarkMode,
     exitConfirmationEnabled,
     setExitConfirmation,
+    urlBarPosition,
+    setUrlBarPositionPref,
+    autoHideNavBar,
+    setAutoHideNavBarPref,
     userAgent,
     navigateTo,
   }), [
@@ -349,7 +430,7 @@ export const BrowserProvider = ({ children }) => {
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
-    isDarkMode, exitConfirmationEnabled
+    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar
   ]);
 
   return (

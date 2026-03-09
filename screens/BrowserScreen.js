@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
@@ -17,14 +17,16 @@ import HomeScreen from '../components/HomeScreen';
  * Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management.
  * Each tab maintains its own WebView instance for proper navigation history.
  */
-const BrowserTab = ({ 
-  tab, 
-  isActive, 
-  userAgent, 
-  adBlockEnabled, 
-  onUpdateState, 
-  onLoadEnd, 
-  onRegisterRef 
+const BrowserTab = ({
+  tab,
+  isActive,
+  userAgent,
+  adBlockEnabled,
+  onUpdateState,
+  onLoadEnd,
+  onRegisterRef,
+  onScroll,
+  autoHideEnabled
 }) => {
   // Track the last URL the WebView told us about to avoid loops
   const lastReportedUrl = useRef(tab.url);
@@ -74,6 +76,33 @@ const BrowserTab = ({
     })();
   ` : '';
 
+  // Scroll tracking script for auto-hide navbar
+  const scrollTrackingScript = autoHideEnabled ? `
+    (function() {
+      let lastScrollY = window.scrollY;
+      let scrollTimeout;
+
+      window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+
+        // Throttle scroll events
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'scroll',
+              direction: scrollDirection,
+              scrollY: currentScrollY
+            }));
+          }
+        }, 50);
+
+        lastScrollY = currentScrollY;
+      });
+    })();
+  ` : '';
+
   return (
     <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
       <WebView
@@ -82,6 +111,18 @@ const BrowserTab = ({
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
         onLoadEnd={(e) => onLoadEnd(e, tab.id)}
+        onMessage={(event) => {
+          if (autoHideEnabled && onScroll) {
+            try {
+              const data = JSON.parse(event.nativeEvent.data);
+              if (data.type === 'scroll') {
+                onScroll(data.direction, data.scrollY);
+              }
+            } catch (e) {
+              // Ignore non-JSON messages
+            }
+          }
+        }}
         startInLoadingState={true}
         renderLoading={() => (
            <View style={styles.loadingContainer}>
@@ -89,7 +130,7 @@ const BrowserTab = ({
            </View>
         )}
         userAgent={userAgent}
-        injectedJavaScript={adBlockScript}
+        injectedJavaScript={adBlockScript + scrollTrackingScript}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowsBackForwardNavigationGestures={true}
@@ -123,10 +164,17 @@ const BrowserScreen = () => {
     isDarkMode,
     exitConfirmationEnabled,
     setExitConfirmation,
+    urlBarPosition,
+    autoHideNavBar,
   } = useBrowser();
 
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+
+  // Animated value for navbar hide/show
+  const navbarTranslateY = useRef(new Animated.Value(0)).current;
+  const isNavbarVisible = useRef(true);
+  const lastScrollDirection = useRef(null);
   
   // Refs to track WebViews for all tabs
   const activeWebViewRef = useRef(null);
@@ -161,6 +209,46 @@ const BrowserScreen = () => {
       addHistoryEntry(nativeEvent.url, title);
     }
   }, [addHistoryEntry]);
+
+  // Handle scroll events for auto-hide navbar
+  const handleScroll = useCallback((direction, scrollY) => {
+    if (!autoHideNavBar) return;
+
+    // Hide navbar when scrolling down, show when scrolling up
+    // Only hide after scrolling down a bit (avoid hiding on small scrolls)
+    const shouldHide = direction === 'down' && scrollY > 50;
+    const shouldShow = direction === 'up';
+
+    // For top bar: hide by sliding up (negative Y), show at 0
+    // For bottom bar: hide by sliding down (positive Y), show at 0
+    const hideValue = urlBarPosition === 'bottom' ? 100 : -100;
+
+    if (shouldHide && isNavbarVisible.current) {
+      isNavbarVisible.current = false;
+      Animated.timing(navbarTranslateY, {
+        toValue: hideValue,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else if (shouldShow && !isNavbarVisible.current) {
+      isNavbarVisible.current = true;
+      Animated.timing(navbarTranslateY, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    lastScrollDirection.current = direction;
+  }, [autoHideNavBar, navbarTranslateY, urlBarPosition]);
+
+  // Reset navbar visibility when URL changes
+  useEffect(() => {
+    if (autoHideNavBar) {
+      isNavbarVisible.current = true;
+      navbarTranslateY.setValue(0);
+    }
+  }, [currentUrl, autoHideNavBar, navbarTranslateY]);
 
 
   useEffect(() => {
@@ -206,14 +294,26 @@ const BrowserScreen = () => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.topBar, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff', borderBottomColor: isDarkMode ? '#333' : '#eee' }]}>
-          <AddressBar />
-        </View>
-        
+        {/* Address Bar - Top or Bottom based on setting */}
+        {urlBarPosition === 'top' && (
+          <Animated.View
+            style={[
+              styles.topBar,
+              {
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
+                borderBottomColor: isDarkMode ? '#333' : '#eee',
+                transform: [{ translateY: navbarTranslateY }]
+              }
+            ]}
+          >
+            <AddressBar />
+          </Animated.View>
+        )}
+
         {/* Render Content */}
         <View style={{ flex: 1 }}>
           {tabs.map((tab, index) => {
@@ -236,10 +336,28 @@ const BrowserScreen = () => {
                 onUpdateState={(state) => handleTabUpdate(state, index)}
                 onLoadEnd={handleLoadEnd}
                 onRegisterRef={handleRegisterRef}
+                onScroll={handleScroll}
+                autoHideEnabled={autoHideNavBar}
               />
             );
           })}
         </View>
+
+        {/* Address Bar - Bottom position */}
+        {urlBarPosition === 'bottom' && (
+          <Animated.View
+            style={[
+              styles.bottomBar,
+              {
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
+                borderTopColor: isDarkMode ? '#333' : '#eee',
+                transform: [{ translateY: navbarTranslateY }]
+              }
+            ]}
+          >
+            <AddressBar />
+          </Animated.View>
+        )}
 
       </KeyboardAvoidingView>
 
@@ -300,54 +418,82 @@ const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setD
 };
 
 const TabSwitcher = ({ visible, onClose }) => {
-  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab } = useBrowser();
+  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, isDarkMode } = useBrowser();
+  const [processingIndex, setProcessingIndex] = useState(null);
+
+  const getTabTitle = (url) => {
+    if (url === 'about:blank') return 'Home';
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  };
+
+  const handleCloseTab = (index) => {
+    if (processingIndex !== null) return; // Prevent multiple rapid clicks
+    setProcessingIndex(index);
+    closeTab(index);
+    setTimeout(() => setProcessingIndex(null), 300);
+  };
+
+  const handleAddTab = () => {
+    if (processingIndex === 'add') return; // Prevent multiple rapid clicks
+    setProcessingIndex('add');
+    addTab();
+    setTimeout(() => setProcessingIndex(null), 300);
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff' }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Tabs ({tabs.length})</Text>
+            <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Tabs ({tabs.length})</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#333" />
+              <Ionicons name="close" size={22} color={isDarkMode ? '#fff' : '#333'} />
             </TouchableOpacity>
           </View>
-          
+
           <FlatList
             data={tabs}
             keyExtractor={(item) => item.id}
-            numColumns={2}
             renderItem={({ item, index }) => (
-              <TouchableOpacity 
-                style={[styles.tabItem, activeTabIndex === index && styles.activeTabItem]}
+              <TouchableOpacity
+                style={[styles.tabItemCompact, { backgroundColor: isDarkMode ? '#2A2A2A' : '#f5f5f5', borderColor: activeTabIndex === index ? '#2196F3' : 'transparent' }]}
                 onPress={() => {
-                  setActiveTabIndex(index);
-                  onClose();
+                  if (processingIndex === null) {
+                    setActiveTabIndex(index);
+                    onClose();
+                  }
                 }}
+                activeOpacity={processingIndex !== null ? 0.5 : 0.7}
               >
-                <Text style={styles.tabUrl} numberOfLines={2}>
-                  {item.url === 'about:blank' ? 'Home Page' : item.url}
-                </Text>
-                <TouchableOpacity 
-                  style={styles.closeTabButton}
-                  onPress={() => closeTab(index)}
+                <View style={styles.tabInfoCompact}>
+                  <Ionicons name="globe" size={16} color={activeTabIndex === index ? '#2196F3' : '#666'} />
+                  <Text style={[styles.tabTitleCompact, { color: isDarkMode ? '#fff' : '#000' }]} numberOfLines={1}>
+                    {getTabTitle(item.url)}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.closeTabButtonCompact, processingIndex === index && { opacity: 0.5 }]}
+                  onPress={() => handleCloseTab(index)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name="close-circle" size={20} color="#F44336" />
+                  <Ionicons name="close" size={18} color="#F44336" />
                 </TouchableOpacity>
               </TouchableOpacity>
             )}
-            contentContainerStyle={styles.tabList}
+            contentContainerStyle={styles.tabListCompact}
           />
 
-          <TouchableOpacity 
-            style={styles.newTabButton}
-            onPress={() => {
-              addTab();
-              onClose();
-            }}
+          <TouchableOpacity
+            style={[styles.newTabButtonCompact, processingIndex === 'add' && { opacity: 0.5 }]}
+            onPress={handleAddTab}
+            activeOpacity={0.7}
           >
-            <Ionicons name="add" size={24} color="#fff" />
-            <Text style={styles.newTabButtonText}>New Tab</Text>
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.newTabButtonTextCompact}>New Tab</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -365,6 +511,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -381,6 +532,30 @@ const styles = StyleSheet.create({
       },
       web: {
         boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+      }
+    }),
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingBottom: Platform.OS === 'ios' ? 10 : 5,
+    ...Platform.select({
+      android: {
+        elevation: 2,
+      },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+      },
+      web: {
+        boxShadow: '0 -1px 2px rgba(0,0,0,0.1)',
       }
     }),
   },
@@ -409,63 +584,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    height: '80%',
-    padding: 20,
+    height: '60%',
+    padding: 16,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
   },
-  tabList: {
-    paddingBottom: 20,
+  tabListCompact: {
+    paddingBottom: 16,
   },
-  tabItem: {
-    width: '47%',
-    height: 100,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    margin: '1.5%',
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    position: 'relative',
-  },
-  activeTabItem: {
-    borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD',
-    borderWidth: 2,
-  },
-  tabUrl: {
-    fontSize: 12,
-    color: '#333',
-  },
-  closeTabButton: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#fff',
+  tabItemCompact: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
     borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
   },
-  newTabButton: {
+  tabInfoCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  tabTitleCompact: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 10,
+    flex: 1,
+  },
+  closeTabButtonCompact: {
+    padding: 4,
+  },
+  newTabButtonCompact: {
     flexDirection: 'row',
     backgroundColor: '#2196F3',
-    padding: 15,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 10,
+    gap: 8,
+    marginTop: 4,
   },
-  newTabButtonText: {
+  newTabButtonTextCompact: {
     color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    fontWeight: '600',
+    fontSize: 14,
   },
   confirmModal: {
     width: '85%',

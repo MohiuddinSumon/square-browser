@@ -54,7 +54,7 @@ const CustomBottomNav = () => {
         style={styles.navButton}
         onPress={handleHome}
       >
-        <Ionicons name="home-outline" size={24} color={colors.icon} />
+        <Ionicons name="home-outline" size={22} color={colors.icon} />
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -62,7 +62,7 @@ const CustomBottomNav = () => {
         onPress={handleTabs}
       >
         <View style={styles.tabsIconContainer}>
-          <Ionicons name="copy-outline" size={24} color={colors.icon} />
+          <Ionicons name="copy-outline" size={22} color={colors.icon} />
           <View style={[styles.tabCountBadge, { backgroundColor: colors.badge, borderColor: colors.badgeBorder }]}>
             <Text style={[styles.tabCountText, { color: colors.badgeText }]}>{tabs.length}</Text>
           </View>
@@ -73,7 +73,7 @@ const CustomBottomNav = () => {
         style={styles.navButton}
         onPress={handleSettings}
       >
-        <Ionicons name="settings-outline" size={24} color={colors.icon} />
+        <Ionicons name="settings-outline" size={22} color={colors.icon} />
       </TouchableOpacity>
     </View>
   );
@@ -87,17 +87,25 @@ const UrlHandler = () => {
   useEffect(() => {
     // Handle URL when app is opened from a link
     const handleInitialUrl = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        navigation.navigate('Browser');
-        navigateTo(initialUrl);
+      try {
+        const initialUrl = await Linking.getInitialURL();
+        if (initialUrl) {
+          console.log('[UrlHandler] Initial URL:', initialUrl);
+          navigation.navigate('Browser');
+          // Small delay to ensure Browser screen is mounted
+          setTimeout(() => navigateTo(initialUrl), 100);
+        }
+      } catch (error) {
+        console.error('[UrlHandler] Error handling initial URL:', error);
       }
     };
 
     // Handle URL when app is already running
     const subscription = Linking.addEventListener('url', ({ url }) => {
+      console.log('[UrlHandler] Received URL:', url);
       navigation.navigate('Browser');
-      navigateTo(url);
+      // Small delay to ensure Browser screen is mounted
+      setTimeout(() => navigateTo(url), 100);
     });
 
     handleInitialUrl();
@@ -155,28 +163,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    paddingVertical: 8,
-    paddingBottom: 12,
-    height: 60,
+    paddingVertical: 6,
+    paddingBottom: 8,
+    height: 50,
   },
   navButton: {
-    padding: 8,
-    minWidth: 50,
+    padding: 6,
+    minWidth: 45,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabsIconContainer: {
     position: 'relative',
-    padding: 2,
+    padding: 1,
   },
   tabCountBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -1,
+    right: -1,
     backgroundColor: '#2196F3',
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    borderRadius: 7,
+    minWidth: 14,
+    height: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -184,7 +192,7 @@ const styles = StyleSheet.create({
   },
   tabCountText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   navButtonDisabled: {

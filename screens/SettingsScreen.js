@@ -5,15 +5,19 @@ import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 
 const SettingsScreen = ({ navigation }) => {
-  const { 
-    history, 
-    bookmarks, 
-    desktopMode, 
+  const {
+    history,
+    bookmarks,
+    desktopMode,
     setDesktopMode,
     adBlockEnabled,
     setAdBlockEnabled,
     isDarkMode,
-    toggleDarkMode
+    toggleDarkMode,
+    urlBarPosition,
+    setUrlBarPositionPref,
+    autoHideNavBar,
+    setAutoHideNavBarPref,
   } = useBrowser();
 
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
@@ -67,14 +71,14 @@ const SettingsScreen = ({ navigation }) => {
 
       <ScrollView style={styles.container}>
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>Browser Settings</Text>
-        
+
         <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="desktop-outline" size={24} color={colors.subtext} />
             <Text style={[styles.menuItemText, { color: colors.text }]}>Desktop Mode</Text>
           </View>
-          <Switch 
-            value={desktopMode} 
+          <Switch
+            value={desktopMode}
             onValueChange={setDesktopMode}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={desktopMode ? colors.accent : "#f4f3f4"}
@@ -86,8 +90,8 @@ const SettingsScreen = ({ navigation }) => {
             <Ionicons name="shield-outline" size={24} color={colors.subtext} />
             <Text style={[styles.menuItemText, { color: colors.text }]}>Ad Blocker</Text>
           </View>
-          <Switch 
-            value={adBlockEnabled} 
+          <Switch
+            value={adBlockEnabled}
             onValueChange={setAdBlockEnabled}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={adBlockEnabled ? colors.accent : "#f4f3f4"}
@@ -99,11 +103,47 @@ const SettingsScreen = ({ navigation }) => {
             <Ionicons name={isDarkMode ? "moon" : "sunny-outline"} size={24} color={colors.subtext} />
             <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
           </View>
-          <Switch 
-            value={isDarkMode} 
+          <Switch
+            value={isDarkMode}
             onValueChange={toggleDarkMode}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={isDarkMode ? colors.accent : "#f4f3f4"}
+          />
+        </View>
+
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="code-working-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>URL Bar Position</Text>
+          </View>
+          <View style={styles.positionButtons}>
+            <TouchableOpacity
+              style={[styles.positionButton, urlBarPosition === 'top' && styles.positionButtonActive, { borderColor: urlBarPosition === 'top' ? colors.accent : colors.border }]}
+              onPress={() => setUrlBarPositionPref('top')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.positionButtonText, { color: urlBarPosition === 'top' ? colors.accent : colors.subtext }]}>Top</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.positionButton, urlBarPosition === 'bottom' && styles.positionButtonActive, { borderColor: urlBarPosition === 'bottom' ? colors.accent : colors.border }]}
+              onPress={() => setUrlBarPositionPref('bottom')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.positionButtonText, { color: urlBarPosition === 'bottom' ? colors.accent : colors.subtext }]}>Bottom</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="eye-off-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Auto-Hide URL Bar</Text>
+          </View>
+          <Switch
+            value={autoHideNavBar}
+            onValueChange={setAutoHideNavBarPref}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={autoHideNavBar ? colors.accent : "#f4f3f4"}
           />
         </View>
 
@@ -281,6 +321,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 30,
     marginBottom: 40,
+  },
+  positionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  positionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  positionButtonActive: {
+    backgroundColor: 'transparent',
+  },
+  positionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

@@ -111,6 +111,8 @@ export const isBookmarked = async (url) => {
   }
 };
 
+const TABS_KEY = '@openbrowser_tabs';
+const ACTIVE_TAB_INDEX_KEY = '@openbrowser_active_tab_index';
 const USAGE_KEY = '@openbrowser_usage';
 
 /**
@@ -158,5 +160,76 @@ export const loadUsage = async (date) => {
   } catch (error) {
     console.error('Error loading usage:', error);
     return {};
+  }
+};
+
+/**
+ * Save tabs state
+ * @param {Array} tabs - Array of tab objects
+ */
+export const saveTabs = async (tabs) => {
+  try {
+    await AsyncStorage.setItem(TABS_KEY, JSON.stringify(tabs));
+    return true;
+  } catch (error) {
+    console.error('Error saving tabs:', error);
+    return false;
+  }
+};
+
+/**
+ * Load tabs state
+ * @returns {Array} Array of tab objects
+ */
+export const loadTabs = async () => {
+  try {
+    const tabsJson = await AsyncStorage.getItem(TABS_KEY);
+    if (tabsJson) {
+      const tabs = JSON.parse(tabsJson);
+      // Validate and return tabs, or default to single blank tab
+      if (Array.isArray(tabs) && tabs.length > 0) {
+        return tabs;
+      }
+    }
+    // Return default tab state
+    return [{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }];
+  } catch (error) {
+    console.error('Error loading tabs:', error);
+    return [{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }];
+  }
+};
+
+/**
+ * Save active tab index
+ * @param {number} index - Active tab index
+ */
+export const saveActiveTabIndex = async (index) => {
+  try {
+    await AsyncStorage.setItem(ACTIVE_TAB_INDEX_KEY, JSON.stringify(index));
+    return true;
+  } catch (error) {
+    console.error('Error saving active tab index:', error);
+    return false;
+  }
+};
+
+/**
+ * Load active tab index
+ * @returns {number} Active tab index
+ */
+export const loadActiveTabIndex = async () => {
+  try {
+    const indexJson = await AsyncStorage.getItem(ACTIVE_TAB_INDEX_KEY);
+    if (indexJson) {
+      const index = JSON.parse(indexJson);
+      // Ensure index is a valid number
+      if (typeof index === 'number' && index >= 0) {
+        return index;
+      }
+    }
+    return 0;
+  } catch (error) {
+    console.error('Error loading active tab index:', error);
+    return 0;
   }
 };
