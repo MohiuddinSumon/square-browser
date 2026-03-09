@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
@@ -179,16 +179,35 @@ const BrowserScreen = () => {
   // Animated value for content padding
   const contentPadding = useRef(new Animated.Value(0)).current;
 
+  // Keyboard height tracking for bottom URL bar
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   // Calculate URL bar height for content padding (approximately 50-60px)
   const URL_BAR_HEIGHT = Platform.OS === 'ios' ? 60 : 55;
   const statusBarHeight = Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0;
   const totalTopBarHeight = URL_BAR_HEIGHT + statusBarHeight;
 
   // Initialize content padding based on URL bar position
+  // Always include status bar height to prevent content from going under status icons
   useEffect(() => {
-    const initialPadding = urlBarPosition === 'top' ? totalTopBarHeight : 0;
+    const initialPadding = urlBarPosition === 'top' ? totalTopBarHeight : statusBarHeight;
     contentPadding.setValue(initialPadding);
   }, []); // Only run once on mount
+
+  // Track keyboard height for bottom URL bar positioning
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
   
   // Refs to track WebViews for all tabs
   const activeWebViewRef = useRef(null);
@@ -236,7 +255,16 @@ const BrowserScreen = () => {
     // For top bar: hide by sliding up (negative Y), show at 0
     // For bottom bar: hide by sliding down (positive Y), show at 0
     const hideValue = urlBarPosition === 'bottom' ? 100 : -100;
-    const targetPadding = urlBarPosition === 'top' && shouldHide ? statusBarHeight : (urlBarPosition === 'top' ? totalTopBarHeight : 0);
+
+    // Calculate target padding based on URL bar position and visibility
+    // When URL bar is at bottom, padding stays at status bar height (doesn't change)
+    // When URL bar is at top, padding changes based on visibility
+    let targetPadding;
+    if (urlBarPosition === 'bottom') {
+      targetPadding = statusBarHeight; // Always maintain status bar padding for bottom position
+    } else {
+      targetPadding = isNavbarVisible.current === false || shouldHide ? statusBarHeight : totalTopBarHeight;
+    }
 
     if (shouldHide && isNavbarVisible.current) {
       isNavbarVisible.current = false;
@@ -247,7 +275,7 @@ const BrowserScreen = () => {
           useNativeDriver: true,
         }),
         Animated.timing(contentPadding, {
-          toValue: urlBarPosition === 'top' ? statusBarHeight : 0,
+          toValue: urlBarPosition === 'top' ? statusBarHeight : statusBarHeight,
           duration: 200,
           useNativeDriver: false,
         }),
@@ -261,7 +289,7 @@ const BrowserScreen = () => {
           useNativeDriver: true,
         }),
         Animated.timing(contentPadding, {
-          toValue: urlBarPosition === 'top' ? totalTopBarHeight : 0,
+          toValue: urlBarPosition === 'top' ? totalTopBarHeight : statusBarHeight,
           duration: 200,
           useNativeDriver: false,
         }),
@@ -276,9 +304,9 @@ const BrowserScreen = () => {
     if (autoHideNavBar) {
       isNavbarVisible.current = true;
       navbarTranslateY.setValue(0);
-      contentPadding.setValue(urlBarPosition === 'top' ? totalTopBarHeight : 0);
+      contentPadding.setValue(urlBarPosition === 'top' ? totalTopBarHeight : statusBarHeight);
     }
-  }, [currentUrl, autoHideNavBar, navbarTranslateY, contentPadding, urlBarPosition, totalTopBarHeight]);
+  }, [currentUrl, autoHideNavBar, navbarTranslateY, contentPadding, urlBarPosition, totalTopBarHeight, statusBarHeight]);
 
 
   useEffect(() => {
@@ -381,7 +409,8 @@ const BrowserScreen = () => {
               {
                 backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
                 borderTopColor: isDarkMode ? '#333' : '#eee',
-                transform: [{ translateY: navbarTranslateY }]
+                transform: [{ translateY: navbarTranslateY }],
+                bottom: keyboardHeight || 0, // Move up when keyboard is open
               }
             ]}
           >
