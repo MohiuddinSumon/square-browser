@@ -1,7 +1,7 @@
-# OpenBrowser
+# SquareBrowser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Open Source](https://img.shields.io/badge/Open%20Source-Yes-green.svg)](https://github.com/MohiuddinSumon/open-browser)
+[![Open Source](https://img.shields.io/badge/Open%20Source-Yes-green.svg)](https://github.com/MohiuddinSumon/square-browser)
 
 A privacy-focused mobile browser built with React Native and Expo, designed to promote mindful browsing through permanent, local-only history tracking.
 
@@ -26,8 +26,8 @@ A privacy-focused mobile browser built with React Native and Expo, designed to p
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/MohiuddinSumon/open-browser.git
-   cd OpenBrowser
+   git clone https://github.com/MohiuddinSumon/square-browser.git
+   cd SquareBrowser
    ```
 
 2. Install dependencies:
@@ -61,7 +61,7 @@ See [BUILD_APK.md](BUILD_APK.md) for instructions on building a release APK.
 ### Project Structure
 
 ```
-OpenBrowser/
+SquareBrowser/
 ├── components/          # Reusable UI components
 │   ├── AddressBar.js
 │   ├── HomeScreen.js
@@ -108,7 +108,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## Privacy Policy
 
-OpenBrowser is committed to your privacy:
+SquareBrowser is committed to your privacy:
 
 - **No Data Collection**: We do not collect, transmit, or store any of your browsing data on external servers.
 - **Local Storage Only**: All history, bookmarks, and usage statistics are stored locally on your device using AsyncStorage.
@@ -119,7 +119,7 @@ For more details, see the in-app Privacy Policy or view it in [screens/PrivacyPo
 
 ## Terms of Service
 
-By using OpenBrowser, you acknowledge that:
+By using SquareBrowser, you acknowledge that:
 - This is an accountability-focused tool with permanent history logging.
 - History cannot be deleted within the app.
 - No incognito/private mode is provided.
@@ -142,8 +142,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/MohiuddinSumon/open-browser/issues)
-- **Discussions**: Join discussions on [GitHub Discussions](https://github.com/MohiuddinSumon/open-browser/discussions)
+- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/MohiuddinSumon/square-browser/issues)
+- **Discussions**: Join discussions on [GitHub Discussions](https://github.com/MohiuddinSumon/square-browser/discussions)
 
 ## Acknowledgments
 
