@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SquareBrowser 10-inch Tablet Screenshot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1a1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .device {
+      width: 900px;
+      height: 1350px;
+      background: #000;
+      border-radius: 25px;
+      padding: 20px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+      position: relative;
+    }
+
+    .screen {
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border-radius: 15px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Status bar */
+    .status-bar {
+      height: 30px;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 25px;
+      color: white;
+      font-size: 14px;
+    }
+
+    /* Main browser area */
+    .browser-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* URL Bar */
+    .url-bar {
+      background: #f5f5f5;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .url-bar-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+    }
+
+    .url-bar-btn svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .url-input {
+      flex: 1;
+      background: #e0e0e0;
+      border-radius: 25px;
+      padding: 12px 25px;
+      font-size: 16px;
+      color: #333;
+    }
+
+    /* WebView content */
+    .webview {
+      flex: 1;
+      background: linear-gradient(180deg, #2196F3 0%, #1976D2 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px;
+    }
+
+    .webview-icon {
+      width: 160px;
+      height: 160px;
+      background: white;
+      border-radius: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 35px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
+
+    .webview-icon svg {
+      width: 90px;
+      height: 90px;
+      fill: #2196F3;
+    }
+
+    .webview-title {
+      font-size: 44px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 15px;
+    }
+
+    .webview-subtitle {
+      font-size: 24px;
+      color: rgba(255,255,255,0.85);
+      text-align: center;
+      max-width: 500px;
+      line-height: 1.5;
+    }
+
+    /* Features list in webview */
+    .features-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 40px;
+      max-width: 600px;
+    }
+
+    .feature-tag {
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 10px 20px;
+      border-radius: 20px;
+      color: white;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feature-tag svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Bottom nav */
+    .bottom-nav {
+      height: 70px;
+      background: #fff;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: #2196F3;
+    }
+
+    .nav-item svg {
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
+    }
+
+    .nav-item span {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Tab badge */
+    .tab-badge {
+      position: relative;
+    }
+
+    .tab-badge::after {
+      content: '3';
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #2196F3;
+      color: white;
+      font-size: 11px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    .info {
+      text-align: center;
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="device">
+      <div class="screen">
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span>9:41</span>
+          <span style="display: flex; gap: 8px; align-items: center;">
+            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9m0 16c-3.86 0-7-3.14-7-7s3.14-7 7-7 7 3.14 7 7-3.14 7-7 7Z"/></svg>
+            <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9m8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0m-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13Z"/></svg>
+            <svg width="18" height="16" fill="white" viewBox="0 0 24 16"><path d="M16 10h-2V7h-4v3H8v4h2v7h4v-7h2l-2-4h4l-2-4zm-4 9V7h-4v12h4z" transform="translate(0 4)"/></svg>
+            <svg width="22" height="14" fill="white" viewBox="0 0 24 14"><rect x="0" y="0" width="22" height="14" rx="2"/><rect x="20" y="5" width="4" height="4" rx="1" fill="#4CAF50"/></svg>
+          </span>
+        </div>
+
+        <!-- Browser area -->
+        <div class="browser-area">
+          <!-- URL Bar -->
+          <div class="url-bar">
+            <div class="url-bar-btn">
+              <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="currentColor"/></svg>
+            </div>
+            <div class="url-bar-btn">
+              <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8-8-8z" fill="currentColor"/></svg>
+            </div>
+            <div class="url-input">squarebrowser.com</div>
+            <div class="url-bar-btn">
+              <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/></svg>
+            </div>
+          </div>
+
+          <!-- WebView -->
+          <div class="webview">
+            <div class="webview-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Z"/></svg>
+            </div>
+            <div class="webview-title">SquareBrowser</div>
+            <div class="webview-subtitle">Privacy-First Mobile Browser<br/>Browse without being tracked</div>
+
+            <div class="features-list">
+              <div class="feature-tag">
+                <svg viewBox="0 0 24 24" fill="white"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4Z"/></svg>
+                No Tracking
+              </div>
+              <div class="feature-tag">
+                <svg viewBox="0 0 24 24" fill="white"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-9 14H5v-2h6v2zm0-4H5v-2h6v2zm0-4H5V8h6v2zm8 8h-6v-2h6v2zm0-4h-6v-2h6v2zm0-4h-6V8h6v2z"/></svg>
+                Local Only
+              </div>
+              <div class="feature-tag">
+                <svg viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                Ad Block
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="bottom-nav">
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span>Home</span>
+          </div>
+          <div class="nav-item tab-badge">
+            <svg viewBox="0 0 24 24"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5m2 0v14h14V5H5m2 2h2v2H7V7m4 0h2v2h-2V7m4 0h2v2h-2V7M7 11h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2M7 15h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2Z"/></svg>
+            <span>Tabs</span>
+          </div>
+          <div class="nav-item">
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <span>Settings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info">10-inch Tablet Screenshot - Right-click and "Open image in new tab" then screenshot<br>Target size: 1600 x 2400 pixels</div>
+  </div>
+</body>
+</html>

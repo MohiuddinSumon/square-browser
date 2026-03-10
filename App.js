@@ -7,7 +7,7 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { BrowserProvider, useBrowser } from './context/BrowserContext';
@@ -17,6 +17,7 @@ import BookmarksScreen from './screens/BookmarksScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from './screens/TermsOfServiceScreen';
+import LandingPage from './components/LandingPage';
 import { StatusBar } from 'expo-status-bar';
 
 const Stack = createStackNavigator();
@@ -120,6 +121,9 @@ const UrlHandler = () => {
 
 // Main App Component
 function AppNavigator() {
+  // Show landing page on web, browser app on mobile
+  const initialRoute = Platform.OS === 'web' ? 'Landing' : 'Browser';
+
   return (
     <>
       <UrlHandler />
@@ -127,8 +131,9 @@ function AppNavigator() {
         screenOptions={{
           headerShown: false,
         }}
-        initialRouteName="Browser"
+        initialRouteName={initialRoute}
       >
+        <Stack.Screen name="Landing" component={LandingPage} options={{ headerShown: false }} />
         <Stack.Screen name="Browser" component={BrowserScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
@@ -136,7 +141,7 @@ function AppNavigator() {
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
       </Stack.Navigator>
-      <CustomBottomNav />
+      {Platform.OS !== 'web' && <CustomBottomNav />}
     </>
   );
 }
