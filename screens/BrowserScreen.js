@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
- * 
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
  * BrowserScreen - Main browser interface component
  * Handles tab management, WebView rendering, and navigation
  */
@@ -189,10 +189,11 @@ const BrowserScreen = () => {
 
   // Initialize content padding based on URL bar position
   // Always include status bar height to prevent content from going under status icons
+  // Update when urlBarPosition changes (loaded from AsyncStorage)
   useEffect(() => {
     const initialPadding = urlBarPosition === 'top' ? totalTopBarHeight : statusBarHeight;
     contentPadding.setValue(initialPadding);
-  }, []); // Only run once on mount
+  }, [urlBarPosition]); // Re-run when urlBarPosition is loaded from AsyncStorage
 
   // Track keyboard height for bottom URL bar positioning
   useEffect(() => {
@@ -410,7 +411,8 @@ const BrowserScreen = () => {
                 backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
                 borderTopColor: isDarkMode ? '#333' : '#eee',
                 transform: [{ translateY: navbarTranslateY }],
-                bottom: keyboardHeight || 0, // Move up when keyboard is open
+                bottom: keyboardHeight || 0,
+                paddingBottom: keyboardHeight > 0 ? 0 : (Platform.OS === 'ios' ? 10 : 5), // Remove padding when keyboard is open
               }
             ]}
           >
@@ -447,7 +449,7 @@ const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setD
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={styles.modalOverlay}>
         <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
-          <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Exit OpenBrowser?</Text>
+          <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Exit SquareBrowser?</Text>
           <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
             Are you sure you want to close the application?
           </Text>

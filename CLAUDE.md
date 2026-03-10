@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OpenBrowser is a privacy-focused mobile browser built with React Native and Expo. The core philosophy is **accountability through permanent, local-only history tracking**. All browsing data is stored locally on the device with no external servers or data collection.
+SquareBrowser is a privacy-focused mobile browser built with React Native and Expo. The core philosophy is **accountability through permanent, local-only history tracking**. All browsing data is stored locally on the device with no external servers or data collection.
 
 ## Development Commands
 
@@ -48,7 +48,7 @@ cd android && ./gradlew bundleRelease
 ### Directory Structure
 
 ```
-OpenBrowser/
+SquareBrowser/
 ├── App.js                    # Main entry point, navigation setup, URL handling
 ├── context/BrowserContext.js # Global state management (tabs, history, bookmarks, settings)
 ├── components/               # Reusable UI components
@@ -98,11 +98,11 @@ The app handles deep linking from external apps via `expo-linking` in `App.js`:
 ### Data Persistence (utils/storage.js)
 
 All data is stored locally using AsyncStorage with consistent prefixes:
-- `@openbrowser_history_` - History entries (append-only)
-- `@openbrowser_bookmarks_` - Bookmark entries
-- `@openbrowser_usage_` - Daily usage statistics per domain
-- `@openbrowser_theme` - Dark/light mode preference
-- `@openbrowser_exit_confirm` - Exit confirmation setting
+- `@squarebrowser_history_` - History entries (append-only)
+- `@squarebrowser_bookmarks_` - Bookmark entries
+- `@squarebrowser_usage_` - Daily usage statistics per domain
+- `@squarebrowser_theme` - Dark/light mode preference
+- `@squarebrowser_exit_confirm` - Exit confirmation setting
 
 ## Important Constraints
 
@@ -141,7 +141,7 @@ Basic ad blocking is implemented via injected JavaScript that removes common ad 
 ## Build and Release
 
 ### Android
-- Package name: `com.openbrowser.app`
+- Package name: `com.squarebrowser.app`
 - Production signing configured in `android/app/build.gradle`
 - Version info must match between `app.json` and `package.json`
 - Use Expo Dev Client for development builds
@@ -154,7 +154,7 @@ When updating versions:
 
 ## Code Style
 
-- Copyright headers in all source files: `Copyright (c) 2025 OpenBrowser Contributors`
+- Copyright headers in all source files: `Copyright (c) 2025 SquareBrowser Contributors`
 - Uses `@expo/vector-icons` (Ionicons) for all icons
 - Platform-specific code uses `Platform.OS` with `ios`/`android`/`web` checks
 - Dark mode support via `isDarkMode` state from BrowserContext

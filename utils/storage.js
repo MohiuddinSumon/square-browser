@@ -1,13 +1,13 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
- * 
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
  * storage.js - Local storage utilities for history, bookmarks, and usage statistics
  * All data is stored locally on the device using AsyncStorage
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const HISTORY_KEY = '@openbrowser_history';
-const BOOKMARKS_KEY = '@openbrowser_bookmarks';
+const HISTORY_KEY = '@squarebrowser_history';
+const BOOKMARKS_KEY = '@squarebrowser_bookmarks';
 
 /**
  * Save a history entry (append-only)
@@ -111,9 +111,9 @@ export const isBookmarked = async (url) => {
   }
 };
 
-const TABS_KEY = '@openbrowser_tabs';
-const ACTIVE_TAB_INDEX_KEY = '@openbrowser_active_tab_index';
-const USAGE_KEY = '@openbrowser_usage';
+const TABS_KEY = '@squarebrowser_tabs';
+const ACTIVE_TAB_INDEX_KEY = '@squarebrowser_active_tab_index';
+const USAGE_KEY = '@squarebrowser_usage';
 
 /**
  * Save usage duration for a domain on a specific date

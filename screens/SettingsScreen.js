@@ -41,7 +41,7 @@ const SettingsScreen = ({ navigation }) => {
   // handleAbout is no longer used in the new UI, but kept as per instruction format
   const handleAbout = useCallback(() => {
     alert(
-      'OpenBrowser\n\n' +
+      'SquareBrowser\n\n' +
       'A mobile internet browser built for accountability and digital self-care.\n\n' +
       'Version: ' + appVersion + '\n\n' +
       'All browsing activity is logged and cannot be cleared or hidden.'
@@ -201,8 +201,8 @@ const SettingsScreen = ({ navigation }) => {
 
         <View style={styles.aboutContainer}>
           <Text style={[styles.aboutText, { color: colors.subtext }]}>
-            OpenBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits. 
-            With no incognito or hidden modes, OpenBrowser ensures complete transparency in all your online activity.
+            SquareBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits.
+            With no incognito or hidden modes, SquareBrowser ensures complete transparency in all your online activity.
           </Text>
           <Text style={[styles.aboutText, { color: colors.subtext }]}>
             Your history is permanent and your time is precious. Every minute you spend here is recorded for your own accountability.
@@ -212,7 +212,7 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.infoSection, { borderTopColor: colors.border }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.subtext }]}>App Name</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>OpenBrowser</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>SquareBrowser</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.subtext }]}>Version</Text>
@@ -225,7 +225,7 @@ const SettingsScreen = ({ navigation }) => {
         </View>
 
         <Text style={[styles.footerText, { color: colors.subtext }]}>
-          OpenBrowser v{appVersion} • Created for Mindfulness
+          SquareBrowser v{appVersion} • Honest Browsing
         </Text>
       </ScrollView>
     </SafeAreaView>

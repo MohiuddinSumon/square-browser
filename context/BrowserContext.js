@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
- * 
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
  * BrowserContext - Main context provider for browser state management
  * Handles tabs, history, bookmarks, and app-wide browser functionality
  */
@@ -86,22 +86,22 @@ export const BrowserProvider = ({ children }) => {
       setYesterdayStats(yStats);
 
       // Load theme preference
-      const savedTheme = await AsyncStorage.getItem('@openbrowser_theme');
+      const savedTheme = await AsyncStorage.getItem('@squarebrowser_theme');
       if (savedTheme) {
         setIsDarkMode(savedTheme === 'dark');
       }
 
-      const savedExitConfirm = await AsyncStorage.getItem('@openbrowser_exit_confirm');
+      const savedExitConfirm = await AsyncStorage.getItem('@squarebrowser_exit_confirm');
       if (savedExitConfirm !== null) {
         setExitConfirmationEnabled(savedExitConfirm === 'true');
       }
 
-      const savedUrlBarPosition = await AsyncStorage.getItem('@openbrowser_urlbar_position');
+      const savedUrlBarPosition = await AsyncStorage.getItem('@squarebrowser_urlbar_position');
       if (savedUrlBarPosition) {
         setUrlBarPosition(savedUrlBarPosition);
       }
 
-      const savedAutoHideNavBar = await AsyncStorage.getItem('@openbrowser_autohide_navbar');
+      const savedAutoHideNavBar = await AsyncStorage.getItem('@squarebrowser_autohide_navbar');
       if (savedAutoHideNavBar !== null) {
         setAutoHideNavBar(savedAutoHideNavBar === 'true');
       }
@@ -120,22 +120,22 @@ export const BrowserProvider = ({ children }) => {
   const toggleDarkMode = async () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
-    await AsyncStorage.setItem('@openbrowser_theme', newMode ? 'dark' : 'light');
+    await AsyncStorage.setItem('@squarebrowser_theme', newMode ? 'dark' : 'light');
   };
 
   const setExitConfirmation = async (enabled) => {
     setExitConfirmationEnabled(enabled);
-    await AsyncStorage.setItem('@openbrowser_exit_confirm', enabled ? 'true' : 'false');
+    await AsyncStorage.setItem('@squarebrowser_exit_confirm', enabled ? 'true' : 'false');
   };
 
   const setUrlBarPositionPref = async (position) => {
     setUrlBarPosition(position);
-    await AsyncStorage.setItem('@openbrowser_urlbar_position', position);
+    await AsyncStorage.setItem('@squarebrowser_urlbar_position', position);
   };
 
   const setAutoHideNavBarPref = async (enabled) => {
     setAutoHideNavBar(enabled);
-    await AsyncStorage.setItem('@openbrowser_autohide_navbar', enabled ? 'true' : 'false');
+    await AsyncStorage.setItem('@squarebrowser_autohide_navbar', enabled ? 'true' : 'false');
   };
 
   /**

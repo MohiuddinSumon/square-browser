@@ -31,22 +31,22 @@ const TermsOfServiceScreen = ({ navigation }) => {
         
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>1. Acceptance of Terms</Text>
         <Text style={[styles.text, { color: colors.text }]}>
-          By installing and using OpenBrowser, you acknowledge that this is an accountability-focused tool.
+          By installing and using SquareBrowser, you acknowledge that this is an accountability-focused tool.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>2. Use of the App</Text>
         <Text style={[styles.text, { color: colors.text }]}>
-          You agree to use OpenBrowser for mindful browsing. You understand that the app is designed to record your history permanently to provide full transparency and accountability.
+          You agree to use SquareBrowser for mindful browsing. You understand that the app is designed to record your history permanently to provide full transparency and accountability.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>3. No Incognito/Private Mode</Text>
         <Text style={[styles.text, { color: colors.text }]}>
-          OpenBrowser does not offer a private browsing mode. Every action performed within the browser is logged locally.
+          SquareBrowser does not offer a private browsing mode. Every action performed within the browser is logged locally.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>4. Limitation of Liability</Text>
         <Text style={[styles.text, { color: colors.text }]}>
-          OpenBrowser is provided "as is". We are not responsible for any content viewed or the impact of permanent history logging on your personal or professional life.
+          SquareBrowser is provided "as is". We are not responsible for any content viewed or the impact of permanent history logging on your personal or professional life.
         </Text>
 
         <Text style={[styles.footer, { color: colors.subtext }]}>

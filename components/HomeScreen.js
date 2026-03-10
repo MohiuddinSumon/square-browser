@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
+ * Copyright (c) 2025 SquareBrowser Contributors
  *
  * HomeScreen - Modern home screen with quick shortcuts and time accountability
  */
@@ -14,36 +14,36 @@ const HomeScreen = () => {
   const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats, isDarkMode } = useBrowser();
 
   const lifeQuotes = [
-    "You are the sum of your time. Don't throw yourself away.",
-    "Yesterday is a part of your life that is gone forever. Look at what you gave it to.",
-    "Your life is leaking through your screen. Are these sites worth your soul?",
-    "Every minute you spend here is a minute you aren't living out there.",
-    "Time is the only currency you can't earn back. You are spending it right now.",
-    "You are a human being, not a data point. Reclaim your time.",
-    "Each click is a tick of your life's clock. Make it count.",
-    "The screen glows, but your life grows dimmer. What are you chasing?",
-    "In 100 years, nobody will remember what you scrolled through today.",
-    "Your attention is the most valuable thing you own. Who are you giving it to?",
-    "This moment exists once. You're spending it on pixels.",
-    "The internet promises everything but delivers only distraction.",
-    "You're not missing out by putting this down. You're missing out on real life.",
-    "Hours vanish here, while your dreams gather dust.",
-    "Perfect moments are slipping away while you watch perfect videos.",
-    "The world outside waits for no one, especially not those who wait for likes.",
-    "Your childhood is gone. Your adulthood is disappearing. How much of it have you spent here?",
-    "This isn't living. It's numbing. Feel something real instead.",
-    "Notifications are not priorities. They are someone else's agenda for your time.",
-    "You can't save time for later. It's being spent right now.",
-    "The algorithm knows you better than you know yourself. That should scare you.",
-    "Everything you seek here - connection, meaning, purpose - exists out there, not in here.",
-    "Your heroes didn't build their legacy by watching others build theirs.",
-    "This screen is a thief, stealing moments you can never get back.",
-    "At the end, nobody's last words will be 'I wish I had scrolled more.'",
-    "The past is gone, the future isn't guaranteed. All you have is now - and you're giving it away.",
-    "Your dreams don't have a notification bell. They wait in silence while you chase noise.",
-    "Somewhere, someone is living the life you want. They're not on this screen.",
-    "You think you're passing time. Time is passing you.",
-    "Regret is heavy. Choose carefully how you fill your hours."
+    { text: "You are the sum of your time. Don't throw yourself away.", icon: "hourglass-outline", color: "#FF9800" },
+    { text: "Yesterday is a part of your life that is gone forever. Look at what you gave it to.", icon: "calendar-outline", color: "#9E9E9E" },
+    { text: "Your life is leaking through your screen. Are these sites worth your soul?", icon: "warning-outline", color: "#F44336" },
+    { text: "Every minute you spend here is a minute you aren't living out there.", icon: "time-outline", color: "#FF9800" },
+    { text: "Time is the only currency you can't earn back. You are spending it right now.", icon: "cash-outline", color: "#4CAF50" },
+    { text: "You are a human being, not a data point. Reclaim your time.", icon: "person-outline", color: "#2196F3" },
+    { text: "Each click is a tick of your life's clock. Make it count.", icon: "radio-button-on-outline", color: "#FF9800" },
+    { text: "The screen glows, but your life grows dimmer. What are you chasing?", icon: "sunny-outline", color: "#FFC107" },
+    { text: "In 100 years, nobody will remember what you scrolled through today.", icon: "hourglass-outline", color: "#9E9E9E" },
+    { text: "Your attention is the most valuable thing you own. Who are you giving it to?", icon: "diamond-outline", color: "#9C27B0" },
+    { text: "This moment exists once. You're spending it on pixels.", icon: "flower-outline", color: "#E91E63" },
+    { text: "The internet promises everything but delivers only distraction.", icon: "cloud-off-outline", color: "#9E9E9E" },
+    { text: "You're not missing out by putting this down. You're missing out on real life.", icon: "leaf-outline", color: "#4CAF50" },
+    { text: "Hours vanish here, while your dreams gather dust.", icon: "moon-outline", color: "#3F51B5" },
+    { text: "Perfect moments are slipping away while you watch perfect videos.", icon: "water-outline", color: "#00BCD4" },
+    { text: "The world outside waits for no one, especially not those who wait for likes.", icon: "people-outline", color: "#795548" },
+    { text: "Your childhood is gone. Your adulthood is disappearing. How much of it have you spent here?", icon: "hourglass-outline", color: "#FF5722" },
+    { text: "This isn't living. It's numbing. Feel something real instead.", icon: "heart-outline", color: "#E91E63" },
+    { text: "Notifications are not priorities. They are someone else's agenda for your time.", icon: "notifications-off-outline", color: "#607D8B" },
+    { text: "You can't save time for later. It's being spent right now.", icon: "timer-outline", color: "#FF9800" },
+    { text: "The algorithm knows you better than you know yourself. That should scare you.", icon: "eye-off-outline", color: "#F44336" },
+    { text: "Everything you seek here - connection, meaning, purpose - exists out there, not in here.", icon: "git-branch-outline", color: "#4CAF50" },
+    { text: "Your heroes didn't build their legacy by watching others build theirs.", icon: "trophy-outline", color: "#FFC107" },
+    { text: "This screen is a thief, stealing moments you can never get back.", icon: "hand-left-outline", color: "#F44336" },
+    { text: "At the end, nobody's last words will be 'I wish I had scrolled more.'", icon: "ribbon-outline", color: "#9E9E9E" },
+    { text: "The past is gone, the future isn't guaranteed. All you have is now - and you're giving it away.", icon: "flash-outline", color: "#FFC107" },
+    { text: "Your dreams don't have a notification bell. They wait in silence while you chase noise.", icon: "notifications-outline", color: "#9E9E9E" },
+    { text: "Somewhere, someone is living the life you want. They're not on this screen.", icon: "compass-outline", color: "#00BCD4" },
+    { text: "You think you're passing time. Time is passing you.", icon: "swap-horizontal-outline", color: "#FF9800" },
+    { text: "Regret is heavy. Choose carefully how you fill your hours.", icon: "barbell-outline", color: "#607D8B" }
   ];
 
   // Recent bookmarks for quick access
@@ -192,10 +192,12 @@ const HomeScreen = () => {
 
         {/* Accountability Quote - Core Feature */}
         <View style={[styles.quoteCard, { backgroundColor: isDarkMode ? '#1F1A1A' : '#FFF8F0', borderColor: isDarkMode ? '#3A2A1A' : '#FFE0B2' }]}>
-          <Ionicons name="eye-outline" size={28} color={colors.warning} />
-          <Text style={[styles.quoteText, { color: colors.text }]}>
-            "{randomQuote}"
-          </Text>
+          <View style={styles.quoteContainer}>
+            <Ionicons name={randomQuote.icon} size={20} color={randomQuote.color} />
+            <Text style={[styles.quoteText, { color: colors.text }]}>
+              "{randomQuote.text}"
+            </Text>
+          </View>
           {totalToday > 0 && (
             <View style={styles.quoteStats}>
               <Text style={[styles.quoteStatsText, { color: colors.subtext }]}>
@@ -287,13 +289,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
   },
+  quoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   quoteText: {
-    fontSize: 18,
+    fontSize: 17,
     fontStyle: 'italic',
-    lineHeight: 28,
-    textAlign: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    lineHeight: 26,
+    flex: 1,
     fontWeight: '400',
   },
   quoteStats: {

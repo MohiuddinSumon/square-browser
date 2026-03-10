@@ -1,6 +1,6 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
- * 
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
  * App.js - Main application entry point
  * Sets up navigation and provides browser context to all screens
  */

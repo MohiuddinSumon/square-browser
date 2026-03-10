@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 OpenBrowser Contributors
+ * Copyright (c) 2025 SquareBrowser Contributors
  *
  * HistoryScreen - Displays browsing history grouped by date with collapsible date sections
  */

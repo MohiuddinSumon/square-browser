@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "OpenBrowser",
-    "slug": "OpenBrowser",
+    "name": "SquareBrowser",
+    "slug": "SquareBrowser",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.openbrowser.app"
+      "bundleIdentifier": "com.squarebrowser.app"
     },
     "android": {
-      "package": "com.openbrowser.app",
+      "package": "com.squarebrowser.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

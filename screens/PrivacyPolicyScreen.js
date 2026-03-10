@@ -32,7 +32,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
         
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>1. Introduction</Text>
         <Text style={[styles.text, { color: colors.text }]}>
-          OpenBrowser is committed to your privacy. This policy explains how we handle your data.
+          SquareBrowser is committed to your privacy. This policy explains how we handle your data.
         </Text>
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>2. Local Storage Only</Text>
@@ -51,7 +51,7 @@ const PrivacyPolicyScreen = ({ navigation }) => {
         </Text>
 
         <Text style={[styles.footer, { color: colors.subtext }]}>
-          By using OpenBrowser, you agree to this local-first privacy approach.
+          By using SquareBrowser, you agree to this local-first privacy approach.
         </Text>
       </ScrollView>
     </SafeAreaView>
