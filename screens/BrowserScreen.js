@@ -145,7 +145,7 @@ const BrowserTab = ({
 };
 
 
-const BrowserScreen = () => {
+const BrowserScreen = ({ navigation }) => {
   const {
     currentUrl,
     setCurrentUrl,
@@ -166,7 +166,16 @@ const BrowserScreen = () => {
     setExitConfirmation,
     urlBarPosition,
     autoHideNavBar,
+    timerEnabled,
+    limitReached,
+    strictMode,
+    reminderDismissed,
+    dismissReminder,
+    setTimerScreenActive,
   } = useBrowser();
+
+  const showSoftOverlay = timerEnabled && limitReached && !strictMode && !reminderDismissed;
+  const showStrictWall = timerEnabled && limitReached && strictMode;
 
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
@@ -310,9 +319,23 @@ const BrowserScreen = () => {
   }, [currentUrl, autoHideNavBar, navbarTranslateY, contentPadding, urlBarPosition, totalTopBarHeight, statusBarHeight]);
 
 
+  // Pause/resume timer when navigating away from the browser screen
+  useEffect(() => {
+    if (!navigation) return;
+    const focusUnsub = navigation.addListener('focus', () => setTimerScreenActive(true));
+    const blurUnsub = navigation.addListener('blur', () => setTimerScreenActive(false));
+    return () => {
+      focusUnsub();
+      blurUnsub();
+    };
+  }, [navigation, setTimerScreenActive]);
+
   useEffect(() => {
     // Handle Android hardware back button
     const backAction = () => {
+      // Strict timer wall — consume back press, do nothing
+      if (showStrictWall) return true;
+
       if (showTabSwitcher) {
         setShowTabSwitcher(false);
         return true;
@@ -349,7 +372,7 @@ const BrowserScreen = () => {
     );
 
     return () => backHandler.remove();
-  }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, exitConfirmationEnabled, setCurrentUrl]);
+  }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
@@ -436,9 +459,20 @@ const BrowserScreen = () => {
         setDontAskAgain={setDontAskAgain}
       />
 
-      <TabSwitcher 
-        visible={showTabSwitcher} 
-        onClose={() => setShowTabSwitcher(false)} 
+      <TabSwitcher
+        visible={showTabSwitcher}
+        onClose={() => setShowTabSwitcher(false)}
+      />
+
+      <TimerSoftOverlay
+        visible={showSoftOverlay}
+        onDismiss={dismissReminder}
+        isDarkMode={isDarkMode}
+      />
+
+      <TimerStrictWall
+        visible={showStrictWall}
+        isDarkMode={isDarkMode}
       />
     </SafeAreaView>
   );
@@ -557,6 +591,66 @@ const TabSwitcher = ({ visible, onClose }) => {
             <Text style={styles.newTabButtonTextCompact}>New Tab</Text>
           </TouchableOpacity>
         </View>
+      </View>
+    </Modal>
+  );
+};
+
+const TimerSoftOverlay = ({ visible, onDismiss, isDarkMode }) => {
+  return (
+    <Modal visible={visible} transparent={true} animationType="fade">
+      <View style={styles.modalOverlay}>
+        <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
+          <Ionicons name="timer-outline" size={48} color="#FF9800" style={{ marginBottom: 12 }} />
+          <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
+          <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
+            You've used your daily browsing time. Great job being mindful!
+          </Text>
+          <TouchableOpacity
+            style={[styles.confirmButton, styles.exitButton, { width: '100%', marginTop: 16 }]}
+            onPress={onDismiss}
+          >
+            <Text style={styles.exitButtonText}>Continue Anyway</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const getMsUntilMidnight = () => {
+  const now = new Date();
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return midnight - now;
+};
+
+const TimerStrictWall = ({ visible, isDarkMode }) => {
+  const [msUntilMidnight, setMsUntilMidnight] = useState(getMsUntilMidnight());
+
+  useEffect(() => {
+    if (!visible) return;
+    const interval = setInterval(() => {
+      setMsUntilMidnight(getMsUntilMidnight());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  const hours = Math.floor(msUntilMidnight / 3600000);
+  const minutes = Math.floor((msUntilMidnight % 3600000) / 60000);
+  const seconds = Math.floor((msUntilMidnight % 60000) / 1000);
+  const countdown = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  return (
+    <Modal visible={visible} transparent={false} animationType="fade" onRequestClose={() => {}}>
+      <View style={[styles.timerWall, { backgroundColor: isDarkMode ? '#0A0A0A' : '#fff' }]}>
+        <Ionicons name="lock-closed" size={64} color="#F44336" />
+        <Text style={[styles.timerWallTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
+        <Text style={[styles.timerWallSubtext, { color: isDarkMode ? '#999' : '#666' }]}>
+          You've set a strict limit. Browser access will resume at midnight.
+        </Text>
+        <Text style={[styles.timerWallCountdown, { color: '#F44336' }]}>{countdown}</Text>
+        <Text style={[styles.timerWallUntil, { color: isDarkMode ? '#666' : '#999' }]}>until midnight</Text>
       </View>
     </Modal>
   );
@@ -781,6 +875,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+  },
+  timerWall: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  timerWallTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  timerWallSubtext: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 40,
+  },
+  timerWallCountdown: {
+    fontSize: 52,
+    fontWeight: 'bold',
+    fontVariant: ['tabular-nums'],
+    letterSpacing: 2,
+  },
+  timerWallUntil: {
+    fontSize: 13,
+    marginTop: 8,
   },
 });
 

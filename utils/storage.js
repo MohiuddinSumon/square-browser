@@ -233,3 +233,70 @@ export const loadActiveTabIndex = async () => {
     return 0;
   }
 };
+
+const TIMER_SETTINGS_KEY = '@squarebrowser_timer_settings';
+const TIMER_DAILY_PREFIX = '@squarebrowser_timer_daily_';
+
+/**
+ * Save timer settings
+ * @param {Object} settings - { enabled, dailyLimitMs, strictMode }
+ */
+export const saveTimerSettings = async (settings) => {
+  try {
+    await AsyncStorage.setItem(TIMER_SETTINGS_KEY, JSON.stringify(settings));
+    return true;
+  } catch (error) {
+    console.error('Error saving timer settings:', error);
+    return false;
+  }
+};
+
+/**
+ * Load timer settings
+ * @returns {Object} { enabled, dailyLimitMs, strictMode }
+ */
+export const loadTimerSettings = async () => {
+  try {
+    const json = await AsyncStorage.getItem(TIMER_SETTINGS_KEY);
+    if (json) {
+      return JSON.parse(json);
+    }
+    return { enabled: false, dailyLimitMs: 3600000, strictMode: false };
+  } catch (error) {
+    console.error('Error loading timer settings:', error);
+    return { enabled: false, dailyLimitMs: 3600000, strictMode: false };
+  }
+};
+
+/**
+ * Save daily timer record
+ * @param {string} date - YYYY-MM-DD
+ * @param {Object} record - { totalMs, reminderDismissed }
+ */
+export const saveTimerDaily = async (date, record) => {
+  try {
+    await AsyncStorage.setItem(TIMER_DAILY_PREFIX + date, JSON.stringify({ ...record, date }));
+    return true;
+  } catch (error) {
+    console.error('Error saving timer daily:', error);
+    return false;
+  }
+};
+
+/**
+ * Load daily timer record
+ * @param {string} date - YYYY-MM-DD
+ * @returns {Object} { totalMs, reminderDismissed, date }
+ */
+export const loadTimerDaily = async (date) => {
+  try {
+    const json = await AsyncStorage.getItem(TIMER_DAILY_PREFIX + date);
+    if (json) {
+      return JSON.parse(json);
+    }
+    return { totalMs: 0, reminderDismissed: false, date };
+  } catch (error) {
+    console.error('Error loading timer daily:', error);
+    return { totalMs: 0, reminderDismissed: false, date };
+  }
+};

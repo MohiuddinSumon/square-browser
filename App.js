@@ -25,7 +25,9 @@ const Stack = createStackNavigator();
 // Custom Bottom Navigation Bar Component
 const CustomBottomNav = () => {
   const navigation = useNavigation();
-  const { tabs, setShowTabSwitcher, navigateTo, isDarkMode } = useBrowser();
+  const { tabs, setShowTabSwitcher, navigateTo, isDarkMode,
+          timerEnabled, limitReached, strictMode } = useBrowser();
+  const timerWallActive = timerEnabled && limitReached && strictMode;
 
   const handleHome = () => {
     navigateTo('about:blank');
@@ -52,15 +54,17 @@ const CustomBottomNav = () => {
   return (
     <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
       <TouchableOpacity
-        style={styles.navButton}
-        onPress={handleHome}
+        style={[styles.navButton, timerWallActive && styles.navButtonDisabled]}
+        onPress={timerWallActive ? undefined : handleHome}
+        disabled={timerWallActive}
       >
         <Ionicons name="home-outline" size={22} color={colors.icon} />
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.navButton}
-        onPress={handleTabs}
+        style={[styles.navButton, timerWallActive && styles.navButtonDisabled]}
+        onPress={timerWallActive ? undefined : handleTabs}
+        disabled={timerWallActive}
       >
         <View style={styles.tabsIconContainer}>
           <Ionicons name="copy-outline" size={22} color={colors.icon} />
@@ -71,8 +75,9 @@ const CustomBottomNav = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.navButton}
-        onPress={handleSettings}
+        style={[styles.navButton, timerWallActive && styles.navButtonDisabled]}
+        onPress={timerWallActive ? undefined : handleSettings}
+        disabled={timerWallActive}
       >
         <Ionicons name="settings-outline" size={22} color={colors.icon} />
       </TouchableOpacity>

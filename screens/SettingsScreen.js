@@ -18,9 +18,19 @@ const SettingsScreen = ({ navigation }) => {
     setUrlBarPositionPref,
     autoHideNavBar,
     setAutoHideNavBarPref,
+    timerEnabled,
+    dailyLimitMs,
+    strictMode,
+    setTimerSettingsPref,
   } = useBrowser();
 
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
+  const [localLimitMinutes, setLocalLimitMinutes] = useState(Math.round(dailyLimitMs / 60000));
+
+  // Keep local picker in sync when context loads from AsyncStorage
+  useEffect(() => {
+    setLocalLimitMinutes(Math.round(dailyLimitMs / 60000));
+  }, [dailyLimitMs]);
 
   // Colors based on theme
   const colors = {
@@ -30,7 +40,8 @@ const SettingsScreen = ({ navigation }) => {
     subtext: isDarkMode ? '#999' : '#666',
     border: isDarkMode ? '#333' : '#eee',
     accent: '#2196F3',
-    success: '#4CAF50', // Added for the Status info row
+    success: '#4CAF50',
+    warning: '#FF9800',
   };
 
   const handleExportHistory = useCallback(() => {
@@ -146,6 +157,98 @@ const SettingsScreen = ({ navigation }) => {
             thumbColor={autoHideNavBar ? colors.accent : "#f4f3f4"}
           />
         </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Daily Timer</Text>
+
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="timer-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Daily Browsing Limit</Text>
+          </View>
+          <Switch
+            value={timerEnabled}
+            onValueChange={(val) => setTimerSettingsPref({ enabled: val, limitMs: localLimitMinutes * 60000, strict: strictMode })}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={timerEnabled ? colors.accent : "#f4f3f4"}
+          />
+        </View>
+
+        {timerEnabled && (
+          <>
+            <View style={[styles.menuItem, { borderBottomColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', paddingBottom: 12 }]}>
+              <View style={[styles.menuItemLeft, { marginBottom: 10 }]}>
+                <Ionicons name="hourglass-outline" size={24} color={colors.subtext} />
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Time Limit</Text>
+              </View>
+              <View style={styles.timerPresets}>
+                {[30, 60, 120, 180, 360].map(mins => (
+                  <TouchableOpacity
+                    key={mins}
+                    style={[styles.positionButton, localLimitMinutes === mins && styles.positionButtonActive, { borderColor: localLimitMinutes === mins ? colors.accent : colors.border }]}
+                    onPress={() => {
+                      setLocalLimitMinutes(mins);
+                      setTimerSettingsPref({ enabled: true, limitMs: mins * 60000, strict: strictMode });
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.positionButtonText, { color: localLimitMinutes === mins ? colors.accent : colors.subtext }]}>
+                      {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.timerAdjust}>
+                <TouchableOpacity
+                  style={[styles.positionButton, { borderColor: colors.border }]}
+                  onPress={() => {
+                    const newMins = Math.max(5, localLimitMinutes - 15);
+                    setLocalLimitMinutes(newMins);
+                    setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.positionButtonText, { color: colors.subtext }]}>−15m</Text>
+                </TouchableOpacity>
+                <Text style={[styles.timerCurrentValue, { color: colors.text }]}>
+                  {localLimitMinutes < 60
+                    ? `${localLimitMinutes}m`
+                    : localLimitMinutes % 60 === 0
+                      ? `${localLimitMinutes / 60}h`
+                      : `${Math.floor(localLimitMinutes / 60)}h ${localLimitMinutes % 60}m`}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.positionButton, { borderColor: colors.border }]}
+                  onPress={() => {
+                    const newMins = Math.min(1435, localLimitMinutes + 15);
+                    setLocalLimitMinutes(newMins);
+                    setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.positionButtonText, { color: colors.subtext }]}>+15m</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={[styles.menuItem, { borderBottomColor: colors.border, flexDirection: 'column', alignItems: 'flex-start' }]}>
+              <View style={[styles.menuItemRow, { width: '100%' }]}>
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="lock-closed-outline" size={24} color={colors.subtext} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>Strict Mode</Text>
+                </View>
+                <Switch
+                  value={strictMode}
+                  onValueChange={(val) => setTimerSettingsPref({ enabled: true, limitMs: localLimitMinutes * 60000, strict: val })}
+                  trackColor={{ false: "#767577", true: "#81b0ff" }}
+                  thumbColor={strictMode ? colors.accent : "#f4f3f4"}
+                />
+              </View>
+              <Text style={[styles.menuItemSubtext, { color: colors.warning }]}>
+                Browser locks until midnight — cannot be bypassed.
+              </Text>
+            </View>
+          </>
+        )}
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>Quick Access</Text>
         
@@ -338,6 +441,35 @@ const styles = StyleSheet.create({
   positionButtonText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  menuItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  menuItemSubtext: {
+    fontSize: 12,
+    marginTop: 4,
+    paddingLeft: 36,
+  },
+  timerPresets: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingLeft: 36,
+    marginBottom: 10,
+  },
+  timerAdjust: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 36,
+    gap: 12,
+  },
+  timerCurrentValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
   },
 });
 

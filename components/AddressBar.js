@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import TimerChip from './TimerChip';
 
 const AddressBar = () => {
-  const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode } = useBrowser();
+  const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode,
+          timerEnabled, dailyLimitMs, todayElapsedMs, limitReached } = useBrowser();
+
+  const remainingMs = Math.max(0, dailyLimitMs - todayElapsedMs);
+  const showChip = timerEnabled && !limitReached;
   
   const colors = {
     bg: isDarkMode ? '#1e1e1e' : '#fff',
@@ -109,12 +114,13 @@ const AddressBar = () => {
                 color={isBookmarked ? '#FFD700' : (isDarkMode ? '#999' : '#666')} 
               />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.goButton}
               onPress={handleGo}
             >
               <Ionicons name="arrow-forward" size={20} color={colors.accent} />
             </TouchableOpacity>
+            {showChip && <TimerChip remainingMs={remainingMs} />}
           </>
         )}
       </View>

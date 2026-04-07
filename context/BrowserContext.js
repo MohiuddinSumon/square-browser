@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex } from '../utils/storage';
+import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex, saveTimerSettings, loadTimerSettings, saveTimerDaily, loadTimerDaily } from '../utils/storage';
 
 const BrowserContext = createContext();
 
@@ -42,6 +42,26 @@ export const BrowserProvider = ({ children }) => {
   const [exitConfirmationEnabled, setExitConfirmationEnabled] = useState(true);
   const [urlBarPosition, setUrlBarPosition] = useState('top');
   const [autoHideNavBar, setAutoHideNavBar] = useState(false);
+
+  // Daily browsing timer state
+  const [timerEnabled, setTimerEnabled] = useState(false);
+  const [dailyLimitMs, setDailyLimitMs] = useState(3600000);
+  const [strictMode, setStrictMode] = useState(false);
+  const [todayElapsedMs, setTodayElapsedMs] = useState(0);
+  const [limitReached, setLimitReached] = useState(false);
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+
+  // Mutable ref for timer — avoids stale closures in intervals/AppState handler
+  const timerStateRef = React.useRef({
+    enabled: false,
+    limitMs: 3600000,
+    elapsedMs: 0,
+    sessionStartMs: Date.now(),
+    isForeground: true,
+    today: '',
+    reminderDismissed: false,
+    limitReached: false,
+  });
 
   const activityTracker = React.useRef({
     startTime: Date.now(),
@@ -106,6 +126,29 @@ export const BrowserProvider = ({ children }) => {
         setAutoHideNavBar(savedAutoHideNavBar === 'true');
       }
 
+      // Load timer settings and today's elapsed time
+      const timerSettings = await loadTimerSettings();
+      setTimerEnabled(timerSettings.enabled);
+      setDailyLimitMs(timerSettings.dailyLimitMs);
+      setStrictMode(timerSettings.strictMode);
+
+      const timerDaily = await loadTimerDaily(today);
+      setTodayElapsedMs(timerDaily.totalMs);
+      setReminderDismissed(timerDaily.reminderDismissed);
+
+      // Sync timer ref
+      timerStateRef.current.enabled = timerSettings.enabled;
+      timerStateRef.current.limitMs = timerSettings.dailyLimitMs;
+      timerStateRef.current.elapsedMs = timerDaily.totalMs;
+      timerStateRef.current.today = today;
+      timerStateRef.current.reminderDismissed = timerDaily.reminderDismissed;
+      timerStateRef.current.sessionStartMs = Date.now();
+
+      if (timerSettings.enabled && timerDaily.totalMs >= timerSettings.dailyLimitMs) {
+        setLimitReached(true);
+        timerStateRef.current.limitReached = true;
+      }
+
       // Load tab state
       const loadedTabs = await loadTabs();
       const loadedActiveTabIndex = await loadActiveTabIndex();
@@ -137,6 +180,100 @@ export const BrowserProvider = ({ children }) => {
     setAutoHideNavBar(enabled);
     await AsyncStorage.setItem('@squarebrowser_autohide_navbar', enabled ? 'true' : 'false');
   };
+
+  /**
+   * Timer Settings — save and update state + ref
+   */
+  const setTimerSettingsPref = async ({ enabled, limitMs, strict }) => {
+    setTimerEnabled(enabled);
+    setDailyLimitMs(limitMs);
+    setStrictMode(strict);
+    timerStateRef.current.enabled = enabled;
+    timerStateRef.current.limitMs = limitMs;
+    if (!enabled) {
+      setLimitReached(false);
+      setReminderDismissed(false);
+      timerStateRef.current.limitReached = false;
+      timerStateRef.current.reminderDismissed = false;
+    }
+    await saveTimerSettings({ enabled, dailyLimitMs: limitMs, strictMode: strict });
+  };
+
+  /**
+   * Dismiss the soft reminder overlay for the rest of the day
+   */
+  const dismissReminder = useCallback(async () => {
+    setReminderDismissed(true);
+    timerStateRef.current.reminderDismissed = true;
+    const today = new Date().toISOString().split('T')[0];
+    await saveTimerDaily(today, {
+      totalMs: timerStateRef.current.elapsedMs,
+      reminderDismissed: true,
+    });
+  }, []);
+
+  /**
+   * Called by BrowserScreen focus/blur events to pause/resume the timer
+   * when the user navigates to non-browser screens.
+   */
+  const setTimerScreenActive = useCallback(async (active) => {
+    if (active) {
+      timerStateRef.current.sessionStartMs = Date.now();
+      timerStateRef.current.isForeground = true;
+    } else {
+      if (!timerStateRef.current.isForeground) return;
+      const liveElapsed = timerStateRef.current.elapsedMs + (Date.now() - timerStateRef.current.sessionStartMs);
+      timerStateRef.current.elapsedMs = liveElapsed;
+      timerStateRef.current.isForeground = false;
+      setTodayElapsedMs(liveElapsed);
+      const today = new Date().toISOString().split('T')[0];
+      await saveTimerDaily(today, {
+        totalMs: liveElapsed,
+        reminderDismissed: timerStateRef.current.reminderDismissed,
+      });
+    }
+  }, []);
+
+  /**
+   * Timer tick — 1-second interval that accumulates browsing time
+   * and triggers limit enforcement when the daily budget is exhausted.
+   */
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const ref = timerStateRef.current;
+      if (!ref.enabled || !ref.isForeground) return;
+
+      // Midnight rollover check
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (ref.today && ref.today !== todayStr) {
+        // New day — reset everything
+        timerStateRef.current.elapsedMs = 0;
+        timerStateRef.current.today = todayStr;
+        timerStateRef.current.sessionStartMs = Date.now();
+        timerStateRef.current.limitReached = false;
+        timerStateRef.current.reminderDismissed = false;
+        setTodayElapsedMs(0);
+        setLimitReached(false);
+        setReminderDismissed(false);
+        await saveTimerDaily(todayStr, { totalMs: 0, reminderDismissed: false });
+        return;
+      }
+
+      const liveElapsed = ref.elapsedMs + (Date.now() - ref.sessionStartMs);
+      setTodayElapsedMs(liveElapsed);
+
+      if (liveElapsed >= ref.limitMs && !ref.limitReached) {
+        timerStateRef.current.limitReached = true;
+        setLimitReached(true);
+        await saveTimerDaily(todayStr || ref.today, {
+          totalMs: liveElapsed,
+          reminderDismissed: ref.reminderDismissed,
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   /**
    * Tracking Logic - Records browsing activity for usage statistics
@@ -179,7 +316,7 @@ export const BrowserProvider = ({ children }) => {
   }, [currentUrl, recordCurrentActivity]);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
+    const subscription = AppState.addEventListener('change', async nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         recordCurrentActivity();
         // Save tabs when app goes to background
@@ -187,8 +324,36 @@ export const BrowserProvider = ({ children }) => {
           saveTabs(tabs);
           saveActiveTabIndex(activeTabIndex);
         }
+        // Flush timer progress to AsyncStorage
+        const ref = timerStateRef.current;
+        if (ref.enabled && ref.isForeground) {
+          const liveElapsed = ref.elapsedMs + (Date.now() - ref.sessionStartMs);
+          timerStateRef.current.elapsedMs = liveElapsed;
+          timerStateRef.current.isForeground = false;
+          const todayStr = new Date().toISOString().split('T')[0];
+          await saveTimerDaily(todayStr, {
+            totalMs: liveElapsed,
+            reminderDismissed: ref.reminderDismissed,
+          });
+        }
       } else if (nextAppState === 'active') {
         activityTracker.current.startTime = Date.now();
+        // Resume timer session — check for midnight rollover first
+        const ref = timerStateRef.current;
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (ref.today && ref.today !== todayStr) {
+          // Crossed midnight while backgrounded — reset
+          timerStateRef.current.elapsedMs = 0;
+          timerStateRef.current.today = todayStr;
+          timerStateRef.current.limitReached = false;
+          timerStateRef.current.reminderDismissed = false;
+          setTodayElapsedMs(0);
+          setLimitReached(false);
+          setReminderDismissed(false);
+          await saveTimerDaily(todayStr, { totalMs: 0, reminderDismissed: false });
+        }
+        timerStateRef.current.sessionStartMs = Date.now();
+        timerStateRef.current.isForeground = true;
       }
     });
 
@@ -466,12 +631,23 @@ export const BrowserProvider = ({ children }) => {
     userAgent,
     navigateTo,
     navigateToNewTab,
+    timerEnabled,
+    dailyLimitMs,
+    strictMode,
+    todayElapsedMs,
+    limitReached,
+    reminderDismissed,
+    setTimerSettingsPref,
+    dismissReminder,
+    setTimerScreenActive,
   }), [
     history, bookmarks, tabs, activeTabIndex, activeTab, addTab, closeTab,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
-    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar
+    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar,
+    timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
+    reminderDismissed, dismissReminder, setTimerScreenActive,
   ]);
 
   return (
