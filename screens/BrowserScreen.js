@@ -608,7 +608,7 @@ const TimerSoftOverlay = ({ visible, onExtend, isDarkMode }) => {
             You've used your daily browsing time. You can extend by 10 minutes at a time.
           </Text>
           <TouchableOpacity
-            style={[styles.confirmButton, styles.exitButton, { width: '100%', marginTop: 16, backgroundColor: '#FF9800' }]}
+            style={[styles.confirmButton, styles.exitButton, { width: '100%', marginTop: 16, backgroundColor: '#FF9800', flex: 0 }]}
             onPress={onExtend}
           >
             <Text style={styles.exitButtonText}>Give me 10 more minutes</Text>
