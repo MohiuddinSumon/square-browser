@@ -481,7 +481,7 @@ const BrowserScreen = ({ navigation }) => {
 const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setDontAskAgain }) => {
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { justifyContent: 'center' }]}>
         <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
           <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Exit SquareBrowser?</Text>
           <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
@@ -600,7 +600,7 @@ const TabSwitcher = ({ visible, onClose }) => {
 const TimerSoftOverlay = ({ visible, onExtend, isDarkMode }) => {
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
-      <View style={styles.modalOverlay}>
+      <View style={[styles.modalOverlay, { justifyContent: 'center' }]}>
         <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
           <Ionicons name="timer-outline" size={48} color="#FF9800" style={{ marginBottom: 12 }} />
           <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
