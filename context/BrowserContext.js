@@ -201,9 +201,12 @@ export const BrowserProvider = ({ children }) => {
 
   /**
    * Grant 10 extra minutes when user taps "Continue Anyway".
-   * Resets limitReached so the tick re-arms for the next extension window.
+   * Limited to 3 extensions (30 min total) per day.
    */
+  const MAX_EXTENSIONS = 3;
   const extendTimer = useCallback(() => {
+    const currentExtensions = Math.round((timerStateRef.current.extensionMs || 0) / 600000);
+    if (currentExtensions >= MAX_EXTENSIONS) return;
     timerStateRef.current.extensionMs = (timerStateRef.current.extensionMs || 0) + 600000;
     timerStateRef.current.limitReached = false;
     setExtensionMs(prev => prev + 600000);
@@ -626,6 +629,7 @@ export const BrowserProvider = ({ children }) => {
     strictMode,
     todayElapsedMs,
     limitReached,
+    extensionMs,
     setTimerSettingsPref,
     extendTimer,
     setTimerScreenActive,
@@ -636,7 +640,7 @@ export const BrowserProvider = ({ children }) => {
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
-    extendTimer, setTimerScreenActive,
+    extensionMs, extendTimer, setTimerScreenActive,
   ]);
 
   return (

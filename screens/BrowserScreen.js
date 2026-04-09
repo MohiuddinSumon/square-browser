@@ -170,6 +170,7 @@ const BrowserScreen = ({ navigation }) => {
     timerEnabled,
     limitReached,
     strictMode,
+    extensionMs,
     extendTimer,
     setTimerScreenActive,
   } = useBrowser();
@@ -467,6 +468,7 @@ const BrowserScreen = ({ navigation }) => {
       <TimerSoftOverlay
         visible={showSoftOverlay}
         onExtend={extendTimer}
+        extensionMs={extensionMs}
         isDarkMode={isDarkMode}
       />
 
@@ -597,7 +599,12 @@ const TabSwitcher = ({ visible, onClose }) => {
   );
 };
 
-const TimerSoftOverlay = ({ visible, onExtend, isDarkMode }) => {
+const MAX_EXTENSIONS = 3;
+const TimerSoftOverlay = ({ visible, onExtend, extensionMs, isDarkMode }) => {
+  const usedExtensions = Math.round((extensionMs || 0) / 600000);
+  const remaining = MAX_EXTENSIONS - usedExtensions;
+  const canExtend = remaining > 0;
+
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={[styles.modalOverlay, { justifyContent: 'center' }]}>
@@ -605,22 +612,26 @@ const TimerSoftOverlay = ({ visible, onExtend, isDarkMode }) => {
           <Ionicons name="timer-outline" size={48} color="#FF9800" style={{ marginBottom: 12 }} />
           <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
           <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
-            You've used your daily browsing time. You can extend by 10 minutes at a time.
+            {canExtend
+              ? `You've used your daily browsing time. You can extend by 10 minutes — ${remaining} extension${remaining === 1 ? '' : 's'} remaining today.`
+              : "You've used all your extensions for today. Browser access resumes at midnight."}
           </Text>
-          <TouchableOpacity
-            style={{
-              width: '100%',
-              height: 48,
-              borderRadius: 12,
-              backgroundColor: '#FF9800',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginTop: 16,
-            }}
-            onPress={onExtend}
-          >
-            <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Give me 10 more minutes</Text>
-          </TouchableOpacity>
+          {canExtend && (
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                height: 48,
+                borderRadius: 12,
+                backgroundColor: '#FF9800',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: 16,
+              }}
+              onPress={onExtend}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Give me 10 more minutes</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>

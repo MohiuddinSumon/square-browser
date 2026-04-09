@@ -6,9 +6,9 @@ import TimerChip from './TimerChip';
 
 const AddressBar = () => {
   const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode,
-          timerEnabled, dailyLimitMs, todayElapsedMs, limitReached } = useBrowser();
+          timerEnabled, dailyLimitMs, todayElapsedMs, limitReached, extensionMs } = useBrowser();
 
-  const remainingMs = Math.max(0, dailyLimitMs - todayElapsedMs);
+  const remainingMs = Math.max(0, dailyLimitMs + (extensionMs || 0) - todayElapsedMs);
   const showChip = timerEnabled && !limitReached;
   
   const colors = {
