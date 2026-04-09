@@ -1,6 +1,6 @@
 # Product Hunt Launch Guide
 
-This guide will help you prepare and launch OpenBrowser on Product Hunt.
+This guide will help you prepare and launch Square Browser on Product Hunt.
 
 ## What is Product Hunt?
 
@@ -11,17 +11,17 @@ Product Hunt is a platform where makers share and discover new products. A succe
 ### 1. Prepare Your Listing
 
 #### Product Name
-**Option 1**: "OpenBrowser"  
-**Option 2**: "OpenBrowser - Accountability Browser"
+**Option 1**: "Square Browser"  
+**Option 2**: "Square Browser - Accountability Browser"
 
 #### Tagline (60 characters max)
 ```
-Privacy-focused browser with permanent history for mindful browsing
+Privacy-first browser with permanent history for mindful browsing
 ```
 
 #### Description
 ```
-OpenBrowser is a privacy-first mobile browser that promotes mindful internet usage through permanent, local-only history tracking.
+Square Browser is a privacy-first mobile browser that promotes mindful internet usage through permanent, local-only history tracking.
 
 🔒 PRIVACY FIRST
 • All data stored locally on your device
@@ -63,19 +63,19 @@ Select from:
 #### Website URL
 Link to your GitHub repository:
 ```
-https://github.com/MohiuddinSumon/open-browser
+https://github.com/MohiuddinSumon/square-browser
 ```
 
 #### Maker Comment
-Write a personal story about why you built OpenBrowser:
+Write a personal story about why you built Square Browser:
 
 ```
-I built OpenBrowser because I was frustrated with browsers that track everything I do. I wanted a browser that:
+I built Square Browser because I was frustrated with browsers that track everything I do. I wanted a browser that:
 - Respects my privacy (no data collection)
 - Helps me be more mindful of my browsing habits
 - Gives me full control over my data
 
-OpenBrowser stores everything locally on your device - no external servers, no tracking, no analytics. The permanent history feature encourages accountability and mindful browsing.
+Square Browser stores everything locally on your device - no external servers, no tracking, no analytics. The permanent history feature encourages accountability and mindful browsing.
 
 It's completely open source, so you can verify our privacy claims. I hope it helps others take control of their digital lives too!
 ```

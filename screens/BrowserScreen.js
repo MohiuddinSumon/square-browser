@@ -170,12 +170,11 @@ const BrowserScreen = ({ navigation }) => {
     timerEnabled,
     limitReached,
     strictMode,
-    reminderDismissed,
-    dismissReminder,
+    extendTimer,
     setTimerScreenActive,
   } = useBrowser();
 
-  const showSoftOverlay = timerEnabled && limitReached && !strictMode && !reminderDismissed;
+  const showSoftOverlay = timerEnabled && limitReached && !strictMode;
   const showStrictWall = timerEnabled && limitReached && strictMode;
 
   const [exitModalVisible, setExitModalVisible] = useState(false);
@@ -467,7 +466,7 @@ const BrowserScreen = ({ navigation }) => {
 
       <TimerSoftOverlay
         visible={showSoftOverlay}
-        onDismiss={dismissReminder}
+        onExtend={extendTimer}
         isDarkMode={isDarkMode}
       />
 
@@ -598,7 +597,7 @@ const TabSwitcher = ({ visible, onClose }) => {
   );
 };
 
-const TimerSoftOverlay = ({ visible, onDismiss, isDarkMode }) => {
+const TimerSoftOverlay = ({ visible, onExtend, isDarkMode }) => {
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={styles.modalOverlay}>
@@ -606,13 +605,13 @@ const TimerSoftOverlay = ({ visible, onDismiss, isDarkMode }) => {
           <Ionicons name="timer-outline" size={48} color="#FF9800" style={{ marginBottom: 12 }} />
           <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
           <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
-            You've used your daily browsing time. Great job being mindful!
+            You've used your daily browsing time. You can extend by 10 minutes at a time.
           </Text>
           <TouchableOpacity
-            style={[styles.confirmButton, styles.exitButton, { width: '100%', marginTop: 16 }]}
-            onPress={onDismiss}
+            style={[styles.confirmButton, styles.exitButton, { width: '100%', marginTop: 16, backgroundColor: '#FF9800' }]}
+            onPress={onExtend}
           >
-            <Text style={styles.exitButtonText}>Continue Anyway</Text>
+            <Text style={styles.exitButtonText}>Give me 10 more minutes</Text>
           </TouchableOpacity>
         </View>
       </View>

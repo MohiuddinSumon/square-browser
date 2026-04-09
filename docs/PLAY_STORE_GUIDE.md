@@ -1,6 +1,6 @@
 # Google Play Store Publishing Guide
 
-This guide will help you prepare OpenBrowser for publication on the Google Play Store.
+This guide will help you prepare SquareBrowser for publication on the Google Play Store.
 
 ## Prerequisites
 
@@ -39,8 +39,8 @@ Create `android/keystore.properties` (this file is gitignored):
 ```properties
 storePassword=your-store-password-here
 keyPassword=your-key-password-here
-keyAlias=openbrowser-key
-storeFile=../openbrowser-release.keystore
+keyAlias=squarebrowser-key
+storeFile=../squarebrowser-release.keystore
 ```
 
 **Note**: The `storeFile` path is relative to the `android/` directory.
@@ -83,9 +83,9 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 5. **Full Description**: 4000 characters max
    ```
-   OpenBrowser - Privacy-First Mobile Browser
+   SquareBrowser - Privacy-First Mobile Browser
 
-   OpenBrowser is a privacy-focused mobile browser designed to promote mindful internet usage through permanent, local-only history tracking.
+   SquareBrowser is a privacy-focused mobile browser designed to promote mindful internet usage through permanent, local-only history tracking.
 
    KEY FEATURES:
 
@@ -114,9 +114,9 @@ android/app/build/outputs/bundle/release/app-release.aab
    • Built-in ad blocking
    • Usage statistics
 
-   WHY OPENBROWSER?
+   WHY SQUAREBROWSER?
 
-   In an age of constant tracking and data collection, OpenBrowser puts you in control. All your browsing data stays on your device - we don't collect, transmit, or store anything on external servers.
+   In an age of constant tracking and data collection, SquareBrowser puts you in control. All your browsing data stays on your device - we don't collect, transmit, or store anything on external servers.
 
    Perfect for:
    • Privacy-conscious users
@@ -124,19 +124,19 @@ android/app/build/outputs/bundle/release/app-release.aab
    • Anyone who wants full control over their data
    • Users who value transparency (open source)
 
-   OpenBrowser is completely open source. You can review the code, verify our privacy claims, and even contribute to the project.
+   SquareBrowser is completely open source. You can review the code, verify our privacy claims, and even contribute to the project.
 
-   Download OpenBrowser today and take control of your browsing experience.
+   Download SquareBrowser today and take control of your browsing experience.
    ```
 
 ### App Information
 
-- **App Name**: OpenBrowser
+- **App Name**: SquareBrowser
 - **Category**: Tools or Productivity
 - **Content Rating**: Complete the questionnaire in Play Console
 - **Privacy Policy URL**: 
   - Host your Privacy Policy online (GitHub Pages, website, etc.)
-  - Or use: `https://github.com/MohiuddinSumon/open-browser/blob/main/screens/PrivacyPolicyScreen.js`
+  - Or use: `https://github.com/MohiuddinSumon/square-browser/blob/main/screens/PrivacyPolicyScreen.js`
 - **Terms of Service URL**: Same as Privacy Policy
 - **Support Email**: Your support email address
 - **Website**: Optional (GitHub repo URL works)
@@ -147,7 +147,7 @@ In Play Console, complete the Data Safety section:
 
 1. **Data Collection**: 
    - Select "No, we don't collect any user data"
-   - This is accurate for OpenBrowser
+   - This is accurate for SquareBrowser
 
 2. **Data Sharing**:
    - Select "No, we don't share user data"

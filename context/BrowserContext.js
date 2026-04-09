@@ -49,7 +49,8 @@ export const BrowserProvider = ({ children }) => {
   const [strictMode, setStrictMode] = useState(false);
   const [todayElapsedMs, setTodayElapsedMs] = useState(0);
   const [limitReached, setLimitReached] = useState(false);
-  const [reminderDismissed, setReminderDismissed] = useState(false);
+  // extensionMs tracks extra time granted via "Continue Anyway" taps (10 min each)
+  const [extensionMs, setExtensionMs] = useState(0);
 
   // Mutable ref for timer — avoids stale closures in intervals/AppState handler
   const timerStateRef = React.useRef({
@@ -59,7 +60,7 @@ export const BrowserProvider = ({ children }) => {
     sessionStartMs: Date.now(),
     isForeground: true,
     today: '',
-    reminderDismissed: false,
+    extensionMs: 0,
     limitReached: false,
   });
 
@@ -134,14 +135,13 @@ export const BrowserProvider = ({ children }) => {
 
       const timerDaily = await loadTimerDaily(today);
       setTodayElapsedMs(timerDaily.totalMs);
-      setReminderDismissed(timerDaily.reminderDismissed);
 
       // Sync timer ref
       timerStateRef.current.enabled = timerSettings.enabled;
       timerStateRef.current.limitMs = timerSettings.dailyLimitMs;
       timerStateRef.current.elapsedMs = timerDaily.totalMs;
       timerStateRef.current.today = today;
-      timerStateRef.current.reminderDismissed = timerDaily.reminderDismissed;
+      timerStateRef.current.extensionMs = 0;
       timerStateRef.current.sessionStartMs = Date.now();
 
       if (timerSettings.enabled && timerDaily.totalMs >= timerSettings.dailyLimitMs) {
@@ -192,24 +192,22 @@ export const BrowserProvider = ({ children }) => {
     timerStateRef.current.limitMs = limitMs;
     if (!enabled) {
       setLimitReached(false);
-      setReminderDismissed(false);
+      setExtensionMs(0);
       timerStateRef.current.limitReached = false;
-      timerStateRef.current.reminderDismissed = false;
+      timerStateRef.current.extensionMs = 0;
     }
     await saveTimerSettings({ enabled, dailyLimitMs: limitMs, strictMode: strict });
   };
 
   /**
-   * Dismiss the soft reminder overlay for the rest of the day
+   * Grant 10 extra minutes when user taps "Continue Anyway".
+   * Resets limitReached so the tick re-arms for the next extension window.
    */
-  const dismissReminder = useCallback(async () => {
-    setReminderDismissed(true);
-    timerStateRef.current.reminderDismissed = true;
-    const today = new Date().toISOString().split('T')[0];
-    await saveTimerDaily(today, {
-      totalMs: timerStateRef.current.elapsedMs,
-      reminderDismissed: true,
-    });
+  const extendTimer = useCallback(() => {
+    timerStateRef.current.extensionMs = (timerStateRef.current.extensionMs || 0) + 600000;
+    timerStateRef.current.limitReached = false;
+    setExtensionMs(prev => prev + 600000);
+    setLimitReached(false);
   }, []);
 
   /**
@@ -217,20 +215,18 @@ export const BrowserProvider = ({ children }) => {
    * when the user navigates to non-browser screens.
    */
   const setTimerScreenActive = useCallback(async (active) => {
+    const ref = timerStateRef.current;
     if (active) {
-      timerStateRef.current.sessionStartMs = Date.now();
-      timerStateRef.current.isForeground = true;
+      ref.sessionStartMs = Date.now();
+      ref.isForeground = true;
     } else {
-      if (!timerStateRef.current.isForeground) return;
-      const liveElapsed = timerStateRef.current.elapsedMs + (Date.now() - timerStateRef.current.sessionStartMs);
-      timerStateRef.current.elapsedMs = liveElapsed;
-      timerStateRef.current.isForeground = false;
+      if (!ref.isForeground || !ref.enabled) return;
+      const liveElapsed = ref.elapsedMs + (Date.now() - ref.sessionStartMs);
+      ref.elapsedMs = liveElapsed;
+      ref.isForeground = false;
       setTodayElapsedMs(liveElapsed);
       const today = new Date().toISOString().split('T')[0];
-      await saveTimerDaily(today, {
-        totalMs: liveElapsed,
-        reminderDismissed: timerStateRef.current.reminderDismissed,
-      });
+      await saveTimerDaily(today, { totalMs: liveElapsed });
     }
   }, []);
 
@@ -251,24 +247,21 @@ export const BrowserProvider = ({ children }) => {
         timerStateRef.current.today = todayStr;
         timerStateRef.current.sessionStartMs = Date.now();
         timerStateRef.current.limitReached = false;
-        timerStateRef.current.reminderDismissed = false;
+        timerStateRef.current.extensionMs = 0;
         setTodayElapsedMs(0);
         setLimitReached(false);
-        setReminderDismissed(false);
-        await saveTimerDaily(todayStr, { totalMs: 0, reminderDismissed: false });
+        setExtensionMs(0);
+        await saveTimerDaily(todayStr, { totalMs: 0 });
         return;
       }
 
       const liveElapsed = ref.elapsedMs + (Date.now() - ref.sessionStartMs);
       setTodayElapsedMs(liveElapsed);
 
-      if (liveElapsed >= ref.limitMs && !ref.limitReached) {
+      if (liveElapsed >= ref.limitMs + ref.extensionMs && !ref.limitReached) {
         timerStateRef.current.limitReached = true;
         setLimitReached(true);
-        await saveTimerDaily(todayStr || ref.today, {
-          totalMs: liveElapsed,
-          reminderDismissed: ref.reminderDismissed,
-        });
+        await saveTimerDaily(todayStr || ref.today, { totalMs: liveElapsed });
       }
     }, 1000);
 
@@ -331,10 +324,7 @@ export const BrowserProvider = ({ children }) => {
           timerStateRef.current.elapsedMs = liveElapsed;
           timerStateRef.current.isForeground = false;
           const todayStr = new Date().toISOString().split('T')[0];
-          await saveTimerDaily(todayStr, {
-            totalMs: liveElapsed,
-            reminderDismissed: ref.reminderDismissed,
-          });
+          await saveTimerDaily(todayStr, { totalMs: liveElapsed });
         }
       } else if (nextAppState === 'active') {
         activityTracker.current.startTime = Date.now();
@@ -346,11 +336,11 @@ export const BrowserProvider = ({ children }) => {
           timerStateRef.current.elapsedMs = 0;
           timerStateRef.current.today = todayStr;
           timerStateRef.current.limitReached = false;
-          timerStateRef.current.reminderDismissed = false;
+          timerStateRef.current.extensionMs = 0;
           setTodayElapsedMs(0);
           setLimitReached(false);
-          setReminderDismissed(false);
-          await saveTimerDaily(todayStr, { totalMs: 0, reminderDismissed: false });
+          setExtensionMs(0);
+          await saveTimerDaily(todayStr, { totalMs: 0 });
         }
         timerStateRef.current.sessionStartMs = Date.now();
         timerStateRef.current.isForeground = true;
@@ -636,9 +626,8 @@ export const BrowserProvider = ({ children }) => {
     strictMode,
     todayElapsedMs,
     limitReached,
-    reminderDismissed,
     setTimerSettingsPref,
-    dismissReminder,
+    extendTimer,
     setTimerScreenActive,
   }), [
     history, bookmarks, tabs, activeTabIndex, activeTab, addTab, closeTab,
@@ -647,7 +636,7 @@ export const BrowserProvider = ({ children }) => {
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
-    reminderDismissed, dismissReminder, setTimerScreenActive,
+    extendTimer, setTimerScreenActive,
   ]);
 
   return (

@@ -1,4 +1,4 @@
-# How to Build APK for OpenBrowser
+# How to Build APK for SquareBrowser
 
 ## Step 1: Install Android Studio
 
@@ -113,15 +113,15 @@ If you want to publish to Google Play Store, you'll need to create a signed APK:
 
 1. Generate a keystore (one-time):
    ```bash
-   keytool -genkeypair -v -storetype PKCS12 -keystore openbrowser-release.keystore -alias openbrowser-key -keyalg RSA -keysize 2048 -validity 10000
+   keytool -genkeypair -v -storetype PKCS12 -keystore squarebrowser-release.keystore -alias squarebrowser-key -keyalg RSA -keysize 2048 -validity 10000
    ```
 
 2. Create `android/keystore.properties`:
    ```
    storePassword=your-store-password
    keyPassword=your-key-password
-   keyAlias=openbrowser-key
-   storeFile=../openbrowser-release.keystore
+   keyAlias=squarebrowser-key
+   storeFile=../squarebrowser-release.keystore
    ```
 
 3. Update `android/app/build.gradle` to use signing config (see Android documentation)

@@ -1,11 +1,18 @@
 # Changelog
 
-All notable changes to OpenBrowser will be documented in this file.
+All notable changes to SquareBrowser will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+- Moved project documentation into the `docs/` directory.
+
+### Fixed
+- Resolved bottom navigation overflow.
+- Fixed the new tab bottom overlay issue.
 
 ### Planned
 - iOS support
@@ -15,10 +22,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reading mode
 - Download manager
 
+## [1.0.2] - 2025-01-XX
+
+### Added
+- Time limit feature.
+
+### Changed
+- Website landing page and marketing assets.
+
 ## [1.0.0] - 2025-01-XX
 
 ### Added
-- Initial release of OpenBrowser
+- Initial release of SquareBrowser
 - Privacy-focused mobile browser with permanent history tracking
 - Local-only data storage (no external servers)
 - Tab management with multiple tabs support
@@ -37,5 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **No Tracking**: No analytics, telemetry, or data collection
 - **Open Source**: Full source code available
 
-[Unreleased]: https://github.com/MohiuddinSumon/open-browser/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/MohiuddinSumon/open-browser/releases/tag/v1.0.0
+[Unreleased]: https://github.com/MohiuddinSumon/square-browser/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/MohiuddinSumon/square-browser/releases/tag/v1.0.2
+[1.0.0]: https://github.com/MohiuddinSumon/square-browser/releases/tag/v1.0.0
