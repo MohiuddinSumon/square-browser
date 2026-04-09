@@ -6,6 +6,7 @@
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
@@ -515,6 +516,7 @@ const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setD
 const TabSwitcher = ({ visible, onClose }) => {
   const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, isDarkMode } = useBrowser();
   const [processingIndex, setProcessingIndex] = useState(null);
+  const insets = useSafeAreaInsets();
 
   const getTabTitle = (url) => {
     if (url === 'about:blank') return 'Home';
@@ -542,7 +544,7 @@ const TabSwitcher = ({ visible, onClose }) => {
   return (
     <Modal visible={visible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff' }]}>
+        <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff', paddingBottom: insets.bottom || 16 }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Tabs ({tabs.length})</Text>
             <TouchableOpacity onPress={onClose}>
