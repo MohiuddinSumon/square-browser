@@ -10,6 +10,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { View, TouchableOpacity, StyleSheet, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrowserProvider, useBrowser } from './context/BrowserContext';
 import BrowserScreen from './screens/BrowserScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -28,6 +29,7 @@ const CustomBottomNav = () => {
   const { tabs, setShowTabSwitcher, navigateTo, isDarkMode,
           timerEnabled, limitReached, strictMode } = useBrowser();
   const timerWallActive = timerEnabled && limitReached && strictMode;
+  const insets = useSafeAreaInsets();
 
   const handleHome = () => {
     navigateTo('about:blank');
@@ -52,7 +54,7 @@ const CustomBottomNav = () => {
   };
 
   return (
-    <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+    <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: insets.bottom || 8 }]}>
       <TouchableOpacity
         style={[styles.navButton, timerWallActive && styles.navButtonDisabled]}
         onPress={timerWallActive ? undefined : handleHome}
@@ -153,12 +155,14 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <BrowserProvider>
-      <NavigationContainer>
-        <StatusBar style="auto" />
-        <AppNavigator />
-      </NavigationContainer>
-    </BrowserProvider>
+    <SafeAreaProvider>
+      <BrowserProvider>
+        <NavigationContainer>
+          <StatusBar style="auto" />
+          <AppNavigator />
+        </NavigationContainer>
+      </BrowserProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -173,9 +177,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    paddingVertical: 6,
-    paddingBottom: 8,
-    height: 50,
+    paddingTop: 6,
   },
   navButton: {
     padding: 6,
