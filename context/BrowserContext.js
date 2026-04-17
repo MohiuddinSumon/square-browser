@@ -42,6 +42,8 @@ export const BrowserProvider = ({ children }) => {
   const [exitConfirmationEnabled, setExitConfirmationEnabled] = useState(true);
   const [urlBarPosition, setUrlBarPosition] = useState('top');
   const [autoHideNavBar, setAutoHideNavBar] = useState(false);
+  // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
+  const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
 
   // Daily browsing timer state
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -78,12 +80,12 @@ export const BrowserProvider = ({ children }) => {
     activeTabIndexRef.current = activeTabIndex;
   }, [activeTabIndex]);
 
-  // User Agents
-  const MOBILE_UA = Platform.OS === 'ios' 
-    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
-    : 'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36';
-  
-  const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+  // User Agents — last updated 2026-04-16, refresh every ~6 months as Chrome versions advance
+  const MOBILE_UA = Platform.OS === 'ios'
+    ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
+    : 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36';
+
+  const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Safari/537.36';
 
   const userAgent = desktopMode ? DESKTOP_UA : MOBILE_UA;
 
@@ -125,6 +127,12 @@ export const BrowserProvider = ({ children }) => {
       const savedAutoHideNavBar = await AsyncStorage.getItem('@squarebrowser_autohide_navbar');
       if (savedAutoHideNavBar !== null) {
         setAutoHideNavBar(savedAutoHideNavBar === 'true');
+      }
+
+      const savedEnhancedCompat = await AsyncStorage.getItem('@squarebrowser_enhanced_compat');
+      // Default is true (enabled) — only disable if explicitly set to 'false'
+      if (savedEnhancedCompat !== null) {
+        setEnhancedCompatEnabled(savedEnhancedCompat !== 'false');
       }
 
       // Load timer settings and today's elapsed time
@@ -179,6 +187,11 @@ export const BrowserProvider = ({ children }) => {
   const setAutoHideNavBarPref = async (enabled) => {
     setAutoHideNavBar(enabled);
     await AsyncStorage.setItem('@squarebrowser_autohide_navbar', enabled ? 'true' : 'false');
+  };
+
+  const setEnhancedCompatPref = async (enabled) => {
+    setEnhancedCompatEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_enhanced_compat', enabled ? 'true' : 'false');
   };
 
   /**
@@ -621,6 +634,8 @@ export const BrowserProvider = ({ children }) => {
     setUrlBarPositionPref,
     autoHideNavBar,
     setAutoHideNavBarPref,
+    enhancedCompatEnabled,
+    setEnhancedCompatPref,
     userAgent,
     navigateTo,
     navigateToNewTab,
@@ -638,7 +653,7 @@ export const BrowserProvider = ({ children }) => {
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
-    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar,
+    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);

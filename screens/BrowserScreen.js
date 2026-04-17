@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard } from 'react-native';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,19 +14,155 @@ import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
 
 /**
+ * Bot-detection bypass script injected BEFORE page content loads.
+ *
+ * Cloudflare and similar services check for these signals during early JS execution.
+ * Using injectedJavaScriptBeforeContentLoaded ensures we override them before the
+ * page's own scripts run — injectedJavaScript (after DOMContentLoaded) is too late.
+ *
+ * Overrides:
+ *   - navigator.webdriver → false  (explicit bot flag set by WebView runtimes)
+ *   - window.chrome          → realistic Chrome object with runtime, loadTimes, csi, app
+ *   - navigator.plugins      → 5 standard plugin entries present in real Chrome
+ *   - navigator.mimeTypes    → matching MIME types for the above plugins
+ *
+ * NOTE: iOS — injectedJavaScriptBeforeContentLoaded only reaches the main frame, not
+ * iframes. Cloudflare Turnstile runs in an iframe, so this fix is partial on iOS.
+ * Android gets the full fix because the WebView injects into all frames.
+ */
+const BOT_BYPASS_SCRIPT = `
+(function() {
+  try {
+    // 1. Clear the webdriver flag
+    Object.defineProperty(navigator, 'webdriver', {
+      get: () => false,
+      configurable: false,
+    });
+
+    // 2. Inject a realistic window.chrome object
+    if (!window.chrome || !window.chrome.runtime) {
+      const chrome = {
+        app: {
+          isInstalled: false,
+          InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+          RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+          getDetails: function() {},
+          getIsInstalled: function() {},
+          installState: function() {},
+          runningState: function() {},
+        },
+        runtime: {
+          OnInstalledReason: { CHROME_UPDATE: 'chrome_update', INSTALL: 'install', SHARED_MODULE_UPDATE: 'shared_module_update', UPDATE: 'update' },
+          OnRestartRequiredReason: { APP_UPDATE: 'app_update', OS_UPDATE: 'os_update', PERIODIC: 'periodic' },
+          PlatformArch: { ARM: 'arm', ARM64: 'arm64', MIPS: 'mips', MIPS64: 'mips64', X86_32: 'x86-32', X86_64: 'x86-64' },
+          PlatformNaclArch: { ARM: 'arm', MIPS: 'mips', MIPS64: 'mips64', X86_32: 'x86-32', X86_64: 'x86-64' },
+          PlatformOs: { ANDROID: 'android', CROS: 'cros', LINUX: 'linux', MAC: 'mac', OPENBSD: 'openbsd', WIN: 'win' },
+          RequestUpdateCheckStatus: { NO_UPDATE: 'no_update', THROTTLED: 'throttled', UPDATE_AVAILABLE: 'update_available' },
+          id: undefined,
+        },
+        loadTimes: function() {
+          return {
+            commitLoadTime: Date.now() / 1000,
+            connectionInfo: 'h2',
+            finishDocumentLoadTime: 0,
+            finishLoadTime: 0,
+            firstPaintAfterLoadTime: 0,
+            firstPaintTime: 0,
+            navigationType: 'Other',
+            npnNegotiatedProtocol: 'h2',
+            requestTime: Date.now() / 1000 - 0.1,
+            startLoadTime: Date.now() / 1000 - 0.05,
+            wasAlternateProtocolAvailable: false,
+            wasFetchedViaSpdy: true,
+            wasNpnNegotiated: true,
+          };
+        },
+        csi: function() {
+          return { onloadT: Date.now(), pageT: Date.now() - performance.timing.navigationStart, startE: performance.timing.navigationStart, tran: 15 };
+        },
+      };
+      try { Object.defineProperty(window, 'chrome', { value: chrome, writable: false, enumerable: true, configurable: false }); }
+      catch(e) { window.chrome = chrome; }
+    }
+
+    // 3. Spoof navigator.plugins with realistic Chrome entries
+    const pluginData = [
+      { name: 'PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
+      { name: 'Chrome PDF Viewer', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
+      { name: 'Chromium PDF Viewer', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
+      { name: 'Microsoft Edge PDF Viewer', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
+      { name: 'WebKit built-in PDF', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
+    ];
+
+    function makeMimeType(type, suffixes, plugin) {
+      return { type, suffixes, description: '', enabledPlugin: plugin };
+    }
+
+    function makePlugin(data) {
+      const plugin = { name: data.name, filename: data.filename, description: data.description, length: data.mimeTypes.length };
+      data.mimeTypes.forEach((mt, i) => { plugin[i] = makeMimeType(mt.type, mt.suffixes, plugin); });
+      plugin.item = (i) => plugin[i];
+      plugin.namedItem = (name) => Object.values(plugin).find(v => v && v.type === name) || null;
+      plugin[Symbol.iterator] = function*() { for (let i = 0; i < this.length; i++) yield this[i]; };
+      return plugin;
+    }
+
+    const plugins = pluginData.map(makePlugin);
+    plugins.item = (i) => plugins[i] || null;
+    plugins.namedItem = (name) => plugins.find(p => p.name === name) || null;
+    plugins.refresh = () => {};
+    plugins[Symbol.iterator] = function*() { for (let i = 0; i < this.length; i++) yield this[i]; };
+
+    try { Object.defineProperty(navigator, 'plugins', { get: () => plugins, configurable: false }); } catch(e) {}
+
+    // 4. Spoof mimeTypes to match plugins
+    const allMime = plugins.flatMap((p, pi) => pluginData[pi].mimeTypes.map(mt => makeMimeType(mt.type, mt.suffixes, p)));
+    const mimeTypes = {};
+    allMime.forEach((mt, i) => { mimeTypes[i] = mt; mimeTypes[mt.type] = mt; });
+    mimeTypes.length = allMime.length;
+    mimeTypes.item = (i) => mimeTypes[i] || null;
+    mimeTypes.namedItem = (name) => mimeTypes[name] || null;
+    mimeTypes[Symbol.iterator] = function*() { for (let i = 0; i < this.length; i++) yield this[i]; };
+
+    try { Object.defineProperty(navigator, 'mimeTypes', { get: () => mimeTypes, configurable: false }); } catch(e) {}
+
+  } catch(err) {
+    // Never surface errors to the page
+  }
+})();
+true;
+`;
+
+/**
  * BrowserTab Component
  * Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management.
  * Each tab maintains its own WebView instance for proper navigation history.
  */
+/** Returns true if the URL or title looks like a Cloudflare bot-verification challenge */
+const isCloudflareChallengePage = (url = '', title = '') => {
+  if (!url) return false;
+  const lowerUrl = url.toLowerCase();
+  const lowerTitle = title.toLowerCase();
+  return (
+    lowerUrl.includes('challenges.cloudflare.com') ||
+    lowerUrl.includes('/cdn-cgi/challenge-platform/') ||
+    lowerUrl.includes('/cdn-cgi/challenge') ||
+    lowerTitle === 'just a moment...' ||
+    lowerTitle === 'just a moment'
+  );
+};
+
 const BrowserTab = ({
   tab,
   isActive,
   userAgent,
   adBlockEnabled,
+  enhancedCompatEnabled,
   onUpdateState,
   onLoadEnd,
   onRegisterRef,
   onScroll,
+  onChallengeDetected,
   autoHideEnabled
 }) => {
   // Track the last URL the WebView told us about to avoid loops
@@ -50,7 +186,11 @@ const BrowserTab = ({
     lastReportedUrl.current = navState.url;
     // Notify parent to update context/tab state
     onUpdateState(navState);
-  }, [onUpdateState]);
+    // Detect Cloudflare challenge page so parent can show an info banner
+    if (onChallengeDetected) {
+      onChallengeDetected(isCloudflareChallengePage(navState.url, navState.title || ''));
+    }
+  }, [onUpdateState, onChallengeDetected]);
 
   // Stable ref handler to prevent infinite render loops
   const handleWebViewRef = useCallback((node) => {
@@ -63,6 +203,9 @@ const BrowserTab = ({
       onRegisterRef(webViewRef.current);
     }
   }, [isActive, onRegisterRef]);
+
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const adBlockScript = adBlockEnabled ? `
     (function() {
@@ -111,7 +254,18 @@ const BrowserTab = ({
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
-        onLoadEnd={(e) => onLoadEnd(e, tab.id)}
+        onLoadStart={() => { setIsLoading(true); setLoadProgress(0.1); }}
+        onLoadProgress={({ nativeEvent }) => setLoadProgress(nativeEvent.progress)}
+        onLoadEnd={(e) => {
+          setIsLoading(false);
+          setLoadProgress(1);
+          // Re-check CF status after page fully loads (title is available here)
+          if (onChallengeDetected) {
+            const { url = '', title = '' } = e.nativeEvent;
+            onChallengeDetected(isCloudflareChallengePage(url, title));
+          }
+          onLoadEnd(e, tab.id);
+        }}
         onMessage={(event) => {
           if (autoHideEnabled && onScroll) {
             try {
@@ -124,13 +278,9 @@ const BrowserTab = ({
             }
           }
         }}
-        startInLoadingState={true}
-        renderLoading={() => (
-           <View style={styles.loadingContainer}>
-             <ActivityIndicator size="large" color="#2196F3" />
-           </View>
-        )}
+        startInLoadingState={false}
         userAgent={userAgent}
+        injectedJavaScriptBeforeContentLoaded={enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : ''}
         injectedJavaScript={adBlockScript + scrollTrackingScript}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -141,6 +291,13 @@ const BrowserTab = ({
         mixedContentMode="compatibility"
         pullToRefreshEnabled={true}
       />
+      {/* Thin non-blocking progress bar — replaces full-screen ActivityIndicator overlay
+          so Cloudflare challenge pages remain visible and interactive during load */}
+      {isLoading && (
+        <View style={styles.progressBarTrack} pointerEvents="none">
+          <View style={[styles.progressBarFill, { width: `${Math.round(loadProgress * 100)}%` }]} />
+        </View>
+      )}
     </View>
   );
 };
@@ -152,6 +309,7 @@ const BrowserScreen = ({ navigation }) => {
     setCurrentUrl,
     setWebViewRef,
     adBlockEnabled,
+    enhancedCompatEnabled,
     userAgent,
     tabs,
     activeTabIndex,
@@ -180,6 +338,11 @@ const BrowserScreen = ({ navigation }) => {
 
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
+  const [isCloudflareChallenge, setIsCloudflareChallenge] = useState(false);
+
+  const handleChallengeDetected = useCallback((detected) => {
+    setIsCloudflareChallenge(detected);
+  }, []);
 
   // Animated value for navbar hide/show
   const navbarTranslateY = useRef(new Animated.Value(0)).current;
@@ -310,8 +473,10 @@ const BrowserScreen = ({ navigation }) => {
     lastScrollDirection.current = direction;
   }, [autoHideNavBar, navbarTranslateY, urlBarPosition, contentPadding, totalTopBarHeight, statusBarHeight]);
 
-  // Reset navbar visibility when URL changes
+  // Reset navbar visibility and CF banner when URL changes
   useEffect(() => {
+    // Clear CF challenge banner whenever the active URL changes — the new page may not be CF
+    setIsCloudflareChallenge(false);
     if (autoHideNavBar) {
       isNavbarVisible.current = true;
       navbarTranslateY.setValue(0);
@@ -397,6 +562,38 @@ const BrowserScreen = ({ navigation }) => {
           </Animated.View>
         )}
 
+        {/* Cloudflare challenge info banner — shown when the active tab hits a CF challenge page.
+            Floats below the address bar without blocking the WebView content so the user
+            can still interact with the Turnstile / IUAM challenge underneath. */}
+        {isCloudflareChallenge && (
+          <View style={[
+            styles.cfBanner,
+            urlBarPosition === 'top'
+              ? { top: totalTopBarHeight }
+              : { bottom: (keyboardHeight || 0) + (Platform.OS === 'ios' ? 80 : 70) },
+            { backgroundColor: isDarkMode ? '#2a2000' : '#fff8e1' },
+          ]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color="#FF9800" />
+            <Text style={[styles.cfBannerText, { color: isDarkMode ? '#ffd54f' : '#7a5800' }]}>
+              Cloudflare is verifying your browser — please wait…
+            </Text>
+            <TouchableOpacity
+              style={styles.cfBannerReload}
+              onPress={() => activeWebViewRef.current && activeWebViewRef.current.reload()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="refresh" size={16} color="#FF9800" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cfBannerClose}
+              onPress={() => setIsCloudflareChallenge(false)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={16} color={isDarkMode ? '#ffd54f' : '#7a5800'} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Render Content */}
         <Animated.View style={{ flex: 1, paddingTop: contentPadding }}>
           {tabs.map((tab, index) => {
@@ -416,9 +613,11 @@ const BrowserScreen = ({ navigation }) => {
                 isActive={isActive}
                 userAgent={userAgent}
                 adBlockEnabled={adBlockEnabled}
+                enhancedCompatEnabled={enhancedCompatEnabled !== false}
                 onUpdateState={(state) => handleTabUpdate(state, index)}
                 onLoadEnd={handleLoadEnd}
                 onRegisterRef={handleRegisterRef}
+                onChallengeDetected={isActive ? handleChallengeDetected : undefined}
                 onScroll={handleScroll}
                 autoHideEnabled={autoHideNavBar}
               />
@@ -740,6 +939,21 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
   },
+  // Thin top progress bar — replaces full-screen loading overlay
+  // Uses pointerEvents="none" so it never blocks the page (including CF challenges)
+  progressBarTrack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'transparent',
+    zIndex: 5,
+  },
+  progressBarFill: {
+    height: 3,
+    backgroundColor: '#2196F3',
+  },
   loadingContainer: {
     position: 'absolute',
     top: 0,
@@ -749,6 +963,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
+  },
+  // Cloudflare challenge info banner
+  cfBanner: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    zIndex: 20,
+    gap: 8,
+    ...Platform.select({
+      android: { elevation: 4 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+    }),
+  },
+  cfBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  cfBannerReload: {
+    padding: 2,
+  },
+  cfBannerClose: {
+    padding: 2,
   },
   modalOverlay: {
     flex: 1,

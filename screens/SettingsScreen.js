@@ -18,6 +18,8 @@ const SettingsScreen = ({ navigation }) => {
     setUrlBarPositionPref,
     autoHideNavBar,
     setAutoHideNavBarPref,
+    enhancedCompatEnabled,
+    setEnhancedCompatPref,
     timerEnabled,
     dailyLimitMs,
     strictMode,
@@ -106,6 +108,22 @@ const SettingsScreen = ({ navigation }) => {
             onValueChange={setAdBlockEnabled}
             trackColor={{ false: "#767577", true: "#81b0ff" }}
             thumbColor={adBlockEnabled ? colors.accent : "#f4f3f4"}
+          />
+        </View>
+
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="globe-outline" size={24} color={colors.subtext} />
+            <View>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Enhanced Compatibility</Text>
+              <Text style={[styles.menuItemSubtext, { color: colors.subtext, paddingLeft: 0 }]}>Helps load sites with Cloudflare protection</Text>
+            </View>
+          </View>
+          <Switch
+            value={enhancedCompatEnabled !== false}
+            onValueChange={setEnhancedCompatPref}
+            trackColor={{ false: "#767577", true: "#81b0ff" }}
+            thumbColor={enhancedCompatEnabled !== false ? colors.accent : "#f4f3f4"}
           />
         </View>
 
