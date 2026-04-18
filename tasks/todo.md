@@ -1,3 +1,73 @@
+# TODO: Link Long-Press Context Menu
+
+## Task 1 — `addTabInBackground` in `context/BrowserContext.js`
+- [ ] Add `addTabInBackground(url)` callback after `addTab` (~line 505)
+- [ ] `setTabs` updater appends new tab WITHOUT calling `setActiveTabIndex`
+- [ ] Add URL formatting (same as `navigateTo`: add `https://`, handle search)
+- [ ] Expose `addTabInBackground` in context `value` useMemo + deps array
+- [ ] Verify: calling it increases `tabs.length` but leaves `activeTabIndex` unchanged
+
+## Task 2 — `linkLongPressScript` injection in `screens/BrowserScreen.js`
+- [ ] Add `linkLongPressScript` constant inside `BrowserTab` after `scrollTrackingScript`
+- [ ] Script: `findAnchor()` walks up DOM to find `<a href>` from any touch target
+- [ ] Script: 500ms `touchstart` timer fires `postMessage({ type: 'linkLongPress', url, text })`
+- [ ] Script: cancel timer on `touchmove`, `touchend`, `touchcancel`
+- [ ] Script: suppress Android `contextmenu` event on link targets
+- [ ] Concatenate `linkLongPressScript` to `injectedJavaScript` prop
+- [ ] Verify: long-press a link → postMessage fires; short tap → no message; scroll safety passes
+
+## Task 3 — Extend `onMessage` + add `onLinkLongPress` prop to `BrowserTab`
+- [ ] Add `onLinkLongPress` to `BrowserTab` function signature
+- [ ] Extend `onMessage` handler: dispatch `data.type === 'linkLongPress'` to `onLinkLongPress(url, text)`
+- [ ] Wrap both type branches in `try/catch` (already present — keep it)
+- [ ] Pass `onLinkLongPress={isActive ? handleLinkLongPress : undefined}` in parent render loop
+- [ ] Verify: message reaches `BrowserScreen` handler; scroll-tracking still works
+
+## Task 4 — `LinkContextMenu` modal + wiring in `screens/BrowserScreen.js`
+
+### 4a — Install expo-clipboard
+- [ ] Run `npx expo install expo-clipboard`
+
+### 4b — Imports + state + handlers in `BrowserScreen`
+- [ ] Add `import * as Clipboard from 'expo-clipboard'`
+- [ ] Add `Share` to existing `react-native` destructure import
+- [ ] Add `linkMenuVisible` + `longPressedLink` state declarations
+- [ ] Destructure `addTabInBackground`, `toggleBookmark` from `useBrowser()`
+- [ ] Add `handleLinkLongPress(url, text)` callback — guards `javascript:` URIs
+- [ ] Add `handleOpenInNewTab`, `handleOpenInBackground`, `handleCopyLink`, `handleShareLink`, `handleAddBookmark` callbacks
+
+### 4c — `LinkContextMenu` component
+- [ ] Build component above `StyleSheet.create`
+- [ ] URL header row (truncated at 50 chars) with link icon
+- [ ] 5 action rows with Ionicons icons + labels
+- [ ] Cancel row at bottom with blue text
+- [ ] Tap-outside via outer `TouchableOpacity` overlay
+- [ ] Inner `View` uses `onStartShouldSetResponder` to prevent close on inside taps
+- [ ] Dark mode support via `isDarkMode` prop
+- [ ] `animationType="slide"` bottom sheet
+
+### 4d — Styles
+- [ ] Add `contextMenuSheet`, `contextMenuHeader`, `contextMenuUrl`, `contextMenuItem`, `contextMenuIcon`, `contextMenuItemText`, `contextMenuCancel`, `contextMenuCancelText` to `StyleSheet.create`
+
+### 4e — Mount in JSX
+- [ ] Add `<LinkContextMenu ... />` alongside `ExitModal` / `TabSwitcher`
+
+## Verification Checklist
+- [ ] Long-press link → menu appears; short tap → navigates normally
+- [ ] Scrolling through links → no menu trigger
+- [ ] `<img>` inside `<a>` → menu shows the `<a>` URL
+- [ ] Open in New Tab → switches to new tab
+- [ ] Open in Background Tab → stays on current; new tab visible in switcher
+- [ ] Copy Link → paste confirms correct URL
+- [ ] Share → native OS share sheet opens
+- [ ] Add Bookmark → URL in bookmarks screen
+- [ ] Cancel / tap outside → closes cleanly, no action fired
+- [ ] Dark mode → correct colors throughout
+- [ ] Android → system WebView context menu does NOT appear
+- [ ] Scroll-tracking / navbar auto-hide → no regression
+
+---
+<!-- Previous todos archived below — Cloudflare / Bot-Verification Fix -->
 # TODO: Cloudflare / Bot-Verification Fix
 
 ## Task 1 — Update User-Agent strings

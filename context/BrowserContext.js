@@ -504,6 +504,24 @@ export const BrowserProvider = ({ children }) => {
     });
   }, []);
 
+  const addTabInBackground = useCallback((url = 'about:blank') => {
+    let formattedUrl = url.trim();
+    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+      if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
+        formattedUrl = 'https://' + formattedUrl;
+      } else {
+        formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
+      }
+    }
+    const newTab = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+      url: formattedUrl,
+      canGoBack: false,
+      canGoForward: false,
+    };
+    setTabs(prev => [...prev, newTab]);
+  }, []);
+
   const closeTab = useCallback((index) => {
     setTabs(prev => {
       if (prev.length === 1) {
@@ -603,6 +621,7 @@ export const BrowserProvider = ({ children }) => {
     activeTabIndex,
     activeTab,
     addTab,
+    addTabInBackground,
     closeTab,
     setActiveTabIndex,
     updateTabState,
@@ -649,7 +668,7 @@ export const BrowserProvider = ({ children }) => {
     extendTimer,
     setTimerScreenActive,
   }), [
-    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, closeTab,
+    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,

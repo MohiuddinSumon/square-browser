@@ -5,7 +5,8 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard } from 'react-native';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
@@ -163,7 +164,8 @@ const BrowserTab = ({
   onRegisterRef,
   onScroll,
   onChallengeDetected,
-  autoHideEnabled
+  autoHideEnabled,
+  onLinkLongPress,
 }) => {
   // Track the last URL the WebView told us about to avoid loops
   const lastReportedUrl = useRef(tab.url);
@@ -247,6 +249,38 @@ const BrowserTab = ({
     })();
   ` : '';
 
+  const linkLongPressScript = `
+    (function() {
+      var _sqTimer = null;
+      function findAnchor(el) {
+        while (el && el !== document.body) {
+          if (el.tagName && el.tagName.toLowerCase() === 'a' && el.href) return el;
+          el = el.parentElement;
+        }
+        return null;
+      }
+      document.addEventListener('touchstart', function(e) {
+        var a = findAnchor(e.target);
+        if (!a) return;
+        _sqTimer = setTimeout(function() {
+          window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'linkLongPress',
+            url: a.href,
+            text: (a.innerText || '').trim().substring(0, 80)
+          }));
+        }, 500);
+      }, { passive: true });
+      ['touchmove', 'touchend', 'touchcancel'].forEach(function(ev) {
+        document.addEventListener(ev, function() {
+          if (_sqTimer) { clearTimeout(_sqTimer); _sqTimer = null; }
+        }, { passive: true });
+      });
+      document.addEventListener('contextmenu', function(e) {
+        if (findAnchor(e.target)) e.preventDefault();
+      }, true);
+    })();
+  `;
+
   return (
     <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
       <WebView
@@ -267,21 +301,21 @@ const BrowserTab = ({
           onLoadEnd(e, tab.id);
         }}
         onMessage={(event) => {
-          if (autoHideEnabled && onScroll) {
-            try {
-              const data = JSON.parse(event.nativeEvent.data);
-              if (data.type === 'scroll') {
-                onScroll(data.direction, data.scrollY);
-              }
-            } catch (e) {
-              // Ignore non-JSON messages
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'scroll' && autoHideEnabled && onScroll) {
+              onScroll(data.direction, data.scrollY);
+            } else if (data.type === 'linkLongPress' && onLinkLongPress) {
+              onLinkLongPress(data.url, data.text);
             }
+          } catch (e) {
+            // Ignore non-JSON messages
           }
         }}
         startInLoadingState={false}
         userAgent={userAgent}
         injectedJavaScriptBeforeContentLoaded={enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : ''}
-        injectedJavaScript={adBlockScript + scrollTrackingScript}
+        injectedJavaScript={adBlockScript + scrollTrackingScript + linkLongPressScript}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowsBackForwardNavigationGestures={true}
@@ -314,10 +348,12 @@ const BrowserScreen = ({ navigation }) => {
     tabs,
     activeTabIndex,
     addTab,
+    addTabInBackground,
     closeTab,
     setActiveTabIndex,
     updateTabState,
     addHistoryEntry,
+    toggleBookmark,
     showTabSwitcher,
     setShowTabSwitcher,
     isDarkMode,
@@ -339,10 +375,45 @@ const BrowserScreen = ({ navigation }) => {
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
   const [isCloudflareChallenge, setIsCloudflareChallenge] = useState(false);
+  const [linkMenuVisible, setLinkMenuVisible] = useState(false);
+  const [longPressedLink, setLongPressedLink] = useState({ url: '', text: '' });
 
   const handleChallengeDetected = useCallback((detected) => {
     setIsCloudflareChallenge(detected);
   }, []);
+
+  const handleLinkLongPress = useCallback((url, text) => {
+    if (!url || url.startsWith('javascript:')) return;
+    setLongPressedLink({ url, text });
+    setLinkMenuVisible(true);
+  }, []);
+
+  const handleOpenInNewTab = useCallback(() => {
+    setLinkMenuVisible(false);
+    addTab(longPressedLink.url);
+  }, [addTab, longPressedLink.url]);
+
+  const handleOpenInBackground = useCallback(() => {
+    setLinkMenuVisible(false);
+    addTabInBackground(longPressedLink.url);
+  }, [addTabInBackground, longPressedLink.url]);
+
+  const handleCopyLink = useCallback(async () => {
+    setLinkMenuVisible(false);
+    await Clipboard.setStringAsync(longPressedLink.url);
+  }, [longPressedLink.url]);
+
+  const handleShareLink = useCallback(() => {
+    setLinkMenuVisible(false);
+    Share.share(Platform.OS === 'ios'
+      ? { url: longPressedLink.url }
+      : { message: longPressedLink.url });
+  }, [longPressedLink.url]);
+
+  const handleAddBookmark = useCallback(async () => {
+    setLinkMenuVisible(false);
+    await toggleBookmark(longPressedLink.url, longPressedLink.text || longPressedLink.url);
+  }, [toggleBookmark, longPressedLink]);
 
   // Animated value for navbar hide/show
   const navbarTranslateY = useRef(new Animated.Value(0)).current;
@@ -620,6 +691,7 @@ const BrowserScreen = ({ navigation }) => {
                 onChallengeDetected={isActive ? handleChallengeDetected : undefined}
                 onScroll={handleScroll}
                 autoHideEnabled={autoHideNavBar}
+                onLinkLongPress={isActive ? handleLinkLongPress : undefined}
               />
             );
           })}
@@ -668,6 +740,18 @@ const BrowserScreen = ({ navigation }) => {
         visible={showSoftOverlay}
         onExtend={extendTimer}
         extensionMs={extensionMs}
+        isDarkMode={isDarkMode}
+      />
+
+      <LinkContextMenu
+        visible={linkMenuVisible}
+        url={longPressedLink.url}
+        onClose={() => setLinkMenuVisible(false)}
+        onOpenInNewTab={handleOpenInNewTab}
+        onOpenInBackground={handleOpenInBackground}
+        onCopyLink={handleCopyLink}
+        onShare={handleShareLink}
+        onAddBookmark={handleAddBookmark}
         isDarkMode={isDarkMode}
       />
 
@@ -871,6 +955,64 @@ const TimerStrictWall = ({ visible, isDarkMode }) => {
         <Text style={[styles.timerWallCountdown, { color: '#F44336' }]}>{countdown}</Text>
         <Text style={[styles.timerWallUntil, { color: isDarkMode ? '#666' : '#999' }]}>until midnight</Text>
       </View>
+    </Modal>
+  );
+};
+
+const LinkContextMenu = ({
+  visible,
+  url,
+  onClose,
+  onOpenInNewTab,
+  onOpenInBackground,
+  onCopyLink,
+  onShare,
+  onAddBookmark,
+  isDarkMode,
+}) => {
+  const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+  const menuBg = isDarkMode ? '#1e1e1e' : '#fff';
+  const textColor = isDarkMode ? '#fff' : '#000';
+  const subtitleColor = isDarkMode ? '#999' : '#666';
+  const dividerColor = isDarkMode ? '#333' : '#eee';
+
+  const items = [
+    { icon: 'open-outline',         label: 'Open in New Tab',        onPress: onOpenInNewTab },
+    { icon: 'browsers-outline',     label: 'Open in Background Tab', onPress: onOpenInBackground },
+    { icon: 'copy-outline',         label: 'Copy Link',              onPress: onCopyLink },
+    { icon: 'share-social-outline', label: 'Share',                  onPress: onShare },
+    { icon: 'bookmark-outline',     label: 'Add Bookmark',           onPress: onAddBookmark },
+  ];
+
+  return (
+    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.contextMenuOverlay} activeOpacity={1} onPress={onClose}>
+        <View
+          style={[styles.contextMenuSheet, { backgroundColor: menuBg }]}
+          onStartShouldSetResponder={() => true}
+        >
+          <View style={[styles.contextMenuHandle]} />
+          <View style={[styles.contextMenuHeader, { borderBottomColor: dividerColor }]}>
+            <Ionicons name="link" size={14} color={subtitleColor} />
+            <Text style={[styles.contextMenuUrl, { color: subtitleColor }]} numberOfLines={1}>
+              {displayUrl}
+            </Text>
+          </View>
+          {items.map(({ icon, label, onPress }) => (
+            <TouchableOpacity key={label} style={styles.contextMenuItem} onPress={onPress} activeOpacity={0.7}>
+              <Ionicons name={icon} size={20} color={textColor} style={styles.contextMenuIcon} />
+              <Text style={[styles.contextMenuItemText, { color: textColor }]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={[styles.contextMenuCancel, { borderTopColor: dividerColor }]}
+            onPress={onClose}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.contextMenuCancelText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -1167,6 +1309,68 @@ const styles = StyleSheet.create({
   timerWallUntil: {
     fontSize: 13,
     marginTop: 8,
+  },
+  contextMenuOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  contextMenuSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+    ...Platform.select({
+      android: { elevation: 8 },
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  contextMenuHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#ccc',
+    alignSelf: 'center',
+    marginVertical: 8,
+  },
+  contextMenuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 8,
+  },
+  contextMenuUrl: {
+    flex: 1,
+    fontSize: 12,
+  },
+  contextMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  contextMenuIcon: {
+    width: 28,
+  },
+  contextMenuItemText: {
+    fontSize: 16,
+  },
+  contextMenuCancel: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+    paddingTop: 16,
+    alignItems: 'center',
+  },
+  contextMenuCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2196F3',
   },
 });
 
