@@ -1,3 +1,70 @@
+# Plan: Link Long-Press Context Menu
+
+## Context
+
+SquareBrowser has no in-page link context menu. Tapping a link always navigates the current tab. This plan adds a long-press gesture on web page links that shows a bottom-sheet modal with options: Open in New Tab, Open in Background Tab, Copy Link, Share, Add Bookmark. Uses the existing JS injection + postMessage pattern already in place for scroll tracking.
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `context/BrowserContext.js` | Add `addTabInBackground()` — new tab without switching |
+| `screens/BrowserScreen.js` | JS injection + onMessage handler + state + `LinkContextMenu` modal |
+| `package.json` | Add `expo-clipboard` via `npx expo install expo-clipboard` |
+
+## Dependency Graph
+
+```
+Task 1 (addTabInBackground) ─────────────────────────────────┐
+Task 2 (JS injection script) ──→ Task 3 (onMessage + prop) ──→ Task 4 (modal + wiring)
+```
+
+Tasks 1 and 2 are independent. Task 3 requires Task 2 conceptually. Task 4 requires all three.
+
+## Tasks
+
+### Task 1 — `addTabInBackground` in `context/BrowserContext.js`
+Add after existing `addTab` (~line 505). Same structure but `setTabs` updater does NOT call `setActiveTabIndex` — stays on current tab. Expose in context `value` useMemo.
+
+**Acceptance:** `tabs.length` +1, `activeTabIndex` unchanged.
+
+### Task 2 — `linkLongPressScript` in `screens/BrowserScreen.js`
+Add constant inside `BrowserTab` (after `scrollTrackingScript`). Script detects 500ms `touchstart` on `<a>` elements (walks up DOM via `findAnchor`), sends `postMessage({ type: 'linkLongPress', url, text })`. Cancels on `touchmove`/`touchend`. Suppresses Android `contextmenu` on links. Concatenate to `injectedJavaScript` prop.
+
+**Acceptance:** Long-press triggers message. Scrolling through links does not. Android native menu suppressed.
+
+### Task 3 — Extend `onMessage` + `onLinkLongPress` prop in `BrowserTab`
+Add `onLinkLongPress` to signature. Extend `onMessage` to dispatch `linkLongPress` type. Pass `onLinkLongPress={isActive ? handleLinkLongPress : undefined}` from parent loop.
+
+**Acceptance:** Message reaches `BrowserScreen`. Scroll events unaffected.
+
+### Task 4 — `LinkContextMenu` modal + wiring
+- `npx expo install expo-clipboard`
+- Add `linkMenuVisible` + `longPressedLink` state; `handleLinkLongPress` + 5 action handlers
+- Build `LinkContextMenu` bottom-sheet modal (URL header + action rows + Cancel), following existing TabSwitcher/ExitModal pattern
+- Mount alongside other modals in JSX
+
+**Actions:** Open in New Tab (`addTab`), Open in Background Tab (`addTabInBackground`), Copy Link (`Clipboard.setStringAsync`), Share (`Share.share`), Add Bookmark (`toggleBookmark`)
+
+**Acceptance:** All actions work. Tap-outside dismisses. Dark mode correct. `javascript:` URIs blocked.
+
+## Verification
+
+1. Long-press link → menu slides up. Short tap → navigates normally.
+2. Scroll while starting over link → no menu.
+3. Long-press `<img>` inside `<a>` → menu uses `<a>` href.
+4. Open in New Tab → switches to new tab, URL loads.
+5. Open in Background Tab → stays on current; new tab in switcher.
+6. Copy Link → paste confirms URL.
+7. Share → native OS share sheet.
+8. Add Bookmark → appears in bookmarks screen.
+9. Cancel / tap-outside → closes cleanly.
+10. Dark mode → correct colors.
+11. Android: system WebView context menu does NOT appear for links.
+12. Scroll-tracking navbar animation still works (regression test).
+
+---
+<!-- Previous plan archived below — Cloudflare / Bot-Verification Screen Hang -->
 # Plan: Fix Cloudflare / Bot-Verification Screen Hang
 
 **Date:** 2026-04-16  
