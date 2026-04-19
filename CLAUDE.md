@@ -152,6 +152,10 @@ When updating versions:
 2. Update `version` and `versionCode` in `app.json`
 3. Update `android/app/build.gradle` if manually versioning
 
+## Git Commits
+
+- Never include "Claude" or any AI assistant reference in commit messages or co-author tags
+
 ## Code Style
 
 - Copyright headers in all source files: `Copyright (c) 2025 SquareBrowser Contributors`

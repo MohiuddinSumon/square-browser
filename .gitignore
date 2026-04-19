@@ -70,6 +70,9 @@ keystore.properties
 .env.local
 .env.*.local
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # Logs
 logs/
 *.log
