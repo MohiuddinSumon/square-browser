@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Science of Internet Addiction and How to Break Free | SquareBrowser Blog</title>
+  <meta name="description" content="Understanding the neuroscience behind phone addiction — dopamine loops, variable rewards, and the practical tools that actually help you break free from compulsive internet use.">
+  <link rel="canonical" href="https://squarebrowser.vercel.app/blog/internet-addiction-how-to-break-free">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://squarebrowser.vercel.app/blog/internet-addiction-how-to-break-free">
+  <meta property="og:title" content="The Science of Internet Addiction — and the Simple Tools That Actually Help">
+  <meta property="og:description" content="Tech companies spend billions engineering engagement. This is what's happening in your brain, and what you can actually do about it today.">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "The Science of Internet Addiction — and the Simple Tools That Actually Help",
+    "description": "The neuroscience of phone addiction — dopamine loops, variable reward schedules — and practical tools to break free.",
+    "author": { "@type": "Organization", "name": "SquareBrowser" },
+    "publisher": { "@type": "Organization", "name": "SquareBrowser", "url": "https://squarebrowser.vercel.app/" },
+    "datePublished": "2026-04-24",
+    "url": "https://squarebrowser.vercel.app/blog/internet-addiction-how-to-break-free"
+  }
+  </script>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg:#FAFAF8; --bg-alt:#F2F4F7; --surface:#fff; --border:#E5E7EB;
+      --text:#111827; --muted:#6B7280; --faint:#9CA3AF;
+      --blue:#2563EB; --blue-lt:#EFF6FF; --blue-dk:#1D4ED8;
+      --green:#16A34A; --green-lt:#F0FDF4;
+      --font-d:'Bricolage Grotesque',sans-serif; --font-b:'Plus Jakarta Sans',sans-serif;
+      --shadow:0 4px 16px rgba(0,0,0,.08); --r:12px;
+    }
+    [data-theme="dark"] { --bg:#0F1117; --bg-alt:#161B27; --surface:#1C2333; --border:#273449; --text:#EEF2FF; --muted:#8895AB; --faint:#4A5568; --blue-lt:#1e3a5f; --green-lt:#052e16; }
+    body { font-family: var(--font-b); background: var(--bg); color: var(--text); line-height: 1.7; }
+
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(250,250,248,0.9); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); }
+    [data-theme="dark"] nav { background: rgba(15,17,23,0.9); }
+    .nav-inner { max-width: 1120px; margin: 0 auto; padding: 0 40px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--text); }
+    .nav-logo img { width: 28px; height: 28px; border-radius: 7px; }
+    .nav-logo span { font-family: var(--font-d); font-size: 16px; font-weight: 700; }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+    .nav-link { font-size: 14px; color: var(--muted); text-decoration: none; padding: 6px 12px; border-radius: 8px; transition: all 0.2s; }
+    .nav-link:hover { color: var(--text); background: var(--bg-alt); }
+    .theme-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 15px; }
+    .nav-cta { font-family: var(--font-d); font-size: 13px; font-weight: 700; color: #fff; background: var(--blue); text-decoration: none; padding: 8px 16px; border-radius: 9px; }
+
+    .article-wrap { max-width: 720px; margin: 0 auto; padding: 60px 40px 100px; }
+    .breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+    .breadcrumb a { color: var(--blue); text-decoration: none; }
+
+    .article-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .article-cat { font-size: 12px; font-weight: 700; color: var(--green); background: var(--green-lt); padding: 4px 12px; border-radius: 100px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .article-time { font-size: 13px; color: var(--muted); }
+
+    h1 { font-family: var(--font-d); font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.1; letter-spacing: -0.025em; margin-bottom: 24px; }
+    .article-intro { font-size: 19px; color: var(--muted); line-height: 1.7; font-style: italic; margin-bottom: 40px; padding-bottom: 40px; border-bottom: 1px solid var(--border); }
+
+    h2 { font-family: var(--font-d); font-size: 26px; font-weight: 700; margin: 44px 0 16px; letter-spacing: -0.015em; }
+    h3 { font-family: var(--font-d); font-size: 20px; font-weight: 700; margin: 32px 0 12px; }
+    p { font-size: 17px; margin-bottom: 20px; }
+    strong { font-weight: 600; }
+    ul, ol { padding-left: 24px; margin-bottom: 20px; }
+    li { font-size: 17px; margin-bottom: 10px; }
+
+    .callout { background: var(--green-lt); border-left: 4px solid var(--green); border-radius: 0 var(--r) var(--r) 0; padding: 20px 24px; margin: 32px 0; }
+    .callout p { margin: 0; }
+    [data-theme="dark"] .callout { background: rgba(22,163,74,0.1); }
+
+    .stat-box { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
+    .stat-item { background: var(--bg-alt); border-radius: var(--r); padding: 20px; text-align: center; border: 1px solid var(--border); }
+    .stat-num { font-family: var(--font-d); font-size: 32px; font-weight: 800; color: var(--blue); display: block; }
+    .stat-label { font-size: 13px; color: var(--muted); display: block; margin-top: 4px; }
+
+    .app-cta { background: var(--blue); border-radius: var(--r); padding: 32px; margin: 44px 0; text-align: center; color: #fff; }
+    .app-cta h3 { font-family: var(--font-d); font-size: 22px; color: #fff; margin: 0 0 10px; }
+    .app-cta p { color: rgba(255,255,255,0.8); margin-bottom: 20px; font-size: 15px; }
+    .app-cta a { display: inline-flex; align-items: center; gap: 8px; background: #fff; color: var(--blue); font-family: var(--font-d); font-weight: 700; font-size: 15px; padding: 12px 24px; border-radius: 9px; text-decoration: none; }
+
+    .related { margin-top: 60px; padding-top: 40px; border-top: 1px solid var(--border); }
+    .related h3 { font-family: var(--font-d); font-size: 20px; margin-bottom: 20px; }
+    .related-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .related-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; text-decoration: none; color: var(--text); transition: all 0.2s; }
+    .related-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .related-card-cat { font-size: 11px; font-weight: 700; color: var(--blue); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+    .related-card-title { font-family: var(--font-d); font-size: 15px; font-weight: 700; line-height: 1.4; }
+
+    footer { padding: 36px 40px; border-top: 1px solid var(--border); text-align: center; font-size: 13px; color: var(--faint); }
+    footer a { color: var(--blue); text-decoration: none; }
+
+    @media (max-width: 680px) {
+      .article-wrap { padding: 48px 20px 80px; }
+      .nav-inner { padding: 0 20px; }
+      .nav-link { display: none; }
+      .related-grid { grid-template-columns: 1fr; }
+      .stat-box { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="/" class="nav-logo"><img src="/icon.png" alt="SB"><span>SquareBrowser</span></a>
+      <div class="nav-right">
+        <a href="/blog/" class="nav-link">Blog</a>
+        <button class="theme-btn" id="themeBtn">🌙</button>
+        <a href="https://play.google.com/store/apps/details?id=com.squarebrowser.app" class="nav-cta">Download Free</a>
+      </div>
+    </div>
+  </nav>
+
+  <article class="article-wrap">
+    <p class="breadcrumb"><a href="/">Home</a> / <a href="/blog/">Blog</a> / Phone Addiction</p>
+
+    <div class="article-meta">
+      <span class="article-cat">Phone Addiction</span>
+      <span class="article-time">April 2026 · 7 min read</span>
+    </div>
+
+    <h1>The Science of Internet Addiction — and the Simple Tools That Actually Help</h1>
+
+    <p class="article-intro">You're not weak. You're not lacking discipline. You're up against billion-dollar behavioral engineering — and your brain was never designed to resist it. Understanding what's actually happening is the first step to doing something about it.</p>
+
+    <div class="stat-box">
+      <div class="stat-item">
+        <span class="stat-num">7h</span>
+        <span class="stat-label">average daily screen time globally</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">150×</span>
+        <span class="stat-label">average phone checks per day</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num">2026</span>
+        <span class="stat-label">still no mainstream solution</span>
+      </div>
+    </div>
+
+    <h2>What's actually happening in your brain</h2>
+    <p>Every time you pull out your phone to check for notifications, scroll a feed, or open a browser tab, your brain's dopaminergic system activates. Dopamine is not, as often described, a "pleasure chemical." It's more accurately an anticipation chemical — it spikes in response to the possibility of reward, not the reward itself.</p>
+    <p>This is why you can scroll social media for an hour and feel worse at the end than when you started. The dopamine system was activated by the anticipation of finding something interesting or socially affirming — and it fires whether or not you actually find it. The scrolling is the behavior the dopamine drives, not any particular piece of content.</p>
+
+    <h3>Variable reward schedules: the slot machine in your pocket</h3>
+    <p>B.F. Skinner demonstrated in the 1950s that animals would press a lever most persistently when rewards were delivered on a variable schedule — sometimes immediately, sometimes after many presses, never predictably. This is the most addictive reward pattern known to behavioral science.</p>
+    <p>Every social feed, news site, and notification system is designed around variable reward schedules. Sometimes you open Instagram and there's something interesting. Sometimes there isn't. <strong>The unpredictability is the feature, not a bug.</strong> It keeps the dopamine system engaged in a way that predictable rewards never could.</p>
+    <p>Your browser is the delivery mechanism for all of these variable reward systems. Every new tab is a pull on the lever.</p>
+
+    <h3>Infinite scroll: removing the natural stopping point</h3>
+    <p>Human behavior naturally clusters around transitions and endpoints. You finish a chapter, you put the book down. You finish an episode, you stop watching. These natural stopping points give your conscious mind a moment to ask: "Do I want to continue?"</p>
+    <p>Infinite scroll was specifically designed to eliminate these stopping points. There is no end. There is no "next chapter" button that creates a moment of choice. The feed simply continues, and continuing is the path of least resistance.</p>
+    <p>Introducing an artificial stopping point — a daily time limit that cuts off access — restores the choice architecture that infinite scroll removed.</p>
+
+    <h2>Why "just use less" doesn't work</h2>
+    <p>The common advice to "just use your phone less" fails because it assumes the problem is a lack of intention. Most people who struggle with excessive phone use have plenty of intention — they just can't execute on it consistently in the moments that matter.</p>
+    <p>The problem is architectural. You're trying to use conscious, rational decision-making (prefrontal cortex) to override a system (the dopamine/limbic system) that operates faster, more automatically, and with more evolutionary horsepower. In a head-to-head fight between your prefrontal cortex and your dopamine system, the dopamine system wins most of the time — especially when you're tired, stressed, or bored.</p>
+
+    <div class="callout">
+      <p><strong>The solution isn't more willpower.</strong> It's changing the architecture of your environment so that good behavior is the default and bad behavior requires extra effort. Systems beat intentions every time.</p>
+    </div>
+
+    <h2>What actually helps: the evidence</h2>
+    <p>Research on technology overuse and phone addiction points to a consistent set of effective interventions. They share one common thread: they work at the system level, not the intention level.</p>
+
+    <h3>Hard time limits (not soft ones)</h3>
+    <p>Studies comparing hard app limits (where the app actually stops working) to soft limits (where you get a notification you can dismiss) consistently find that hard limits reduce usage significantly more. The friction of having to actively override a limit is often enough to break the automaticity of the behavior.</p>
+    <p>The key finding: limits you set in advance, when you're not in the middle of a browsing session, are much more likely to be respected than limits you try to enforce in the moment.</p>
+
+    <h3>Accountability through visible tracking</h3>
+    <p>When people can see their usage data — not estimates, but actual minute-by-minute records — they consistently rate themselves as using their phones more than they'd like, and they reduce usage. The mere act of making behavior visible changes it.</p>
+    <p>This is why usage statistics paired with permanent history are more effective than either alone. The statistics show you the numbers. The permanent history makes those numbers feel real and consequential in a way that something you could delete doesn't.</p>
+
+    <h3>The power of commitment devices</h3>
+    <p>Economists call them "commitment devices" — arrangements you make with your future self to constrain your options when you're in a weaker moment. Ulysses had himself tied to the mast. You can use Strict Mode.</p>
+    <p>Strict Mode — which locks the browser completely until midnight with no override — is a commitment device. The decision to enable it is made in the morning, when your willpower is fresh and your intentions are clear. The lock holds during the evening, when cravings are stronger and decision-making is worse. You're essentially making a binding agreement with your future self.</p>
+    <p>Research on commitment devices consistently shows they work: people who pre-commit to specific constraints achieve better outcomes than those who rely on moment-by-moment self-control.</p>
+
+    <h2>A realistic picture of what "better" looks like</h2>
+    <p>The goal is not to never use the internet. The internet is useful, entertaining, and connected to real relationships and real work. The goal is <strong>intentional use</strong> — choosing to be online when you've decided to be, rather than drifting online out of habit, boredom, or anxiety.</p>
+    <p>This looks like:</p>
+    <ul>
+      <li>Opening a specific browser tab to find something specific, then closing it when you're done</li>
+      <li>Reading the news once, intentionally, rather than checking it 15 times</li>
+      <li>Using social media when you've decided to, not as a reflexive response to boredom</li>
+      <li>Being present in physical space without the background hum of "I should check my phone"</li>
+    </ul>
+    <p>None of this requires sainthood. It requires tools that create the right default behavior — and the patience to let new habits form over weeks, not days.</p>
+
+    <h2>Where to start today</h2>
+    <p>If you want to take one practical step today, this is it: set a hard daily browsing limit and commit to it for two weeks. Don't optimize the number yet — just pick something slightly uncomfortable and stick to it.</p>
+    <p>After two weeks, look at your usage stats. See where your time actually went. Use that information to adjust your limits. Then do it again.</p>
+    <p>That's the whole system. The compounding effects, over time, are significant.</p>
+
+    <div class="app-cta">
+      <h3>The browser that works with your brain, not against it</h3>
+      <p>Daily limits, Strict Mode, permanent history. Free on Android.</p>
+      <a href="https://play.google.com/store/apps/details?id=com.squarebrowser.app">Download SquareBrowser Free</a>
+    </div>
+
+    <div class="related">
+      <h3>More from the blog</h3>
+      <div class="related-grid">
+        <a href="/blog/how-to-reduce-screen-time-android" class="related-card">
+          <div class="related-card-cat">Digital Wellness</div>
+          <div class="related-card-title">How to Reduce Screen Time on Android Without Willpower</div>
+        </a>
+        <a href="/blog/permanent-history-accountability" class="related-card">
+          <div class="related-card-cat">Accountability</div>
+          <div class="related-card-title">Why a Browser That Won't Delete History Changed Everything</div>
+        </a>
+      </div>
+    </div>
+  </article>
+
+  <footer>
+    <p>© 2026 SquareBrowser · <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms</a> · <a href="https://github.com/MohiuddinSumon/square-browser">GitHub</a></p>
+  </footer>
+
+  <script>
+    const btn = document.getElementById('themeBtn');
+    const html = document.documentElement;
+    if (localStorage.getItem('sb-theme') === 'dark') { html.setAttribute('data-theme','dark'); btn.textContent='☀️'; }
+    btn.addEventListener('click', () => {
+      const dark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', dark ? 'light' : 'dark');
+      btn.textContent = dark ? '🌙' : '☀️';
+      localStorage.setItem('sb-theme', dark ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>
