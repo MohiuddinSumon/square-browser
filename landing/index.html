@@ -56,8 +56,15 @@
     --text:       #E5EDE0;
     --muted:      #7F9280;
     --border:     #2A3D2D;
-    --shadow-card: 0 24px 64px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-card: 0 32px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.35);
   }
+  /* Dark mode component overrides */
+  [data-theme="dark"] .trust-num { color: #A8C4AE; }
+  [data-theme="dark"] .bento-card { background: var(--cream-deep); }
+  [data-theme="dark"] .bento-card:nth-child(1) { background: #2A4E38; border-color: #3D6E52; }
+  [data-theme="dark"] .blog-card { background: var(--cream-deep); }
+  [data-theme="dark"] .step-phone { border-color: #3A5A48; background: var(--cream-deep); }
+  [data-theme="dark"] .shot-card { background: var(--cream-deep); }
 
   /* ─── BASE ───────────────────────────────── */
   html { scroll-behavior: smooth; }
@@ -206,23 +213,26 @@
     position: absolute; left: 50%; top: 0;
     width: 240px; margin-left: -120px;
     border-radius: 28px; overflow: hidden;
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.32), 0 12px 32px rgba(0,0,0,0.18), 0 4px 10px rgba(0,0,0,0.1);
     background: var(--cream-alt);
     transform-style: preserve-3d;
     transition: transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.4s ease;
     will-change: transform;
+    cursor: grab;
   }
+  .shot-card:active { cursor: grabbing; }
 
-  /* Phone notch bar */
+  /* Phone status bar — dark contrasting band */
   .shot-card::before {
-    content: ''; display: block; height: 24px;
-    background: var(--cream-alt); border-bottom: 1px solid var(--border);
+    content: ''; display: block; height: 26px;
+    background: #0D1C10;
     position: relative; z-index: 1;
   }
+  /* Pill / notch indicator */
   .shot-card::after {
-    content: ''; position: absolute; top: 7px; left: 50%;
-    transform: translateX(-50%); width: 50px; height: 7px;
-    background: var(--border); border-radius: 4px; z-index: 2;
+    content: ''; position: absolute; top: 8px; left: 50%;
+    transform: translateX(-50%); width: 48px; height: 6px;
+    background: rgba(255,255,255,0.22); border-radius: 4px; z-index: 2;
   }
   .shot-card img { width: 100%; display: block; }
 
@@ -313,22 +323,22 @@
   .section-title em { font-style: italic; color: var(--amber); }
   .section-sub { font-size: 17px; color: var(--muted); line-height: 1.7; max-width: 540px; }
 
-  .section-head { margin-bottom: 64px; }
+  .section-head { margin-bottom: 48px; }
 
   /* ─── HOW IT WORKS ───────────────────────── */
   .how-steps { display: flex; flex-direction: column; gap: 0; }
 
   .how-step {
-    display: grid; grid-template-columns: 80px 1fr 260px;
-    gap: 40px; align-items: center;
-    padding: 60px 0; border-bottom: 1px solid var(--border);
+    display: grid; grid-template-columns: 64px 1fr 200px;
+    gap: 32px; align-items: center;
+    padding: 32px 0; border-bottom: 1px solid var(--border);
   }
   .how-step:last-child { border-bottom: none; }
   .how-step:nth-child(even) { direction: rtl; }
   .how-step:nth-child(even) > * { direction: ltr; }
 
   .step-num {
-    font-family: var(--font-d); font-size: 80px; font-weight: 900; font-style: italic;
+    font-family: var(--font-d); font-size: 56px; font-weight: 900; font-style: italic;
     color: var(--border); line-height: 1; letter-spacing: -0.04em; user-select: none;
   }
 
@@ -338,19 +348,19 @@
   .step-desc { font-size: 16px; color: var(--muted); line-height: 1.7; }
 
   .step-phone {
-    width: 220px; border-radius: 28px; overflow: hidden;
-    border: 2px solid var(--border); background: var(--cream-alt);
-    box-shadow: 0 20px 48px rgba(0,0,0,0.12);
+    width: 180px; border-radius: 24px; overflow: hidden;
+    border: 1px solid var(--border); background: var(--cream-alt);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.1);
     position: relative; flex-shrink: 0;
   }
   .step-phone::before {
     content: ''; display: block; height: 22px;
-    background: var(--cream-alt); border-bottom: 1px solid var(--border);
+    background: #0D1C10;
   }
   .step-phone::after {
-    content: ''; position: absolute; top: 6px; left: 50%;
-    transform: translateX(-50%); width: 44px; height: 6px;
-    background: var(--border); border-radius: 3px;
+    content: ''; position: absolute; top: 7px; left: 50%;
+    transform: translateX(-50%); width: 40px; height: 5px;
+    background: rgba(255,255,255,0.22); border-radius: 3px;
   }
   .step-phone img { width: 100%; display: block; }
 
@@ -533,7 +543,7 @@
     .bento { grid-template-columns: repeat(2, 1fr); }
     .bento-card:nth-child(1) { grid-column: span 2; grid-row: span 1; }
     .bento-card:nth-child(n+2) { grid-column: span 1; }
-    .how-step { grid-template-columns: 60px 1fr 200px; gap: 24px; }
+    .how-step { grid-template-columns: 52px 1fr 160px; gap: 20px; }
     .how-step:nth-child(even) { direction: ltr; }
     .footer-inner { grid-template-columns: 1fr 1fr; }
   }
@@ -630,7 +640,7 @@
         <div class="shot-card"><img src="screenshots/strict_mode_limit_reached.jpg" alt="Strict mode locked" loading="eager"></div>
         <div class="shot-card"><img src="screenshots/browsing_assunnah.jpg" alt="Browsing with timer" loading="eager"></div>
       </div>
-      <p class="deck-hint">Hover to explore the app</p>
+      <p class="deck-hint">Hover or drag to explore</p>
     </div>
   </section>
 
@@ -947,93 +957,136 @@
     localStorage.setItem('sb-theme', dark ? 'light' : 'dark');
   });
 
-  // ── SCREENSHOT DECK: 3D WOBBLE ────────────────────────
+  // ── SCREENSHOT DECK: 3D WOBBLE + DRAG CYCLING ────────
   const deck = document.getElementById('shotDeck');
   const cards = [...deck.querySelectorAll('.shot-card')];
   const cursor = document.getElementById('deckCursor');
+  const N = cards.length; // 5
   let rafId = null;
   let isHovered = false;
+  let currentCard = 2; // index of the centered card
 
-  // Default CSS transforms (matching the :nth-child CSS above)
-  const defaults = [
-    { tx: -48, ty: 0,  rz: -9 },
-    { tx: -24, ty: 8,  rz: -4 },
-    { tx:   0, ty: 14, rz:  1 },
-    { tx:  24, ty: 8,  rz:  6 },
-    { tx:  48, ty: 0,  rz: 11 },
-  ];
+  function getOffset(i) {
+    let off = i - currentCard;
+    while (off > Math.floor(N / 2)) off -= N;
+    while (off < -Math.floor(N / 2)) off += N;
+    return off;
+  }
+
+  function posForOffset(off) {
+    return { tx: off * 28, ty: Math.abs(off) * 8, rz: off * 5, z: N - Math.abs(off) };
+  }
 
   function applyDeckTransform(dx, dy) {
-    // dx, dy: -1..1 normalized mouse offset from center
     cards.forEach((card, i) => {
-      const d = defaults[i];
-      const depth = (i - 2) / 2;  // -1..0..1
-
-      // Fan spread increases with hover + mouse
-      const fanMult = isHovered ? 1.8 : 1;
-      const tx = d.tx * fanMult + dx * 18 * (1 + Math.abs(depth) * 0.4);
-      const ty = d.ty + dy * 10 + Math.abs(depth) * 6;
-      const rz = d.rz + dx * 4;
+      const off = getOffset(i);
+      const base = posForOffset(off);
+      card.style.zIndex = base.z;
+      const fanMult = isHovered ? 1.75 : 1;
+      const tx = base.tx * fanMult + dx * 18 * (1 + Math.abs(off) * 0.4);
+      const ty = base.ty + dy * 10 + Math.abs(off) * 4;
+      const rz = base.rz + dx * 4;
       const rx = -dy * 18;
-      const ry = dx * 18 + depth * 4;
-
-      card.style.transform = `
-        translateX(${tx}px)
-        translateY(${ty}px)
-        rotateX(${rx}deg)
-        rotateY(${ry}deg)
-        rotateZ(${rz}deg)
-      `;
+      const ry = dx * 18 + off * 4;
+      card.style.transform = `translateX(${tx}px) translateY(${ty}px) rotateX(${rx}deg) rotateY(${ry}deg) rotateZ(${rz}deg)`;
     });
   }
 
-  function resetDeck() {
+  function resetDeck(animated) {
     cards.forEach((card, i) => {
-      const d = defaults[i];
-      card.style.transform = `translateX(${d.tx}px) translateY(${d.ty}px) rotateZ(${d.rz}deg)`;
+      const off = getOffset(i);
+      const p = posForOffset(off);
+      card.style.zIndex = p.z;
+      if (animated) card.style.transition = 'transform 0.55s cubic-bezier(0.34,1.4,0.64,1)';
+      card.style.transform = `translateX(${p.tx}px) translateY(${p.ty}px) rotateZ(${p.rz}deg)`;
     });
+    if (animated) setTimeout(() => cards.forEach(c => c.style.transition = ''), 600);
   }
 
+  function cycleCard(dir) {
+    currentCard = ((currentCard + dir) % N + N) % N;
+    resetDeck(true);
+  }
+
+  // Initial positions
+  resetDeck(false);
+
+  // Hover
   deck.addEventListener('mouseenter', () => {
     isHovered = true;
     cursor.style.opacity = '1';
     cursor.style.transform = 'translate(-50%,-50%) scale(1)';
   });
-
   deck.addEventListener('mouseleave', () => {
     isHovered = false;
     cursor.style.opacity = '0';
     cursor.style.transform = 'translate(-50%,-50%) scale(0)';
     if (rafId) cancelAnimationFrame(rafId);
-    resetDeck();
+    if (!isDragging) resetDeck(false);
   });
-
   deck.addEventListener('mousemove', (e) => {
-    // Move custom cursor
+    if (isDragging) return;
     cursor.style.left = e.clientX + 'px';
     cursor.style.top  = e.clientY + 'px';
-
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
       const rect = deck.getBoundingClientRect();
-      const dx = (e.clientX - rect.left  - rect.width  / 2) / (rect.width  / 2);
-      const dy = (e.clientY - rect.top   - rect.height / 2) / (rect.height / 2);
+      const dx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+      const dy = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
       applyDeckTransform(Math.max(-1, Math.min(1, dx)), Math.max(-1, Math.min(1, dy)));
     });
   });
 
-  // Touch support for mobile
+  // Drag cycling (mouse)
+  let isDragging = false;
+  let dragStartX = null;
+  let hasDragged = false;
+  const DRAG_THRESH = 48;
+
+  deck.addEventListener('mousedown', (e) => {
+    dragStartX = e.clientX;
+    isDragging = true;
+    hasDragged = false;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging || dragStartX === null) return;
+    if (Math.abs(e.clientX - dragStartX) > 10) hasDragged = true;
+  });
+  window.addEventListener('mouseup', (e) => {
+    if (!isDragging) return;
+    if (hasDragged) {
+      const delta = e.clientX - dragStartX;
+      if (Math.abs(delta) > DRAG_THRESH) cycleCard(delta < 0 ? 1 : -1);
+      else resetDeck(false);
+    }
+    isDragging = false;
+    dragStartX = null;
+  });
+
+  // Touch support
+  let touchStartX = null;
+  deck.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
   deck.addEventListener('touchmove', (e) => {
+    if (touchStartX === null) return;
     e.preventDefault();
     const touch = e.touches[0];
     const rect = deck.getBoundingClientRect();
-    const dx = (touch.clientX - rect.left  - rect.width  / 2) / (rect.width  / 2);
-    const dy = (touch.clientY - rect.top   - rect.height / 2) / (rect.height / 2);
+    const dx = (touch.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+    const dy = (touch.clientY - rect.top - rect.height / 2) / (rect.height / 2);
     isHovered = true;
     applyDeckTransform(Math.max(-1, Math.min(1, dx)), Math.max(-1, Math.min(1, dy)));
   }, { passive: false });
-
-  deck.addEventListener('touchend', () => { isHovered = false; resetDeck(); });
+  deck.addEventListener('touchend', (e) => {
+    if (touchStartX !== null) {
+      const delta = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(delta) > DRAG_THRESH) cycleCard(delta < 0 ? 1 : -1);
+      else { isHovered = false; resetDeck(false); }
+    }
+    touchStartX = null;
+  });
 
   // ── SCROLL REVEALS ────────────────────────────────────
   const revealObs = new IntersectionObserver(
