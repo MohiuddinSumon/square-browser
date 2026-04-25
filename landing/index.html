@@ -40,6 +40,7 @@
     --text:       #181F16;
     --muted:      #72836F;
     --border:     #CFC7B8;
+    --on-forest:  #F0E8DA; /* always light — text/icons on dark forest backgrounds */
     --shadow-card: 0 24px 64px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
     --shadow-sm:   0 2px 8px rgba(0,0,0,0.06);
     --r:  14px;
@@ -125,7 +126,7 @@
 
   .nav-cta {
     font-family: var(--font-d); font-size: 14px; font-weight: 700;
-    color: var(--cream); background: var(--forest); text-decoration: none;
+    color: var(--on-forest); background: var(--forest); text-decoration: none;
     padding: 10px 20px; border-radius: 10px; margin-left: 10px;
     transition: all 0.25s; letter-spacing: -0.01em;
   }
@@ -182,7 +183,7 @@
   .btn-primary {
     display: inline-flex; align-items: center; gap: 10px;
     font-family: var(--font-d); font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
-    color: var(--cream); background: var(--forest); text-decoration: none;
+    color: var(--on-forest); background: var(--forest); text-decoration: none;
     padding: 16px 28px; border-radius: var(--r); transition: all 0.25s;
     box-shadow: 0 4px 20px rgba(26,51,36,0.25);
   }
@@ -267,7 +268,7 @@
   /* ─── TICKER ─────────────────────────────── */
   .ticker {
     overflow: hidden; padding: 0;
-    background: var(--forest); color: var(--cream);
+    background: var(--forest); color: var(--on-forest);
     border-top: 1px solid var(--forest-mid); border-bottom: 1px solid var(--forest-mid);
   }
   .ticker-track {
@@ -302,7 +303,7 @@
   .quote-text {
     font-family: var(--font-d); font-size: clamp(28px, 4.5vw, 58px);
     font-weight: 700; font-style: italic; line-height: 1.2; letter-spacing: -0.025em;
-    color: var(--cream); margin-bottom: 28px;
+    color: var(--on-forest); margin-bottom: 28px;
   }
   .quote-text em { font-style: normal; color: var(--amber); }
   .quote-attr { font-size: 14px; color: var(--sage); letter-spacing: 0.04em; }
@@ -486,7 +487,7 @@
   .cta-title {
     font-family: var(--font-d); font-size: clamp(40px, 6vw, 76px);
     font-weight: 900; font-style: italic; letter-spacing: -0.04em; line-height: 1.0;
-    color: var(--cream); margin-bottom: 20px;
+    color: var(--on-forest); margin-bottom: 20px;
   }
   .cta-title em { font-style: normal; color: var(--amber); }
   .cta-sub { font-size: 18px; color: rgba(226,237,229,0.7); margin-bottom: 44px; line-height: 1.6; }
@@ -495,7 +496,7 @@
   .btn-cream {
     display: inline-flex; align-items: center; gap: 10px;
     font-family: var(--font-d); font-size: 16px; font-weight: 700; letter-spacing: -0.01em;
-    color: var(--forest); background: var(--cream); text-decoration: none;
+    color: var(--forest); background: var(--on-forest); text-decoration: none;
     padding: 16px 28px; border-radius: var(--r); transition: all 0.25s;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   }
@@ -538,6 +539,127 @@
   .footer-bottom { max-width: 1180px; margin: 0 auto; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
   .footer-copy { font-size: 13px; color: var(--muted); }
 
+  /* ─── SCROLLBAR ─────────────────────────── */
+  ::-webkit-scrollbar { width: 7px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+  * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+  /* ─── ROADMAP ────────────────────────────── */
+  .roadmap-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;
+  }
+  .roadmap-phase { background: var(--cream); padding: 32px 26px; }
+  .roadmap-phase.rp-done { background: var(--forest); }
+  .roadmap-phase.rp-active { background: var(--cream); border-top: 4px solid var(--amber); }
+  [data-theme="dark"] .roadmap-phase.rp-active { border-top-color: var(--amber); }
+
+  .rp-header { margin-bottom: 20px; }
+  .rp-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .roadmap-phase.rp-done .rp-label { color: rgba(226,237,229,0.5); }
+
+  .rp-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    padding: 4px 12px; border-radius: 100px;
+  }
+  .rp-done .rp-badge { background: rgba(181,102,26,0.3); color: #FFBB70; }
+  .rp-active .rp-badge { background: var(--amber-lt); color: var(--amber); border: 1px solid rgba(181,102,26,0.25); }
+  .rp-planned .rp-badge { background: var(--cream-alt); color: var(--muted); }
+  .rp-future .rp-badge { background: var(--cream-deep); color: var(--muted); }
+  [data-theme="dark"] .rp-active .rp-badge { background: rgba(181,102,26,0.18); }
+  [data-theme="dark"] .rp-planned .rp-badge, [data-theme="dark"] .rp-future .rp-badge { background: var(--cream-alt); }
+
+  .rp-title { font-family: var(--font-d); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 16px; }
+  .rp-done .rp-title { color: var(--on-forest); }
+
+  .rp-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .rp-list li { font-size: 13.5px; line-height: 1.5; color: var(--muted); padding-left: 16px; position: relative; }
+  .rp-list li::before { content: '–'; position: absolute; left: 0; color: var(--border); }
+  .rp-done .rp-list li { color: rgba(226,237,229,0.6); }
+  .rp-done .rp-list li::before { content: '✓'; color: rgba(181,102,26,0.5); font-size: 11px; top: 1px; }
+  .rp-active .rp-list li::before { color: var(--amber); }
+
+  /* ─── TESTIMONIALS ───────────────────────── */
+  .testi-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+  .testi-card {
+    background: var(--cream-alt); border: 1px solid var(--border);
+    border-radius: var(--r-lg); padding: 28px;
+    display: flex; flex-direction: column; gap: 16px;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .testi-card:hover { transform: translateY(-3px); box-shadow: 0 12px 36px rgba(0,0,0,0.1); }
+  .testi-card.tc-amber { background: var(--amber-lt); border-color: rgba(181,102,26,0.2); }
+  .testi-card.tc-sage { background: var(--forest-lt); border-color: rgba(91,122,101,0.25); }
+  [data-theme="dark"] .testi-card.tc-sage { background: var(--cream-deep); }
+
+  .testi-stars { color: var(--amber); font-size: 13px; letter-spacing: 2px; }
+  .testi-quote {
+    font-family: var(--font-d); font-size: 15.5px; font-style: italic;
+    line-height: 1.7; color: var(--text); letter-spacing: -0.01em; flex: 1;
+  }
+  .testi-author { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
+  .testi-avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.92);
+  }
+  .testi-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .testi-loc { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .testi-cta { text-align: center; margin-top: 52px; }
+
+  /* ─── SUPPORT ────────────────────────────── */
+  .support-section {
+    background: var(--cream-alt); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 80px 40px;
+  }
+  .support-inner { max-width: 900px; margin: 0 auto; }
+  .support-head { text-align: center; margin-bottom: 52px; }
+  .support-head .eyebrow { display: inline-block; }
+  .support-lead {
+    font-family: var(--font-d); font-size: clamp(28px, 3.5vw, 40px); font-weight: 900;
+    letter-spacing: -0.03em; line-height: 1.1; margin: 12px 0 16px; color: var(--text);
+  }
+  .support-lead em { color: var(--amber); font-style: italic; }
+  .support-sub { font-size: 16px; color: var(--muted); line-height: 1.7; max-width: 520px; margin: 0 auto; }
+
+  .support-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .scard {
+    background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: 28px 24px 24px; display: flex; flex-direction: column; gap: 12px;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .scard:hover { transform: translateY(-3px); box-shadow: 0 16px 48px rgba(0,0,0,0.1); }
+  .scard-icon {
+    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; background: var(--cream-alt);
+    border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .scard-title { font-family: var(--font-d); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+  .scard-desc { font-size: 14px; color: var(--muted); line-height: 1.65; flex: 1; }
+  .scard-btn {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 600;
+    text-decoration: none; padding: 10px 18px; border-radius: 10px;
+    transition: all 0.2s; width: fit-content;
+  }
+  .scard-btn-forest { background: var(--forest); color: var(--on-forest); }
+  .scard-btn-forest:hover { background: var(--forest-mid); }
+  .scard-btn-amber { background: var(--amber-lt); color: var(--amber-dk); border: 1px solid rgba(181,102,26,0.25); }
+  .scard-btn-amber:hover { background: var(--amber); color: var(--on-forest); border-color: var(--amber); }
+  .scard-btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .scard-btn-outline:hover { background: var(--cream-alt); border-color: var(--sage); }
+  [data-theme="dark"] .scard { background: var(--cream-deep); }
+  [data-theme="dark"] .scard-btn-amber { background: rgba(181,102,26,0.15); color: #D4884A; border-color: rgba(181,102,26,0.3); }
+  [data-theme="dark"] .scard-btn-amber:hover { background: var(--amber); color: var(--on-forest); }
+
   /* ─── RESPONSIVE ─────────────────────────── */
   @media (max-width: 1024px) {
     .bento { grid-template-columns: repeat(2, 1fr); }
@@ -546,6 +668,9 @@
     .how-step { grid-template-columns: 52px 1fr 160px; gap: 20px; }
     .how-step:nth-child(even) { direction: ltr; }
     .footer-inner { grid-template-columns: 1fr 1fr; }
+    .roadmap-grid { grid-template-columns: 1fr 1fr; }
+    .testi-grid { grid-template-columns: 1fr 1fr; }
+    .support-cards { grid-template-columns: 1fr 1fr; }
   }
 
   @media (max-width: 860px) {
@@ -579,6 +704,10 @@
     .cta-section { padding: 80px 20px; }
     .cta-section::before { font-size: 160px; }
     .trust-item { flex: 1 0 100%; }
+    .roadmap-grid { grid-template-columns: 1fr; }
+    .testi-grid { grid-template-columns: 1fr; }
+    .support-cards { grid-template-columns: 1fr; }
+    .support-section { padding: 60px 20px; }
   }
   </style>
 </head>
@@ -600,6 +729,7 @@
       <div class="nav-links">
         <a href="#how" class="nav-link">How It Works</a>
         <a href="#features" class="nav-link">Features</a>
+        <a href="#roadmap" class="nav-link">Roadmap</a>
         <a href="/blog/" class="nav-link">Blog</a>
         <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">🌙</button>
         <a href="https://play.google.com/store/apps/details?id=com.squarebrowser.app" class="nav-cta">Download Free ↓</a>
@@ -800,8 +930,79 @@
     </div>
   </section>
 
+  <!-- ROADMAP -->
+  <section id="roadmap" class="section">
+    <div class="wrap">
+      <div class="section-head reveal" style="text-align:center; max-width:620px; margin:0 auto 56px;">
+        <div class="eyebrow">Product Roadmap</div>
+        <h2 class="section-title">Built in the open.<br><em>Moving with purpose.</em></h2>
+        <p class="section-sub">SquareBrowser is early-stage and intentional. Here's where we are and where we're heading — for users and investors alike.</p>
+      </div>
+      <div class="roadmap-grid">
+        <div class="roadmap-phase rp-done reveal">
+          <div class="rp-header">
+            <div class="rp-label">01</div>
+            <div class="rp-badge">Shipped ✓</div>
+          </div>
+          <div class="rp-title">Foundation</div>
+          <ul class="rp-list">
+            <li>Full-featured Android browser</li>
+            <li>Daily browsing time limits</li>
+            <li>Strict Mode — hard lock until midnight</li>
+            <li>Permanent, undeletable history</li>
+            <li>Per-domain usage statistics</li>
+            <li>Built-in ad blocker</li>
+            <li>Dark &amp; light themes</li>
+          </ul>
+        </div>
+        <div class="roadmap-phase rp-active reveal" style="transition-delay:.08s">
+          <div class="rp-header">
+            <div class="rp-label">02</div>
+            <div class="rp-badge">In Progress →</div>
+          </div>
+          <div class="rp-title">Insights</div>
+          <ul class="rp-list">
+            <li>Weekly &amp; monthly usage trends</li>
+            <li>Custom domain block lists</li>
+            <li>Home screen timer widget</li>
+            <li>Scheduled browsing windows</li>
+            <li>Focus mode with site whitelists</li>
+          </ul>
+        </div>
+        <div class="roadmap-phase rp-planned reveal" style="transition-delay:.16s">
+          <div class="rp-header">
+            <div class="rp-label">03</div>
+            <div class="rp-badge">Planned</div>
+          </div>
+          <div class="rp-title">Reach</div>
+          <ul class="rp-list">
+            <li>iOS release</li>
+            <li>Parental &amp; family mode</li>
+            <li>Accountability partner sharing</li>
+            <li>Custom lock screen messages</li>
+            <li>Exportable usage reports</li>
+          </ul>
+        </div>
+        <div class="roadmap-phase rp-future reveal" style="transition-delay:.24s">
+          <div class="rp-header">
+            <div class="rp-label">04</div>
+            <div class="rp-badge">Future</div>
+          </div>
+          <div class="rp-title">Ecosystem</div>
+          <ul class="rp-list">
+            <li>Community accountability groups</li>
+            <li>Anonymous usage benchmarks</li>
+            <li>Enterprise &amp; workplace edition</li>
+            <li>Open API for integrations</li>
+            <li>Research partnerships</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- FAQ -->
-  <section class="section">
+  <section class="section section-alt">
     <div class="wrap">
       <div class="section-head reveal" style="text-align:center; max-width:600px; margin:0 auto 64px;">
         <div class="eyebrow">Questions</div>
@@ -881,6 +1082,142 @@
             <div class="blog-meta"><span>April 2026</span><span class="blog-arrow">→</span></div>
           </div>
         </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head reveal" style="text-align:center; max-width:600px; margin:0 auto 56px;">
+        <div class="eyebrow">User Stories</div>
+        <h2 class="section-title">Real people.<br><em>Real results.</em></h2>
+        <p class="section-sub">How SquareBrowser is helping people reclaim hours from doomscrolling, social media loops, and mindless browsing.</p>
+      </div>
+      <div class="testi-grid">
+
+        <div class="testi-card reveal">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"I was spending 3+ hours on Reddit every day without realising it. After two weeks of daily limits, I'm under 40 minutes. The timer in the address bar is what did it — I couldn't pretend I wasn't scrolling."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#4A7C5F">AR</div>
+            <div>
+              <div class="testi-name">Ahmed R.</div>
+              <div class="testi-loc">London, UK · Reddit habit</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card tc-amber reveal" style="transition-delay:.07s">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"The permanent history felt uncomfortable at first. Now I think of it as a mirror. I can't lie to myself about how I'm spending my time — and that's exactly what I needed to change."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#8F4E12">SM</div>
+            <div>
+              <div class="testi-name">Sarah M.</div>
+              <div class="testi-loc">Toronto, Canada · News addiction</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card reveal" style="transition-delay:.14s">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"Strict Mode during exam season was a lifesaver. Once I turned it on in the morning, the temptation just wasn't there. I couldn't override it even when I desperately wanted to procrastinate."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#2D5A3D">JT</div>
+            <div>
+              <div class="testi-name">James T.</div>
+              <div class="testi-loc">Dublin, Ireland · Procrastination</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card tc-sage reveal" style="transition-delay:.07s">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"I had no idea I was spending 90 minutes a day on news sites. The usage stats showed me exactly which domains were stealing my hours. Seeing that number made me genuinely uncomfortable — that's the point."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#5B7A65">PK</div>
+            <div>
+              <div class="testi-name">Priya K.</div>
+              <div class="testi-loc">Bangalore, India · Doomscrolling</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card reveal" style="transition-delay:.14s">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"My sleep improved within a week. A 30-minute limit after 9pm meant no more midnight doomscrolling. Simple idea, works exactly as described — and I didn't need any willpower after setting it."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#5B7A65">ML</div>
+            <div>
+              <div class="testi-name">Marcus L.</div>
+              <div class="testi-loc">Berlin, Germany · Sleep quality</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testi-card tc-amber reveal" style="transition-delay:.21s">
+          <div class="testi-stars">★★★★★</div>
+          <p class="testi-quote">"I've tried screen time apps before and always found workarounds. Strict Mode doesn't give you one. I made the commitment in the morning and it held all day. That's what makes it actually work."</p>
+          <div class="testi-author">
+            <div class="testi-avatar" style="background:#1A3324">FH</div>
+            <div>
+              <div class="testi-name">Fatima H.</div>
+              <div class="testi-loc">Kuala Lumpur, MY · Social media</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="testi-cta reveal">
+        <a href="https://play.google.com/store/apps/details?id=com.squarebrowser.app" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+          Join them — Download Free
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPORT -->
+  <section class="support-section">
+    <div class="support-inner">
+      <div class="support-head reveal">
+        <div class="eyebrow">Support the Project</div>
+        <h2 class="support-lead">Keep it free.<br><em>Fuel the mission.</em></h2>
+        <p class="support-sub">SquareBrowser is built by one person, free for everyone, with zero ads and zero data collection. If it's helped you, here's how you can help it grow.</p>
+      </div>
+      <div class="support-cards">
+
+        <div class="scard reveal">
+          <div class="scard-icon">☕</div>
+          <div class="scard-title">Buy Me a Coffee</div>
+          <p class="scard-desc">One-time contribution — no account needed. Every coffee keeps development going and servers humming.</p>
+          <a href="https://buymeacoffee.com/squarebrowser" class="scard-btn scard-btn-amber" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4v10c0 3.31 2.69 6 6 6h4c3.31 0 6-2.69 6-6V9h-4V8c0-.55.45-1 1-1h3V3zm-3 6v4c0 2.21-1.79 4-4 4h-4c-2.21 0-4-1.79-4-4V5h14v1h-2c-1.1 0-2 .9-2 2v1z"/></svg>
+            Buy a coffee
+          </a>
+        </div>
+
+        <div class="scard reveal" style="transition-delay:.06s">
+          <div class="scard-icon">♡</div>
+          <div class="scard-title">GitHub Sponsors</div>
+          <p class="scard-desc">Monthly support via GitHub. Choose your own amount — cancel anytime. Great way to sustain long-term development.</p>
+          <a href="https://github.com/sponsors/MohiuddinSumon" class="scard-btn scard-btn-forest" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Become a sponsor
+          </a>
+        </div>
+
+        <div class="scard reveal" style="transition-delay:.12s">
+          <div class="scard-icon">★</div>
+          <div class="scard-title">Star on GitHub</div>
+          <p class="scard-desc">Free and takes 3 seconds. Stars help the project get discovered by people who need it and attract potential contributors.</p>
+          <a href="https://github.com/MohiuddinSumon/square-browser" class="scard-btn scard-btn-outline" target="_blank" rel="noopener">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"/></svg>
+            Star the repo
+          </a>
+        </div>
+
       </div>
     </div>
   </section>

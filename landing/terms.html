@@ -1,110 +1,199 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terms of Service - SquareBrowser</title>
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <title>Terms of Service — SquareBrowser</title>
+  <meta name="description" content="SquareBrowser's terms of service. Free, open source, and built for personal accountability. Your data stays on your device.">
+  <link rel="canonical" href="https://squarebrowser.vercel.app/terms">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --cream: #F0E8DA; --cream-alt: #E8DFCF; --cream-deep: #DDD3C2;
+    --forest: #1A3324; --forest-mid: #2D5A3D;
+    --amber: #B5661A; --amber-lt: #FEF0DA;
+    --sage: #5B7A65; --text: #181F16; --muted: #72836F; --border: #CFC7B8;
+    --on-forest: #F0E8DA;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --r: 14px; --r-lg: 22px;
+    --font-d: 'Fraunces', serif; --font-b: 'DM Sans', sans-serif;
+  }
+  [data-theme="dark"] {
+    --cream: #0E1B12; --cream-alt: #172116; --cream-deep: #1F2E22;
+    --text: #E5EDE0; --muted: #7F9280; --border: #2A3D2D;
+    --amber-lt: #2E1C08;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--font-b); background: var(--cream); color: var(--text); line-height: 1.7; transition: background 0.4s, color 0.4s; overflow-x: hidden; }
+  a { color: inherit; }
 
-    :root {
-      --primary: #2196F3;
-      --text: #1a1a1a;
-      --text-light: #666;
-      --bg: #ffffff;
-      --bg-alt: #f8f9fa;
-      --border: #e0e0e0;
-    }
+  .noise { position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.03; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 200px; }
 
-    body.dark {
-      --text: #e0e0e0;
-      --text-light: #999;
-      --bg: #0a0a0a;
-      --bg-alt: #1a1a1a;
-      --border: #333;
-    }
+  nav { position: sticky; top: 0; z-index: 200; background: rgba(240,232,218,0.88); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); transition: background 0.4s; }
+  [data-theme="dark"] nav { background: rgba(14,27,18,0.9); }
+  .nav-inner { max-width: 1180px; margin: 0 auto; padding: 0 40px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .nav-logo img { width: 32px; height: 32px; border-radius: 9px; box-shadow: var(--shadow-sm); }
+  .nav-logo-name { font-family: var(--font-d); font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
+  .nav-right { display: flex; align-items: center; gap: 4px; }
+  .nav-link { font-size: 14px; font-weight: 500; color: var(--muted); text-decoration: none; padding: 7px 14px; border-radius: 9px; transition: all 0.2s; }
+  .nav-link:hover { color: var(--text); background: var(--cream-alt); }
+  .theme-btn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--cream-alt); cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .theme-btn:hover { background: var(--cream-deep); }
+  .nav-cta { font-family: var(--font-d); font-size: 14px; font-weight: 700; color: var(--on-forest); background: var(--forest); text-decoration: none; padding: 10px 20px; border-radius: 10px; margin-left: 8px; transition: all 0.2s; }
+  .nav-cta:hover { background: var(--forest-mid); }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      line-height: 1.8;
-      color: var(--text);
-      background: var(--bg);
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
+  .page-wrap { max-width: 760px; margin: 0 auto; padding: 64px 40px 100px; }
+  .breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 36px; }
+  .breadcrumb a { color: var(--amber); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
 
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--primary);
-      text-decoration: none;
-      margin-bottom: 30px;
-      font-weight: 500;
-    }
+  .page-eyebrow { font-size: 11px; font-weight: 700; color: var(--amber); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 16px; display: block; }
+  h1 { font-family: var(--font-d); font-size: clamp(36px, 5vw, 56px); font-weight: 900; line-height: 1.06; letter-spacing: -0.03em; margin-bottom: 16px; }
+  h1 em { font-style: italic; color: var(--amber); }
+  .page-date { font-size: 14px; color: var(--muted); margin-bottom: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--border); }
 
-    .back-link:hover {
-      text-decoration: underline;
-    }
+  h2 { font-family: var(--font-d); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 44px 0 16px; color: var(--text); }
+  p { font-size: 16.5px; color: var(--text); margin-bottom: 18px; line-height: 1.8; }
+  ul { padding-left: 24px; margin-bottom: 18px; }
+  li { font-size: 16.5px; margin-bottom: 10px; line-height: 1.7; color: var(--text); }
+  strong { font-weight: 600; }
 
-    h1 {
-      font-size: 32px;
-      margin-bottom: 10px;
-    }
+  .highlight-box {
+    background: var(--forest); border-radius: var(--r-lg); padding: 32px 36px; margin: 44px 0;
+    position: relative; overflow: hidden;
+  }
+  .highlight-box::before {
+    content: '§';
+    position: absolute; font-family: var(--font-d); font-size: 200px; font-weight: 900; font-style: italic;
+    color: var(--forest-mid); right: 16px; top: -30px; line-height: 1; pointer-events: none;
+  }
+  .highlight-box-inner { position: relative; z-index: 1; }
+  .highlight-box h3 { font-family: var(--font-d); font-size: 20px; font-weight: 700; font-style: italic; color: var(--on-forest); margin-bottom: 10px; letter-spacing: -0.02em; }
+  .highlight-box p { color: rgba(226,237,229,0.8); margin: 0; font-size: 15px; }
 
-    .date {
-      color: var(--text-light);
-      margin-bottom: 30px;
-    }
+  .callout { background: var(--amber-lt); border-left: 4px solid var(--amber); border-radius: 0 var(--r) var(--r) 0; padding: 20px 24px; margin: 28px 0; }
+  .callout p { margin: 0; font-size: 15.5px; line-height: 1.7; }
+  [data-theme="dark"] .callout { background: rgba(181,102,26,0.12); }
 
-    h2 {
-      font-size: 22px;
-      color: var(--primary);
-      margin-top: 30px;
-      margin-bottom: 15px;
-    }
+  footer { padding: 40px; border-top: 1px solid var(--border); background: var(--cream-alt); }
+  .footer-inner { max-width: 1180px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .footer-copy { font-size: 13px; color: var(--muted); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--amber); }
 
-    p {
-      margin-bottom: 15px;
-      color: var(--text-light);
-    }
-
-    .footer {
-      margin-top: 50px;
-      padding-top: 20px;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      color: var(--text-light);
-      font-style: italic;
-    }
+  @media (max-width: 640px) {
+    .nav-inner { padding: 0 20px; }
+    .nav-link { display: none; }
+    .page-wrap { padding: 48px 20px 80px; }
+    footer { padding: 32px 20px; }
+    .footer-inner { flex-direction: column; gap: 16px; }
+  }
   </style>
 </head>
 <body>
-  <a href="index.html" class="back-link">← Back to Home</a>
+  <div class="noise" aria-hidden="true"></div>
 
-  <h1>Terms of Service</h1>
-  <p class="date">Last Updated: January 4, 2026</p>
+  <nav>
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <img src="/icon.png" alt="SB">
+        <span class="nav-logo-name">SquareBrowser</span>
+      </a>
+      <div class="nav-right">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/blog/" class="nav-link">Blog</a>
+        <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">🌙</button>
+        <a href="https://play.google.com/store/apps/details?id=com.squarebrowser.app" class="nav-cta">Download Free</a>
+      </div>
+    </div>
+  </nav>
 
-  <h2>1. Acceptance of Terms</h2>
-  <p>By installing and using SquareBrowser, you acknowledge that this is an accountability-focused tool.</p>
+  <div class="page-wrap">
+    <p class="breadcrumb"><a href="/">Home</a> / Terms of Service</p>
+    <span class="page-eyebrow">Legal</span>
+    <h1>Terms of <em>Service</em></h1>
+    <p class="page-date">Last updated: January 4, 2026</p>
 
-  <h2>2. Use of the App</h2>
-  <p>You agree to use SquareBrowser for mindful browsing. You understand that the app is designed to record your history permanently to provide full transparency and accountability.</p>
+    <div class="highlight-box">
+      <div class="highlight-box-inner">
+        <h3>Plain English first.</h3>
+        <p>SquareBrowser is a free, open-source accountability tool. You use it to browse with intention. Your data stays on your device. We provide no warranties, but we also take nothing from you.</p>
+      </div>
+    </div>
 
-  <h2>3. No Incognito/Private Mode</h2>
-  <p>SquareBrowser does not offer a private browsing mode. Every action performed within the browser is logged locally.</p>
+    <h2>1. Acceptance of Terms</h2>
+    <p>By installing and using SquareBrowser, you agree to these terms. If you do not agree, please uninstall the app.</p>
+    <p>SquareBrowser is free software provided under an open-source licence. These terms exist to protect both users and the project, not to create obligations that don't serve you.</p>
 
-  <h2>4. Limitation of Liability</h2>
-  <p>SquareBrowser is provided "as is". We are not responsible for any content viewed or the impact of permanent history logging on your personal or professional life.</p>
+    <h2>2. What SquareBrowser Is</h2>
+    <p>SquareBrowser is a mobile web browser for Android designed to support intentional, accountable internet use. It includes:</p>
+    <ul>
+      <li>Daily browsing time limits that pause the browser when exceeded</li>
+      <li>Strict Mode, which locks the browser completely until midnight with no override</li>
+      <li>A permanent, local browsing history that cannot be deleted from within the app</li>
+      <li>Per-domain usage statistics stored locally on your device</li>
+      <li>A built-in ad blocker</li>
+    </ul>
+    <p>You understand and accept these features as core to how the app works.</p>
 
-  <div class="footer">
-    This app is a tool for self-discipline. Use it wisely.
+    <h2>3. The Permanent History Feature</h2>
+    <p>SquareBrowser does not provide a clear history function. Every URL you visit is recorded in local storage on your device and cannot be deleted through the app.</p>
+
+    <div class="callout">
+      <p><strong>This is intentional and is a key feature, not a bug.</strong> The permanent history exists to support honest self-accountability. It is stored only on your device, visible only to you, and is never transmitted to us or anyone else. You accept this design when you use the app.</p>
+    </div>
+
+    <h2>4. No Private / Incognito Mode</h2>
+    <p>SquareBrowser does not offer a private browsing mode. All browsing activity within the app is logged locally. If you require a private browsing mode, SquareBrowser is not the right tool for you.</p>
+
+    <h2>5. Your Responsibilities</h2>
+    <p>You agree to use SquareBrowser in compliance with applicable laws and regulations. You agree not to use SquareBrowser to access illegal content. You are responsible for your own use of the app and for content you access through it.</p>
+    <p>If you share a device with others, you understand that your browsing history stored in the app may be visible to anyone with access to your device and the app.</p>
+
+    <h2>6. Open Source Licence</h2>
+    <p>SquareBrowser is open source. The source code is available at <a href="https://github.com/MohiuddinSumon/square-browser" style="color:var(--amber)">github.com/MohiuddinSumon/square-browser</a>. Your use of the software is also subject to the terms of the applicable open-source licence.</p>
+
+    <h2>7. No Warranties</h2>
+    <p>SquareBrowser is provided "as is", without warranty of any kind — express or implied. We make no guarantees about the app's availability, accuracy, or fitness for any particular purpose.</p>
+    <p>In particular: we do not guarantee that daily limits, Strict Mode, or any other features will prevent access to any content or that they will function without error on all devices.</p>
+
+    <h2>8. Limitation of Liability</h2>
+    <p>To the maximum extent permitted by applicable law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of SquareBrowser, including but not limited to the impact of permanent history logging on your personal or professional life.</p>
+
+    <h2>9. Changes to These Terms</h2>
+    <p>We may update these terms from time to time. When we do, we will update the "last updated" date above. Continued use of the app after changes constitutes acceptance of the revised terms.</p>
+
+    <h2>10. Contact</h2>
+    <p>Questions about these terms? The best way to reach us is via the <a href="https://github.com/MohiuddinSumon/square-browser/issues" style="color:var(--amber)">GitHub issues page</a>.</p>
   </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-copy">© 2026 SquareBrowser · Free, open source, and private.</span>
+      <div class="footer-links">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms</a>
+        <a href="https://github.com/MohiuddinSumon/square-browser">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const btn = document.getElementById('themeBtn');
+    const html = document.documentElement;
+    if (localStorage.getItem('sb-theme') === 'dark') { html.setAttribute('data-theme','dark'); btn.textContent = '☀️'; }
+    btn.addEventListener('click', () => {
+      const dark = html.getAttribute('data-theme') === 'dark';
+      html.setAttribute('data-theme', dark ? 'light' : 'dark');
+      btn.textContent = dark ? '🌙' : '☀️';
+      localStorage.setItem('sb-theme', dark ? 'light' : 'dark');
+    });
+  </script>
 </body>
 </html>

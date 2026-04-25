@@ -133,17 +133,34 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] iOS support
-- [ ] Enhanced ad blocking
-- [ ] Custom search engines
-- [ ] Export/import bookmarks
-- [ ] Reading mode
-- [ ] Download manager
+See [`landing/docs/planned-features.md`](landing/docs/planned-features.md) for the full roadmap.
 
-## Support
+**In Progress**
+- [ ] Weekly/monthly usage trend views and streak tracking
+- [ ] Custom domain block lists
+- [ ] Scheduled browsing windows (e.g., no browsing before 9am)
+- [ ] Home screen timer widget
 
-- **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/MohiuddinSumon/square-browser/issues)
-- **Discussions**: Join discussions on [GitHub Discussions](https://github.com/MohiuddinSumon/square-browser/discussions)
+**Planned**
+- [ ] iOS release (SwiftUI + WKWebView)
+- [ ] Family/parental controls with supervised profiles
+- [ ] Accountability partner — share usage summaries with a trusted contact
+- [ ] Exportable usage reports (CSV/PDF)
+
+## Support the Project
+
+SquareBrowser is free, open source, and built by one person. If it's helped you reclaim time from the internet, consider giving back:
+
+- ☕ **[Buy Me a Coffee](https://buymeacoffee.com/squarebrowser)** — one-time contribution, any amount
+- ♡ **[GitHub Sponsors](https://github.com/sponsors/MohiuddinSumon)** — monthly support, cancel anytime
+- ⭐ **[Star the repo](https://github.com/MohiuddinSumon/square-browser)** — free, helps with discoverability
+
+Core accountability features stay free forever. Sponsorships help keep it that way.
+
+## Help & Issues
+
+- **Bugs / Feature requests**: [GitHub Issues](https://github.com/MohiuddinSumon/square-browser/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/MohiuddinSumon/square-browser/discussions)
 
 ## Acknowledgments
 
