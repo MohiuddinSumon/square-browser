@@ -151,8 +151,7 @@ See [`landing/docs/planned-features.md`](landing/docs/planned-features.md) for t
 
 SquareBrowser is free, open source, and built by one person. If it's helped you reclaim time from the internet, consider giving back:
 
-- ☕ **[Buy Me a Coffee](https://buymeacoffee.com/squarebrowser)** — one-time contribution, any amount
-- ♡ **[GitHub Sponsors](https://github.com/sponsors/MohiuddinSumon)** — monthly support, cancel anytime
+- 💸 **[Send via Wise](https://wise.com/pay/me/mdmohiuddina3)** — direct transfer, any amount, any currency
 - ⭐ **[Star the repo](https://github.com/MohiuddinSumon/square-browser)** — free, helps with discoverability
 
 Core accountability features stay free forever. Sponsorships help keep it that way.
