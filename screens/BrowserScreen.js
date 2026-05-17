@@ -167,26 +167,27 @@ const BrowserTab = ({
   autoHideEnabled,
   onLinkLongPress,
 }) => {
-  // Track the last URL the WebView told us about to avoid loops
-  const lastReportedUrl = useRef(tab.url);
+  // Track the navRequestId we last acted on — avoids reloading on WebView-internal
+  // URL changes (redirects, link clicks) that also update tab.url in context.
+  const lastNavRequestId = useRef(tab.navRequestId || 0);
   const [sourceUrl, setSourceUrl] = useState(tab.url);
   const webViewRef = useRef(null);
 
-  // Sync sourceUrl ONLY when tab.url changes EXTERNALLY (e.g. address bar)
-  // and differs from what we last reported.
+  // Only push a new URL into the WebView when an explicit external navigation was
+  // requested (address bar submit). WebView-internal navigations (redirects, link
+  // clicks) change tab.url without bumping navRequestId, so they are ignored here.
   useEffect(() => {
-    if (tab.url !== lastReportedUrl.current) {
+    const reqId = tab.navRequestId || 0;
+    if (reqId !== lastNavRequestId.current) {
+      lastNavRequestId.current = reqId;
       setSourceUrl(tab.url);
-      lastReportedUrl.current = tab.url;
     }
-  }, [tab.url]);
+  }, [tab.navRequestId, tab.url]);
 
   const webViewSource = useMemo(() => ({ uri: sourceUrl }), [sourceUrl]);
 
   const handleNavigationStateChange = useCallback((navState) => {
-    // Update internal tracker
-    lastReportedUrl.current = navState.url;
-    // Notify parent to update context/tab state
+    // Notify parent to update context/tab state (url, canGoBack, canGoForward)
     onUpdateState(navState);
     // Detect Cloudflare challenge page so parent can show an info banner
     if (onChallengeDetected) {
