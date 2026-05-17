@@ -135,6 +135,103 @@ true;
 `;
 
 /**
+ * Ad-block domain list — used both in injected JS (network interception) and in
+ * onShouldStartLoadWithRequest (native navigation guard).
+ * Covers the most impactful ad-serving networks while avoiding false positives on
+ * legitimate content domains.
+ */
+const AD_DOMAINS = [
+  // Google ad infrastructure
+  'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+  'googletagservices.com', 'pagead2.googlesyndication.com',
+  // Programmatic / DSP / SSP
+  'adnxs.com', 'rubiconproject.com', 'pubmatic.com', 'openx.net',
+  'casalemedia.com', 'adsrvr.org', 'criteo.com', 'criteo.net',
+  'sharethrough.com', 'triplelift.com', 'smartadserver.com',
+  'adform.net', 'advertising.com', 'moatads.com', 'yieldmanager.com',
+  '2mdn.net', 'aolcloud.net', 'adtech.de', 'media.net',
+  // Native / content ads
+  'outbrain.com', 'taboola.com',
+  // Mobile ad networks
+  'adcolony.com', 'applovin.com', 'mopub.com', 'chartboost.com',
+  'vungle.com', 'ironsrc.com', 'admob.com',
+  // Tracking / measurement (pure trackers, not login providers)
+  'scorecardresearch.com', 'quantserve.com', 'chartbeat.com',
+  'adsymptotic.com', 'amazon-adsystem.com',
+];
+
+/** Returns true if the hostname belongs to a known ad/tracking domain */
+const isAdHostname = (hostname = '') =>
+  AD_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
+
+/**
+ * Injected BEFORE page content loads — intercepts network-layer ad requests.
+ * Runs early so ad scripts cannot fire XHR/fetch before we override them.
+ *
+ * Blocks:
+ *   - window.open() → null  (pop-ups, pop-unders)
+ *   - fetch() to ad domains → silent no-op
+ *   - XMLHttpRequest to ad domains → silent no-op
+ *   - document.createElement('script') for ad domains → inert element
+ */
+const AD_BLOCK_NETWORK_SCRIPT = `
+(function() {
+  try {
+    var AD = ${JSON.stringify(AD_DOMAINS)};
+    function _isAd(url) {
+      try {
+        var h = new URL(url, location.href).hostname;
+        return AD.some(function(d) { return h === d || h.slice(-(d.length+1)) === '.'+d; });
+      } catch(e) { return false; }
+    }
+
+    // 1. Kill pop-ups and pop-unders
+    window.open = function() { return null; };
+
+    // 2. Block fetch() to ad domains
+    var _fetch = window.fetch;
+    window.fetch = function(resource, opts) {
+      var url = typeof resource === 'string' ? resource : (resource && resource.url) || '';
+      if (_isAd(url)) return new Promise(function() {});
+      return _fetch.apply(this, arguments);
+    };
+
+    // 3. Block XHR to ad domains
+    var _xhrOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url) {
+      this._sqBlocked = _isAd(String(url));
+      if (!this._sqBlocked) return _xhrOpen.apply(this, arguments);
+    };
+    var _xhrSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function() {
+      if (!this._sqBlocked) return _xhrSend.apply(this, arguments);
+    };
+
+    // 4. Block dynamic <script> injection for ad domains
+    var _createElement = document.createElement.bind(document);
+    document.createElement = function(tag) {
+      var el = _createElement(tag);
+      if (typeof tag === 'string' && tag.toLowerCase() === 'script') {
+        var _setSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+        if (_setSrc) {
+          Object.defineProperty(el, 'src', {
+            set: function(val) {
+              if (_isAd(val)) { this._sqBlocked = true; return; }
+              _setSrc.set.call(this, val);
+            },
+            get: function() { return _setSrc.get.call(this); },
+            configurable: true,
+          });
+        }
+      }
+      return el;
+    };
+  } catch(e) {}
+})();
+true;
+`;
+
+/**
  * BrowserTab Component
  * Encapsulates logic for a SINGLE tab's WebView to ensure persistence and state management.
  * Each tab maintains its own WebView instance for proper navigation history.
@@ -211,16 +308,72 @@ const BrowserTab = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const adBlockScript = adBlockEnabled ? `
-    (function() {
-      const adSelectors = ['.adsbygoogle', '[id^="google_ads_"]', '.ad-box', '.ad-container', '.banner-ad', '.video-ads'];
-      const removeAds = () => {
-        adSelectors.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => el.remove());
-        });
-      };
-      removeAds();
-      setTimeout(removeAds, 2000);
-    })();
+(function() {
+  var AD = ${JSON.stringify(AD_DOMAINS)};
+  function _isAd(url) {
+    try {
+      var h = new URL(url, location.href).hostname;
+      return AD.some(function(d) { return h === d || h.slice(-(d.length+1)) === '.'+d; });
+    } catch(e) { return false; }
+  }
+
+  var adSelectors = [
+    /* Google Ads */
+    '.adsbygoogle','ins.adsbygoogle','[data-ad-client]','[data-ad-slot]',
+    '[id^="google_ads_"]','[id^="google_ad_"]','[id^="div-gpt-ad"]',
+    /* Generic ad containers */
+    '.ad-box','.ad-container','.ad-wrapper','.ad-unit','.ad-zone',
+    '.ad-slot','.ad-banner','.ad-space','.ad-section','.ad-block',
+    '.banner-ad','.video-ads','.advertisement','.advertisements',
+    '[class*="AdWrapper"]','[class*="ad-wrap"]','[id*="adbox"]',
+    '[id*="ad-container"]','[id*="ad_container"]',
+    '[id*="banner_ad"]','[id*="ad-banner"]','[id*="AdContainer"]',
+    /* Outbrain & Taboola */
+    '#outbrain','.outbrain','[id^="outbrain"]',
+    '#taboola','.taboola-container','[id^="taboola"]','.widget_taboola',
+    /* Sponsored / native ad labels */
+    '[id*="sponsored"]','[class*="sponsored-content"]',
+    '[class*="native-ad"]','[class*="promoted"]','[class*="promotion"]',
+    /* Pop-up / interstitial overlays */
+    '[class*="popup-overlay"]','[id*="popup-overlay"]',
+    '[class*="interstitial"]','[id*="interstitial"]',
+    '[class*="ad-overlay"]','[id*="ad-overlay"]',
+    /* Ad iframes */
+    'iframe[src*="doubleclick"]','iframe[src*="googlesyndication"]',
+    'iframe[src*="adnxs"]','iframe[src*="outbrain"]',
+    'iframe[src*="taboola"]','iframe[src*="criteo"]',
+    'iframe[src*="advertising.com"]','iframe[src*="openx"]',
+    'iframe[id*="google_ads"]',
+  ];
+
+  function removeAds() {
+    adSelectors.forEach(function(s) {
+      try { document.querySelectorAll(s).forEach(function(el) { el.remove(); }); }
+      catch(e) {}
+    });
+  }
+
+  removeAds();
+  setTimeout(removeAds, 800);
+  setTimeout(removeAds, 2500);
+
+  /* Watch for dynamically injected ads */
+  try {
+    new MutationObserver(function() { removeAds(); })
+      .observe(document.documentElement, { childList: true, subtree: true });
+  } catch(e) {}
+
+  /* Block click-through to ad domains (catches tap-jacking overlays) */
+  document.addEventListener('click', function(e) {
+    var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!el) return;
+    if (_isAd(el.href || '')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+})();
+true;
   ` : '';
 
   // Scroll tracking script for auto-hide navbar
@@ -315,7 +468,10 @@ const BrowserTab = ({
         }}
         startInLoadingState={false}
         userAgent={userAgent}
-        injectedJavaScriptBeforeContentLoaded={enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : ''}
+        injectedJavaScriptBeforeContentLoaded={
+          (enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : 'true;') +
+          (adBlockEnabled ? AD_BLOCK_NETWORK_SCRIPT : 'true;')
+        }
         injectedJavaScript={adBlockScript + scrollTrackingScript + linkLongPressScript}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -325,6 +481,14 @@ const BrowserTab = ({
         javaScriptCanOpenWindowsAutomatically={false}
         mixedContentMode="compatibility"
         pullToRefreshEnabled={true}
+        onShouldStartLoadWithRequest={(request) => {
+          if (!adBlockEnabled) return true;
+          try {
+            const hostname = new URL(request.url).hostname;
+            if (isAdHostname(hostname)) return false;
+          } catch (e) {}
+          return true;
+        }}
       />
       {/* Thin non-blocking progress bar — replaces full-screen ActivityIndicator overlay
           so Cloudflare challenge pages remain visible and interactive during load */}
