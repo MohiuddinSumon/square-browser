@@ -434,12 +434,18 @@ export const BrowserProvider = ({ children }) => {
       formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
     }
 
-    // Use functional update and ref to get current active index
+    // Use functional update and ref to get current active index.
+    // navRequestId increments on every external (address-bar) navigation so BrowserTab
+    // can distinguish these from WebView-internal redirect/link navigations.
     setTabs(prev => {
       const currentIndex = activeTabIndexRef.current;
       if (currentIndex >= 0 && currentIndex < prev.length) {
         const updatedTabs = [...prev];
-        updatedTabs[currentIndex] = { ...updatedTabs[currentIndex], url: formattedUrl };
+        updatedTabs[currentIndex] = {
+          ...updatedTabs[currentIndex],
+          url: formattedUrl,
+          navRequestId: (updatedTabs[currentIndex].navRequestId || 0) + 1,
+        };
         return updatedTabs;
       }
       return prev;
