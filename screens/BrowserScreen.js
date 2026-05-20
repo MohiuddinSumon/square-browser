@@ -226,6 +226,32 @@ const AD_BLOCK_NETWORK_SCRIPT = `
       }
       return el;
     };
+
+    // 5. Block location-based redirects to ad domains (used as window.open fallback)
+    try {
+      var _assign = Location.prototype.assign;
+      Location.prototype.assign = function(url) {
+        if (_isAd(url)) return;
+        return _assign.call(this, url);
+      };
+      var _replace = Location.prototype.replace;
+      Location.prototype.replace = function(url) {
+        if (_isAd(url)) return;
+        return _replace.call(this, url);
+      };
+      // Trap location.href = 'ad-url' assignments
+      var _locHrefDesc = Object.getOwnPropertyDescriptor(Location.prototype, 'href');
+      if (_locHrefDesc && _locHrefDesc.set) {
+        Object.defineProperty(Location.prototype, 'href', {
+          set: function(val) {
+            if (_isAd(String(val))) return;
+            _locHrefDesc.set.call(this, val);
+          },
+          get: _locHrefDesc.get,
+          configurable: true,
+        });
+      }
+    } catch(e) {}
   } catch(e) {}
 })();
 true;
@@ -363,15 +389,62 @@ const BrowserTab = ({
       .observe(document.documentElement, { childList: true, subtree: true });
   } catch(e) {}
 
-  /* Block click-through to ad domains (catches tap-jacking overlays) */
+  /* Block click-through to ad domains AND all target="_blank" pop-up attempts.
+     Runs in capture phase so it fires before any page click handler. */
   document.addEventListener('click', function(e) {
     var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!el) return;
-    if (_isAd(el.href || '')) {
+    var blocked = _isAd(el.href || '') || el.target === '_blank';
+    if (blocked) {
       e.preventDefault();
       e.stopImmediatePropagation();
     }
   }, true);
+
+  /* Remove transparent overlay elements stacked on top of video players.
+     These are the "invisible ad link" trick — a zero-opacity <a> covers the
+     player so tapping Play actually taps the ad link instead. */
+  function removeVideoAdOverlays() {
+    var players = document.querySelectorAll(
+      'video, [class*="player"], [id*="player"], [class*="Player"], [id*="Player"]'
+    );
+    players.forEach(function(media) {
+      var rect = media.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      try {
+        var stack = document.elementsFromPoint(cx, cy);
+        stack.forEach(function(el) {
+          if (el === media || el === document.body || el === document.documentElement) return;
+          // Only remove elements that sit ABOVE the video and are transparent/invisible
+          var s = window.getComputedStyle(el);
+          var zIndex = parseInt(s.zIndex) || 0;
+          if (zIndex <= 0) return;
+          var opacity = parseFloat(s.opacity);
+          var bg = s.backgroundColor;
+          var isTransparent = opacity < 0.05 ||
+            bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)';
+          // Must look like a clickable overlay (anchor, or has onclick/href)
+          var isClickable = el.tagName === 'A' || el.onclick ||
+            el.getAttribute('onclick') || el.getAttribute('href');
+          if (isTransparent && isClickable) el.remove();
+        });
+      } catch(e) {}
+    });
+  }
+
+  setTimeout(removeVideoAdOverlays, 1200);
+  setTimeout(removeVideoAdOverlays, 3000);
+
+  /* Re-run overlay sweep whenever new nodes are added (e.g. lazy-loaded players) */
+  try {
+    var _overlayTimer = null;
+    new MutationObserver(function() {
+      clearTimeout(_overlayTimer);
+      _overlayTimer = setTimeout(removeVideoAdOverlays, 500);
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  } catch(e) {}
 })();
 true;
   ` : '';
