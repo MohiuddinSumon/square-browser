@@ -90,17 +90,48 @@ npm start
 
 ### Building for Production
 
-#### Android
+#### Android (Manual)
 
 ```bash
 cd android
-./gradlew bundleRelease
+./gradlew bundleRelease   # AAB for Play Store
+./gradlew assembleRelease # APK for direct install
 ```
 
-The AAB (Android App Bundle) will be generated at:
+Output locations:
 ```
 android/app/build/outputs/bundle/release/app-release.aab
+android/app/build/outputs/apk/release/app-release.apk
 ```
+
+#### Android (Automated — recommended)
+
+Use the included `release.bat` script (Windows) to update all version files and build in one step:
+
+```bat
+release.bat
+```
+
+The script will prompt for the new version name and version code, then automatically update:
+- `android/app/build.gradle` — `versionCode` and `versionName`
+- `app.json` — `version` and `android.versionCode`
+- `package.json` — `version`
+
+Then it runs `bundleRelease` and `assembleRelease` back-to-back.
+
+> **Important**: Always keep `versionCode` in sync across all three files. The Gradle file takes precedence when building — a mismatch causes Play Console to receive the wrong version.
+
+### Version Management
+
+Version info lives in three places and must always match:
+
+| File | Fields |
+|------|--------|
+| `android/app/build.gradle` | `versionCode`, `versionName` |
+| `app.json` | `expo.version`, `expo.android.versionCode` |
+| `package.json` | `version` |
+
+Use `release.bat` to update all three atomically and avoid drift.
 
 ## Contributing
 
