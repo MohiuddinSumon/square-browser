@@ -19,6 +19,7 @@
                  "android":  {
                                  "package":  "com.squarebrowser.app",
                                  "versionCode":  7,
+                                 "usesCleartextTraffic":  true,
                                  "adaptiveIcon":  {
                                                       "foregroundImage":  "./assets/adaptive-icon.png",
                                                       "backgroundColor":  "#ffffff"
