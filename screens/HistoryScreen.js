@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 16,
+    flexGrow: 1,
   },
   sectionHeader: {
     backgroundColor: '#f9f9f9',
