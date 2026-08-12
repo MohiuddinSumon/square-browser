@@ -73,6 +73,30 @@ const LandingPage = ({ navigation }) => {
     },
   ];
 
+  const products = [
+    {
+      icon: 'heart-outline',
+      title: 'LoveLedger',
+      description: 'Track your relationship journey',
+      url: 'https://loveledger.squarebrowser.com/',
+      color: '#FF6B9D',
+    },
+    {
+      icon: 'book-outline',
+      title: 'Logbook',
+      description: 'Personal journaling and logging',
+      url: 'https://logbook.squarebrowser.com/',
+      color: '#4CAF50',
+    },
+    {
+      icon: 'code-slash-outline',
+      title: 'Fellow Coder',
+      description: 'Developer community and resources',
+      url: 'https://www.fellowcoder.com/',
+      color: '#2196F3',
+    },
+  ];
+
   const screenshots = [
     { title: 'Home Screen', image: require('./../assets/screenshots/screenshot1.png') },
     { title: 'Browsing', image: require('./../assets/screenshots/screenshot2.png') },
@@ -137,6 +161,35 @@ const LandingPage = ({ navigation }) => {
               <Text style={[styles.featureTitle, { color: colors.text }]}>{feature.title}</Text>
               <Text style={[styles.featureDescription, { color: colors.subtext }]}>{feature.description}</Text>
             </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Products Section */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Products</Text>
+        <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
+          Other projects we've built
+        </Text>
+
+        <View style={styles.featuresGrid}>
+          {products.map((product, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[styles.featureCard, { backgroundColor: colors.bg, borderColor: colors.border }]}
+              onPress={() => openLink(product.url)}
+              accessibilityRole="link"
+              accessibilityLabel={`${product.title}: ${product.description}`}
+            >
+              <View style={[styles.featureIcon, { backgroundColor: product.color + '20' }]}>
+                <Ionicons name={product.icon} size={28} color={product.color} />
+              </View>
+              <Text style={[styles.featureTitle, { color: colors.text }]}>{product.title}</Text>
+              <Text style={[styles.featureDescription, { color: colors.subtext }]}>{product.description}</Text>
+              <Text style={[styles.productLink, { color: colors.accent }]}>
+                {product.url.replace('https://', '').replace(/\/$/, '')}
+              </Text>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
@@ -314,6 +367,11 @@ const styles = StyleSheet.create({
   featureDescription: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  productLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 10,
   },
   screenshotsContainer: {
     flexDirection: 'row',
