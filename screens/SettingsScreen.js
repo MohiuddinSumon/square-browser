@@ -269,8 +269,8 @@ const SettingsScreen = ({ navigation }) => {
         )}
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>Quick Access</Text>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('History')}
         >
@@ -283,7 +283,7 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('Bookmarks')}
         >
@@ -294,6 +294,17 @@ const SettingsScreen = ({ navigation }) => {
           <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
             <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
           </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('Products')}
+        >
+          <View style={styles.menuItemLeft}>
+            <Ionicons name="apps-outline" size={24} color={colors.subtext} />
+            <Text style={[styles.menuItemText, { color: colors.text }]}>Products</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.border} />
         </TouchableOpacity>
 
         <Text style={[styles.sectionTitle, { color: colors.accent }]}>About & Legal</Text>

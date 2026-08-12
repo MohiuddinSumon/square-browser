@@ -15,6 +15,7 @@ import { BrowserProvider, useBrowser } from './context/BrowserContext';
 import BrowserScreen from './screens/BrowserScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import BookmarksScreen from './screens/BookmarksScreen';
+import ProductsScreen from './screens/ProductsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from './screens/TermsOfServiceScreen';
@@ -147,6 +148,7 @@ function AppNavigator() {
         <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} options={{ headerShown: false }} />
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
+        <Stack.Screen name="Products" component={ProductsScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
       {Platform.OS !== 'web' && <CustomBottomNav />}
     </>
