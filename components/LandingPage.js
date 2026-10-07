@@ -3,7 +3,7 @@
  *
  * LandingPage.js - Marketing landing page for web
  */
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,20 +15,13 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
 
 const LandingPage = ({ navigation }) => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  const colors = {
-    bg: isDarkMode ? '#0a0a0a' : '#ffffff',
-    text: isDarkMode ? '#e0e0e0' : '#1a1a1a',
-    subtext: isDarkMode ? '#999' : '#666',
-    accent: '#2196F3',
-    accentHover: '#1976D2',
-    card: isDarkMode ? '#1a1a1a' : '#f8f9fa',
-    border: isDarkMode ? '#333' : '#e0e0e0',
-    hero: isDarkMode ? '#0d47a1' : '#2196F3',
-  };
+  const { isDarkMode, toggleDarkMode } = useBrowser();
+  const theme = getTheme(isDarkMode);
+  const { colors } = theme;
 
   const features = [
     {
@@ -108,166 +101,222 @@ const LandingPage = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Hero Section */}
-      <View style={[styles.hero, { backgroundColor: colors.hero }]}>
-        <View style={styles.heroContent}>
-          <Image
-            source={require('../assets/icon.png')}
-            style={styles.heroIcon}
-            resizeMode="contain"
-          />
-          <Text style={[styles.heroTitle, { color: '#fff' }]}>SquareBrowser</Text>
-          <Text style={[styles.heroSubtitle, { color: 'rgba(255,255,255,0.9)' }]}>
-            Privacy-Focused Mobile Browser
-          </Text>
-          <Text style={[styles.heroDescription, { color: 'rgba(255,255,255,0.8)' }]}>
-            Browse the web with complete privacy. All your data stays on your device.
+    <View style={[styles.page, { backgroundColor: colors.background }]}>
+      {/* Fixed header bar with theme toggle — always reachable */}
+      <View style={[styles.topBar, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
+        <View style={styles.topBarSpacer} />
+        <TouchableOpacity
+          style={[styles.themeToggle, { backgroundColor: colors.surface, borderColor: colors.separator }]}
+          onPress={() => toggleDarkMode()}
+          accessibilityRole="button"
+          accessibilityLabel={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={20} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ backgroundColor: colors.background }}
+      >
+        {/* Hero Section */}
+        <View style={[styles.hero, { backgroundColor: colors.accent }]}>
+          <View style={styles.heroContent}>
+            <Image
+              source={require('../assets/icon.png')}
+              style={styles.heroIcon}
+              resizeMode="contain"
+            />
+            <Text style={[styles.heroTitle, { color: colors.textOnPrimary }]}>SquareBrowser</Text>
+            <Text style={[styles.heroSubtitle, { color: colors.textOnPrimary }]}>
+              Privacy-Focused Mobile Browser
+            </Text>
+            <Text style={[styles.heroDescription, { color: colors.textOnPrimary }]}>
+              Browse the web with complete privacy. All your data stays on your device.
+            </Text>
+
+            <View style={styles.heroButtons}>
+              <TouchableOpacity
+                style={[styles.heroButton, styles.heroButtonPrimary]}
+                onPress={() => openLink('https://play.google.com/store/apps/details?id=com.squarebrowser.app')}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Get SquareBrowser on Google Play"
+              >
+                <Ionicons name="logo-google-play" size={20} color="#1a1a1a" />
+                <Text style={styles.heroButtonTextPrimary}>Get it on Google Play</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.heroButton, styles.heroButtonSecondary]}
+                onPress={() => openLink('https://github.com/MohiuddinSumon/square-browser')}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="View SquareBrowser on GitHub"
+              >
+                <Ionicons name="logo-github" size={20} color={colors.textOnPrimary} />
+                <Text style={styles.heroButtonTextSecondary}>View on GitHub</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* Features Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Features</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+            Everything you need for private, accountable browsing
           </Text>
 
-          <View style={styles.heroButtons}>
+          <View style={styles.featuresGrid}>
+            {features.map((feature, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.featureCard,
+                  { backgroundColor: colors.surface, borderColor: colors.separator },
+                ]}
+              >
+                <View style={[styles.featureIcon, { backgroundColor: colors.accentSoft }]}>
+                  <Ionicons name={feature.icon} size={28} color={colors.accent} />
+                </View>
+                <Text style={[styles.featureTitle, { color: colors.text }]}>{feature.title}</Text>
+                <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>{feature.description}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Products Section */}
+        <View style={[styles.section, { backgroundColor: colors.surfaceAlt }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Products</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+            Other projects we've built
+          </Text>
+
+          <View style={styles.featuresGrid}>
+            {products.map((product, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.featureCard,
+                  { backgroundColor: colors.surface, borderColor: colors.separator },
+                ]}
+                onPress={() => openLink(product.url)}
+                accessibilityRole="link"
+                accessibilityLabel={`${product.title}: ${product.description}`}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.featureIcon, { backgroundColor: product.color + '20' }]}>
+                  <Ionicons name={product.icon} size={28} color={product.color} />
+                </View>
+                <Text style={[styles.featureTitle, { color: colors.text }]}>{product.title}</Text>
+                <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>{product.description}</Text>
+                <Text style={[styles.productLink, { color: colors.accent }]}>
+                  {product.url.replace('https://', '').replace(/\/$/, '')}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Screenshots Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Screenshots</Text>
+          <View style={styles.screenshotsContainer}>
+            {screenshots.map((shot, index) => (
+              <View key={index} style={styles.screenshotWrapper}>
+                <Image
+                  source={shot.image}
+                  style={styles.screenshot}
+                  resizeMode="contain"
+                />
+                <Text style={[styles.screenshotTitle, { color: colors.textSecondary }]}>{shot.title}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Privacy Section */}
+        <View style={[styles.privacySection, { backgroundColor: colors.surfaceAlt }]}>
+          <Ionicons name="shield-checkmark" size={48} color={colors.accent} />
+          <Text style={[styles.privacyTitle, { color: colors.text }]}>Your Privacy Matters</Text>
+          <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
+            SquareBrowser is built with privacy at its core. No data collection, no tracking, no telemetry.
+            All your browsing history, bookmarks, and usage statistics are stored locally on your device.
+          </Text>
+          <View style={styles.privacyLinks}>
             <TouchableOpacity
-              style={[styles.heroButton, styles.heroButtonPrimary]}
-              onPress={() => openLink('https://play.google.com/store/apps/details?id=com.squarebrowser.app')}
+              onPress={() => navigation?.navigate('PrivacyPolicy')}
+              style={styles.privacyLink}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Read the Privacy Policy"
             >
-              <Ionicons name="logo-google-play" size={20} color="#fff" />
-              <Text style={styles.heroButtonText}>Get it on Google Play</Text>
+              <Text style={[styles.privacyLinkText, { color: colors.accent }]}>Privacy Policy</Text>
             </TouchableOpacity>
-
+            <Text style={[styles.privacySeparator, { color: colors.separator }]}>•</Text>
             <TouchableOpacity
-              style={[styles.heroButton, styles.heroButtonSecondary]}
-              onPress={() => openLink('https://github.com/MohiuddinSumon/square-browser')}
+              onPress={() => navigation?.navigate('TermsOfService')}
+              style={styles.privacyLink}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Read the Terms of Service"
             >
-              <Ionicons name="logo-github" size={20} color="#fff" />
-              <Text style={styles.heroButtonText}>View on GitHub</Text>
+              <Text style={[styles.privacyLinkText, { color: colors.accent }]}>Terms of Service</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
 
-      {/* Features Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Features</Text>
-        <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
-          Everything you need for private, accountable browsing
-        </Text>
-
-        <View style={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <View key={index} style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.featureIcon, { backgroundColor: colors.hero + '20' }]}>
-                <Ionicons name={feature.icon} size={28} color={colors.accent} />
-              </View>
-              <Text style={[styles.featureTitle, { color: colors.text }]}>{feature.title}</Text>
-              <Text style={[styles.featureDescription, { color: colors.subtext }]}>{feature.description}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Products Section */}
-      <View style={[styles.section, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Our Products</Text>
-        <Text style={[styles.sectionSubtitle, { color: colors.subtext }]}>
-          Other projects we've built
-        </Text>
-
-        <View style={styles.featuresGrid}>
-          {products.map((product, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.featureCard, { backgroundColor: colors.bg, borderColor: colors.border }]}
-              onPress={() => openLink(product.url)}
-              accessibilityRole="link"
-              accessibilityLabel={`${product.title}: ${product.description}`}
-            >
-              <View style={[styles.featureIcon, { backgroundColor: product.color + '20' }]}>
-                <Ionicons name={product.icon} size={28} color={product.color} />
-              </View>
-              <Text style={[styles.featureTitle, { color: colors.text }]}>{product.title}</Text>
-              <Text style={[styles.featureDescription, { color: colors.subtext }]}>{product.description}</Text>
-              <Text style={[styles.productLink, { color: colors.accent }]}>
-                {product.url.replace('https://', '').replace(/\/$/, '')}
-              </Text>
+        {/* Footer */}
+        <View style={[styles.footer, { backgroundColor: colors.background, borderTopColor: colors.separator }]}>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+            © 2026 SquareBrowser. Open source and privacy-focused.
+          </Text>
+          <View style={styles.footerLinks}>
+            <TouchableOpacity onPress={() => openLink('https://github.com/MohiuddinSumon/square-browser')} activeOpacity={0.7}>
+              <Text style={[styles.footerLink, { color: colors.accent }]}>GitHub</Text>
             </TouchableOpacity>
-          ))}
+            <TouchableOpacity onPress={() => navigation?.navigate('PrivacyPolicy')} activeOpacity={0.7}>
+              <Text style={[styles.footerLink, { color: colors.accent }]}>Privacy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation?.navigate('TermsOfService')} activeOpacity={0.7}>
+              <Text style={[styles.footerLink, { color: colors.accent }]}>Terms</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-
-      {/* Screenshots Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Screenshots</Text>
-        <View style={styles.screenshotsContainer}>
-          {screenshots.map((shot, index) => (
-            <View key={index} style={styles.screenshotWrapper}>
-              <Image
-                source={shot.image}
-                style={styles.screenshot}
-                resizeMode="contain"
-              />
-              <Text style={[styles.screenshotTitle, { color: colors.subtext }]}>{shot.title}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Privacy Section */}
-      <View style={[styles.privacySection, { backgroundColor: colors.card }]}>
-        <Ionicons name="shield-checkmark" size={48} color={colors.accent} />
-        <Text style={[styles.privacyTitle, { color: colors.text }]}>Your Privacy Matters</Text>
-        <Text style={[styles.privacyText, { color: colors.subtext }]}>
-          SquareBrowser is built with privacy at its core. No data collection, no tracking, no telemetry.
-          All your browsing history, bookmarks, and usage statistics are stored locally on your device.
-        </Text>
-        <View style={styles.privacyLinks}>
-          <TouchableOpacity
-            onPress={() => navigation?.navigate('PrivacyPolicy')}
-            style={styles.privacyLink}
-          >
-            <Text style={[styles.privacyLinkText, { color: colors.accent }]}>Privacy Policy</Text>
-          </TouchableOpacity>
-          <Text style={[styles.privacySeparator, { color: colors.border }]}>•</Text>
-          <TouchableOpacity
-            onPress={() => navigation?.navigate('TermsOfService')}
-            style={styles.privacyLink}
-          >
-            <Text style={[styles.privacyLinkText, { color: colors.accent }]}>Terms of Service</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
-        <Text style={[styles.footerText, { color: colors.subtext }]}>
-          © 2026 SquareBrowser. Open source and privacy-focused.
-        </Text>
-        <View style={styles.footerLinks}>
-          <TouchableOpacity onPress={() => openLink('https://github.com/MohiuddinSumon/square-browser')}>
-            <Text style={[styles.footerLink, { color: colors.accent }]}>GitHub</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation?.navigate('PrivacyPolicy')}>
-            <Text style={[styles.footerLink, { color: colors.accent }]}>Privacy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation?.navigate('TermsOfService')}>
-            <Text style={[styles.footerLink, { color: colors.accent }]}>Terms</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Theme Toggle */}
-      <TouchableOpacity
-        style={[styles.themeToggle, { backgroundColor: colors.card, borderColor: colors.border }]}
-        onPress={() => setIsDarkMode(!isDarkMode)}
-      >
-        <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={20} color={colors.text} />
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  page: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    zIndex: 10,
+  },
+  topBarSpacer: {
+    flex: 1,
+  },
+  themeToggle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   hero: {
     paddingVertical: 80,
@@ -313,6 +362,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 8,
     gap: 8,
+    minHeight: 48,
   },
   heroButtonPrimary: {
     backgroundColor: '#fff',
@@ -320,7 +370,12 @@ const styles = StyleSheet.create({
   heroButtonSecondary: {
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  heroButtonText: {
+  heroButtonTextPrimary: {
+    color: '#1a1a1a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  heroButtonTextSecondary: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
@@ -346,7 +401,10 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   featureCard: {
-    width: 260,
+    flexBasis: '30%',
+    minWidth: 240,
+    maxWidth: 360,
+    flexGrow: 1,
     padding: 24,
     borderRadius: 12,
     borderWidth: 1,
@@ -381,10 +439,14 @@ const styles = StyleSheet.create({
   },
   screenshotWrapper: {
     alignItems: 'center',
+    flexBasis: '30%',
+    minWidth: 200,
+    maxWidth: 260,
+    flexGrow: 1,
   },
   screenshot: {
-    width: 200,
-    height: 400,
+    width: '100%',
+    aspectRatio: 0.5,
     borderRadius: 12,
     marginBottom: 10,
   },
@@ -441,17 +503,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  themeToggle: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
-
-export default LandingPage;

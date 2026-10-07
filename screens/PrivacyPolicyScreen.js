@@ -1,26 +1,53 @@
+/**
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
+ * PrivacyPolicyScreen.js - Privacy policy (legal) screen
+ */
 import React from 'react';
 import { ScrollView, Text, StyleSheet, View, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
 
 const PrivacyPolicyScreen = ({ navigation }) => {
   const { isDarkMode } = useBrowser();
+  const theme = getTheme(isDarkMode);
+  const { colors } = theme;
 
-  const colors = {
-    bg: isDarkMode ? '#121212' : '#fff',
-    card: isDarkMode ? '#1e1e1e' : '#fff',
-    text: isDarkMode ? '#e0e0e0' : '#333',
-    subtext: isDarkMode ? '#999' : '#666',
-    border: isDarkMode ? '#333' : '#eee',
-    accent: '#2196F3',
-  };
+  const sections = [
+    {
+      title: '1. Introduction',
+      body: 'SquareBrowser is committed to your privacy. This policy explains how we handle your data.',
+    },
+    {
+      title: '2. Local Storage Only',
+      body: (
+        <Text>
+          All your browsing history, bookmarks, and usage statistics are stored{' '}
+          <Text style={{ fontWeight: 'bold' }}>locally on your device</Text>. We do not use any external
+          servers to store your personal browsing data.
+        </Text>
+      ),
+    },
+    {
+      title: '3. Accountability Focus',
+      body: 'To promote mindful browsing, history is permanent and cannot be deleted within the app. No incognito mode is provided.',
+    },
+    {
+      title: '4. Data Collection',
+      body: 'We do not collect or sell your data to third parties. Your data is yours, kept on your device for your own accountability.',
+    },
+  ];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color={colors.accent} />
         </TouchableOpacity>
@@ -28,29 +55,23 @@ const PrivacyPolicyScreen = ({ navigation }) => {
       </View>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Privacy Policy</Text>
-        <Text style={[styles.date, { color: colors.subtext }]}>Last Updated: January 4, 2026</Text>
-        
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>1. Introduction</Text>
-        <Text style={[styles.text, { color: colors.text }]}>
-          SquareBrowser is committed to your privacy. This policy explains how we handle your data.
-        </Text>
+        <Text style={[styles.date, { color: colors.textSecondary }]}>Last Updated: January 4, 2026</Text>
 
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>2. Local Storage Only</Text>
-        <Text style={[styles.text, { color: colors.text }]}>
-          All your browsing history, bookmarks, and usage statistics are stored **locally on your device**. We do not use any external servers to store your personal browsing data.
-        </Text>
+        {sections.map((section, index) => (
+          <View
+            key={index}
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderRadius: theme.borderRadius.md },
+              theme.shadows.sm,
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.accent }]}>{section.title}</Text>
+            <Text style={[styles.text, { color: colors.text }]}>{section.body}</Text>
+          </View>
+        ))}
 
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>3. Accountability Focus</Text>
-        <Text style={[styles.text, { color: colors.text }]}>
-          To promote mindful browsing, history is permanent and cannot be deleted within the app. No incognito mode is provided.
-        </Text>
-
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>4. Data Collection</Text>
-        <Text style={[styles.text, { color: colors.text }]}>
-          We do not collect or sell your data to third parties. Your data is yours, kept on your device for your own accountability.
-        </Text>
-
-        <Text style={[styles.footer, { color: colors.subtext }]}>
+        <Text style={[styles.footer, { color: colors.textSecondary }]}>
           By using SquareBrowser, you agree to this local-first privacy approach.
         </Text>
       </ScrollView>
@@ -59,23 +80,24 @@ const PrivacyPolicyScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#fff' },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
-  backButton: { padding: 8, marginRight: 8 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#333' },
+  backButton: { padding: 12, marginRight: 8 },
+  headerTitle: { fontSize: 20, fontWeight: 'bold' },
   container: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  date: { fontSize: 14, color: '#666', marginBottom: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginTop: 20, marginBottom: 10, color: '#2196F3' },
-  text: { fontSize: 16, color: '#444', lineHeight: 24 },
-  footer: { marginTop: 30, fontSize: 14, fontStyle: 'italic', textAlign: 'center', color: '#666' }
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+  date: { fontSize: 14, marginBottom: 20 },
+  card: {
+    padding: 20,
+    marginBottom: 20,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  text: { fontSize: 17, lineHeight: 24 },
+  footer: { marginTop: 10, fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
 });
-
-export default PrivacyPolicyScreen;

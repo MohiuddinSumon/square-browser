@@ -1,49 +1,68 @@
 /**
  * Copyright (c) 2025 SquareBrowser Contributors
  *
- * HomeScreen - Modern home screen with quick shortcuts and time accountability
+ * HomeScreen - Modern home screen with quick shortcuts and time accountability.
+ * Privacy-first: no remote favicon service — domains render as local letter tiles.
+ * All colors come from theme.js tokens via getTheme(isDarkMode).
  */
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, Platform, Dimensions, StatusBar } from 'react-native';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+  ScrollView,
+  RefreshControl,
+  Alert,
+  Platform,
+  Dimensions,
+  StatusBar,
+  Animated,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats, isDarkMode } = useBrowser();
 
+  const theme = getTheme(isDarkMode);
+  const { colors, spacing, borderRadius, typography, shadows, animation, touchTarget } = theme;
+
   const lifeQuotes = [
-    { text: "You are the sum of your time. Don't throw yourself away.", icon: "hourglass-outline", color: "#FF9800" },
-    { text: "Yesterday is a part of your life that is gone forever. Look at what you gave it to.", icon: "calendar-outline", color: "#9E9E9E" },
-    { text: "Your life is leaking through your screen. Are these sites worth your soul?", icon: "warning-outline", color: "#F44336" },
-    { text: "Every minute you spend here is a minute you aren't living out there.", icon: "time-outline", color: "#FF9800" },
-    { text: "Time is the only currency you can't earn back. You are spending it right now.", icon: "cash-outline", color: "#4CAF50" },
-    { text: "You are a human being, not a data point. Reclaim your time.", icon: "person-outline", color: "#2196F3" },
-    { text: "Each click is a tick of your life's clock. Make it count.", icon: "radio-button-on-outline", color: "#FF9800" },
-    { text: "The screen glows, but your life grows dimmer. What are you chasing?", icon: "sunny-outline", color: "#FFC107" },
-    { text: "In 100 years, nobody will remember what you scrolled through today.", icon: "hourglass-outline", color: "#9E9E9E" },
-    { text: "Your attention is the most valuable thing you own. Who are you giving it to?", icon: "diamond-outline", color: "#9C27B0" },
-    { text: "This moment exists once. You're spending it on pixels.", icon: "flower-outline", color: "#E91E63" },
-    { text: "The internet promises everything but delivers only distraction.", icon: "cloud-off-outline", color: "#9E9E9E" },
-    { text: "You're not missing out by putting this down. You're missing out on real life.", icon: "leaf-outline", color: "#4CAF50" },
-    { text: "Hours vanish here, while your dreams gather dust.", icon: "moon-outline", color: "#3F51B5" },
-    { text: "Perfect moments are slipping away while you watch perfect videos.", icon: "water-outline", color: "#00BCD4" },
-    { text: "The world outside waits for no one, especially not those who wait for likes.", icon: "people-outline", color: "#795548" },
-    { text: "Your childhood is gone. Your adulthood is disappearing. How much of it have you spent here?", icon: "hourglass-outline", color: "#FF5722" },
-    { text: "This isn't living. It's numbing. Feel something real instead.", icon: "heart-outline", color: "#E91E63" },
-    { text: "Notifications are not priorities. They are someone else's agenda for your time.", icon: "notifications-off-outline", color: "#607D8B" },
-    { text: "You can't save time for later. It's being spent right now.", icon: "timer-outline", color: "#FF9800" },
-    { text: "The algorithm knows you better than you know yourself. That should scare you.", icon: "eye-off-outline", color: "#F44336" },
-    { text: "Everything you seek here - connection, meaning, purpose - exists out there, not in here.", icon: "git-branch-outline", color: "#4CAF50" },
-    { text: "Your heroes didn't build their legacy by watching others build theirs.", icon: "trophy-outline", color: "#FFC107" },
-    { text: "This screen is a thief, stealing moments you can never get back.", icon: "hand-left-outline", color: "#F44336" },
-    { text: "At the end, nobody's last words will be 'I wish I had scrolled more.'", icon: "ribbon-outline", color: "#9E9E9E" },
-    { text: "The past is gone, the future isn't guaranteed. All you have is now - and you're giving it away.", icon: "flash-outline", color: "#FFC107" },
-    { text: "Your dreams don't have a notification bell. They wait in silence while you chase noise.", icon: "notifications-outline", color: "#9E9E9E" },
-    { text: "Somewhere, someone is living the life you want. They're not on this screen.", icon: "compass-outline", color: "#00BCD4" },
-    { text: "You think you're passing time. Time is passing you.", icon: "swap-horizontal-outline", color: "#FF9800" },
-    { text: "Regret is heavy. Choose carefully how you fill your hours.", icon: "barbell-outline", color: "#607D8B" }
+    { text: "You are the sum of your time. Don't throw yourself away.", icon: "hourglass-outline" },
+    { text: "Yesterday is a part of your life that is gone forever. Look at what you gave it to.", icon: "calendar-outline" },
+    { text: "Your life is leaking through your screen. Are these sites worth your soul?", icon: "warning-outline" },
+    { text: "Every minute you spend here is a minute you aren't living out there.", icon: "time-outline" },
+    { text: "Time is the only currency you can't earn back. You are spending it right now.", icon: "cash-outline" },
+    { text: "You are a human being, not a data point. Reclaim your time.", icon: "person-outline" },
+    { text: "Each click is a tick of your life's clock. Make it count.", icon: "radio-button-on-outline" },
+    { text: "The screen glows, but your life grows dimmer. What are you chasing?", icon: "sunny-outline" },
+    { text: "In 100 years, nobody will remember what you scrolled through today.", icon: "hourglass-outline" },
+    { text: "Your attention is the most valuable thing you own. Who are you giving it to?", icon: "diamond-outline" },
+    { text: "This moment exists once. You're spending it on pixels.", icon: "flower-outline" },
+    { text: "The internet promises everything but delivers only distraction.", icon: "cloud-off-outline" },
+    { text: "You're not missing out by putting this down. You're missing out on real life.", icon: "leaf-outline" },
+    { text: "Hours vanish here, while your dreams gather dust.", icon: "moon-outline" },
+    { text: "Perfect moments are slipping away while you watch perfect videos.", icon: "water-outline" },
+    { text: "The world outside waits for no one, especially not those who wait for likes.", icon: "people-outline" },
+    { text: "Your childhood is gone. Your adulthood is disappearing. How much of it have you spent here?", icon: "hourglass-outline" },
+    { text: "This isn't living. It's numbing. Feel something real instead.", icon: "heart-outline" },
+    { text: "Notifications are not priorities. They are someone else's agenda for your time.", icon: "notifications-off-outline" },
+    { text: "You can't save time for later. It's being spent right now.", icon: "timer-outline" },
+    { text: "The algorithm knows you better than you know yourself. That should scare you.", icon: "eye-off-outline" },
+    { text: "Everything you seek here - connection, meaning, purpose - exists out there, not in here.", icon: "git-branch-outline" },
+    { text: "Your heroes didn't build their legacy by watching others build theirs.", icon: "trophy-outline" },
+    { text: "This screen is a thief, stealing moments you can never get back.", icon: "hand-left-outline" },
+    { text: "At the end, nobody's last words will be 'I wish I had scrolled more.'", icon: "ribbon-outline" },
+    { text: "The past is gone, the future isn't guaranteed. All you have is now - and you're giving it away.", icon: "flash-outline" },
+    { text: "Your dreams don't have a notification bell. They wait in silence while you chase noise.", icon: "notifications-outline" },
+    { text: "Somewhere, someone is living the life you want. They're not on this screen.", icon: "compass-outline" },
+    { text: "You think you're passing time. Time is passing you.", icon: "swap-horizontal-outline" },
+    { text: "Regret is heavy. Choose carefully how you fill your hours.", icon: "barbell-outline" },
   ];
 
   // Recent bookmarks for quick access
@@ -51,23 +70,17 @@ const HomeScreen = () => {
     return [...bookmarks].reverse().slice(0, 4);
   }, [bookmarks]);
 
-  // Colors based on theme
-  const colors = {
-    bg: isDarkMode ? '#0A0A0A' : '#F5F7FA',
-    card: isDarkMode ? '#1A1A1A' : '#FFFFFF',
-    text: isDarkMode ? '#E0E0E0' : '#1A1A1A',
-    subtext: isDarkMode ? '#888' : '#666',
-    border: isDarkMode ? '#2A2A2A' : '#E0E0E0',
-    accent: '#2196F3',
-    accentGradient: ['#2196F3', '#1976D2'],
-    danger: '#F44336',
-    success: '#4CAF50',
-    warning: '#FF9800',
-  };
-
   const randomQuote = useMemo(() => {
     return lifeQuotes[Math.floor(Math.random() * lifeQuotes.length)];
   }, []);
+
+  // Quote cycling state
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * lifeQuotes.length));
+  const currentQuote = lifeQuotes[quoteIndex];
+
+  const cycleQuote = () => {
+    setQuoteIndex((prev) => (prev + 1) % lifeQuotes.length);
+  };
 
   const formatDuration = (ms) => {
     const mins = Math.floor(ms / 60000);
@@ -80,11 +93,18 @@ const HomeScreen = () => {
 
   const totalToday = useMemo(() => Object.values(todayStats).reduce((a, b) => a + b, 0), [todayStats]);
 
+  // Dedup by hostname/origin, keep the most recent title, cap at 6.
   const mostVisited = useMemo(() => {
     const uniqueSites = {};
     history.forEach(item => {
-      if (!uniqueSites[item.url] || uniqueSites[item.url].visitCount < item.visitCount) {
-        uniqueSites[item.url] = item;
+      let host;
+      try {
+        host = new URL(item.url).hostname;
+      } catch (e) {
+        host = item.url;
+      }
+      if (!uniqueSites[host] || uniqueSites[host].visitCount < item.visitCount) {
+        uniqueSites[host] = { ...item, host };
       }
     });
 
@@ -93,12 +113,31 @@ const HomeScreen = () => {
       .slice(0, 6);
   }, [history]);
 
-  const getFavicon = (url) => {
+  // Entrance animation (opacity + translateY only, native driver, <300ms).
+  const entrance = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(entrance, {
+      toValue: 1,
+      duration: animation.normal,
+      useNativeDriver: true,
+    }).start();
+  }, [entrance, animation.normal]);
+
+  // Pull-to-refresh state.
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    // Lightweight refresh: brief spinner, no network.
+    setTimeout(() => setRefreshing(false), 400);
+  };
+
+  // Local, deterministic letter tile from the domain (no network).
+  const domainLetter = (url) => {
     try {
-      const domain = new URL(url).hostname;
-      return `https://www.google.com/s2/favicons?sz=128&domain=${domain}`;
+      const host = new URL(url).hostname;
+      return host.charAt(0).toUpperCase();
     } catch (e) {
-      return null;
+      return '?';
     }
   };
 
@@ -113,129 +152,179 @@ const HomeScreen = () => {
       [
         { text: 'Open in Current Tab', onPress: () => navigateTo(url) },
         { text: 'Open in New Tab', onPress: () => addTab(url) },
-        { text: 'Cancel', style: 'cancel' }
+        { text: 'Cancel', style: 'cancel' },
       ]
     );
   };
 
-  const BookmarkItem = ({ bookmark }) => (
-    <TouchableOpacity
-      style={[styles.shortcutItem, { backgroundColor: colors.card }]}
-      onPress={() => navigateTo(bookmark.url)}
-      activeOpacity={0.7}
+  const LetterTile = ({ url, size = 48, radius = 14 }) => (
+    <View
+      style={[
+        styles.letterTile,
+        {
+          width: size,
+          height: size,
+          borderRadius: radius,
+          backgroundColor: colors.accentSoft,
+        },
+      ]}
     >
-      <Image
-        source={{ uri: getFavicon(bookmark.url) }}
-        style={styles.shortcutFavicon}
-        defaultSource={require('../assets/icon.png')}
-      />
+      <Text style={[styles.letterTileText, { color: colors.accent }]}>{domainLetter(url)}</Text>
+    </View>
+  );
+
+  const BookmarkItem = ({ bookmark }) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.shortcutItem,
+        {
+          backgroundColor: colors.surface,
+          minHeight: touchTarget.min,
+        },
+        pressed && { opacity: animation.pressOpacity },
+      ]}
+      onPress={() => navigateTo(bookmark.url)}
+    >
+      <LetterTile url={bookmark.url} />
       <Text style={[styles.shortcutName, { color: colors.text }]} numberOfLines={1}>
         {bookmark.title || new URL(bookmark.url).hostname}
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 
   const SiteItem = ({ site }) => (
-    <TouchableOpacity
-      style={[styles.siteItem, { backgroundColor: colors.card }]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.siteItem,
+        {
+          backgroundColor: colors.surface,
+          minHeight: touchTarget.minRow,
+        },
+        pressed && { opacity: animation.pressOpacity },
+      ]}
       onPress={() => handleSitePress(site.url)}
       onLongPress={() => handleSiteLongPress(site.url)}
-      activeOpacity={0.7}
     >
-      <Image
-        source={{ uri: getFavicon(site.url) }}
-        style={styles.siteFavicon}
-        defaultSource={require('../assets/icon.png')}
-      />
+      <LetterTile url={site.url} size={36} radius={10} />
       <View style={styles.siteInfo}>
         <Text style={[styles.siteTitle, { color: colors.text }]} numberOfLines={1}>
-          {site.title || new URL(site.url).hostname}
+          {site.title || site.host}
         </Text>
-        <Text style={[styles.siteUrl, { color: colors.subtext }]} numberOfLines={1}>
-          {new URL(site.url).hostname}
+        <Text style={[styles.siteUrl, { color: colors.textSecondary }]} numberOfLines={1}>
+          {site.host}
         </Text>
       </View>
-      <View style={[styles.visitCount, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
-        <Text style={[styles.visitCountText, { color: colors.subtext }]}>{site.visitCount}</Text>
+      <View style={[styles.visitCount, { backgroundColor: colors.surfaceAlt }]}>
+        <Text style={[styles.visitCountText, { color: colors.textSecondary }]}>{site.visitCount}</Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.bg} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+            progressBackgroundColor={colors.surface}
+          />
+        }
       >
-        {/* Quick Stats Header */}
-        <View style={[styles.statsHeader, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff' }]}>
-          <View style={styles.quickStats}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.accent }]}>{formatDuration(totalToday)}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Today</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{history.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Visits</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{bookmarks.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Bookmarks</Text>
+        <Animated.View
+          style={{
+            opacity: entrance,
+            transform: [{ translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+          }}
+        >
+          {/* Quick Stats Header */}
+          <View style={[styles.statsHeader, { backgroundColor: colors.surface, borderBottomColor: colors.separator }]}>
+            <View style={styles.quickStats}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.accent }]}>{formatDuration(totalToday)}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today</Text>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.text }]}>{history.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Visits</Text>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: colors.separator }]} />
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.text }]}>{bookmarks.length}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Bookmarks</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* Accountability Quote - Core Feature */}
-        <View style={[styles.quoteCard, { backgroundColor: isDarkMode ? '#1F1A1A' : '#FFF8F0', borderColor: isDarkMode ? '#3A2A1A' : '#FFE0B2' }]}>
-          <View style={styles.quoteContainer}>
-            <Ionicons name={randomQuote.icon} size={20} color={randomQuote.color} />
-            <Text style={[styles.quoteText, { color: colors.text }]}>
-              "{randomQuote.text}"
-            </Text>
-          </View>
+          {/* Accountability Quote - Core Feature (hidden until user has data) */}
           {totalToday > 0 && (
-            <View style={styles.quoteStats}>
-              <Text style={[styles.quoteStatsText, { color: colors.subtext }]}>
-                You've spent {formatDuration(totalToday)} browsing today. Make it count.
+            <Pressable
+              style={({ pressed }) => [
+                styles.quoteCard,
+                {
+                  backgroundColor: colors.surfaceAlt,
+                  borderColor: colors.separator,
+                },
+                pressed && { opacity: animation.pressOpacity },
+              ]}
+              onPress={cycleQuote}
+            >
+              <View style={styles.quoteContainer}>
+                <Ionicons name={currentQuote.icon} size={20} color={colors.warning} />
+                <Text style={[styles.quoteText, { color: colors.text }]}>
+                  "{currentQuote.text}"
+                </Text>
+                <Ionicons name="refresh" size={16} color={colors.textTertiary} style={styles.shuffleIcon} />
+              </View>
+              <View style={[styles.quoteStats, { borderTopColor: colors.separator }]}>
+                <Text style={[styles.quoteStatsText, { color: colors.textSecondary }]}>
+                  You've spent {formatDuration(totalToday)} browsing today. Make it count.
+                </Text>
+              </View>
+            </Pressable>
+          )}
+
+          {/* Quick Access - Recent Bookmarks */}
+          {quickBookmarks.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
+              <View style={styles.shortcutsGrid}>
+                {quickBookmarks.map((bookmark) => (
+                  <BookmarkItem key={bookmark.id} bookmark={bookmark} />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                Bookmark some pages to see them here for quick access.
               </Text>
             </View>
           )}
-        </View>
 
-        {/* Quick Access - Recent Bookmarks */}
-        {quickBookmarks.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
-            <View style={styles.shortcutsGrid}>
-              {quickBookmarks.map((bookmark) => (
-                <BookmarkItem key={bookmark.id} bookmark={bookmark} />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
-            <Text style={[styles.emptyText, { color: colors.subtext }]}>
-              Bookmark some pages to see them here for quick access.
-            </Text>
-          </View>
-        )}
-
-        {/* Most Visited */}
-        {mostVisited.length > 0 && (
+          {/* Most Visited */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Most Visited</Text>
-            {mostVisited.map((site) => (
-              <SiteItem key={site.id} site={site} />
-            ))}
+            {mostVisited.length > 0 ? (
+              mostVisited.map((site) => (
+                <SiteItem key={site.id || site.host} site={site} />
+              ))
+            ) : (
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                Sites you visit most will appear here
+              </Text>
+            )}
           </View>
-        )}
-
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -256,7 +345,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   quickStats: {
     flexDirection: 'row',
@@ -301,11 +389,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontWeight: '400',
   },
+  shuffleIcon: {
+    marginTop: 4,
+  },
   quoteStats: {
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.08)',
   },
   quoteStatsText: {
     fontSize: 13,
@@ -332,14 +422,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     marginBottom: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 16,
   },
-  shortcutFavicon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  letterTile: {
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
+  },
+  letterTileText: {
+    fontSize: 22,
+    fontWeight: '600',
   },
   shortcutName: {
     fontSize: 11,
@@ -358,12 +452,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
-  },
-  siteFavicon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    marginRight: 12,
   },
   siteInfo: {
     flex: 1,
