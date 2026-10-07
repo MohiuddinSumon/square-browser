@@ -1,8 +1,36 @@
+/**
+ * Copyright (c) 2025 SquareBrowser Contributors
+ *
+ * SettingsScreen.js — App settings & preferences.
+ *
+ * iOS HIG grouped-inset list. All colors/radii/shadows/typography derive from
+ * theme.js tokens via getTheme(isDarkMode) — no hardcoded hex. Press feedback
+ * uses Pressable style functions (scale 0.97 / opacity 0.6) with no haptics.
+ */
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, SafeAreaView, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
+import { getTheme } from '../theme';
+
+/**
+ * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
+ * hardcoded RN defaults. Track is accent when on, separator-tinted when off;
+ * thumb is white in both modes.
+ */
+const ThemedSwitch = ({ value, onValueChange, theme }) => {
+  const { colors } = theme;
+  return (
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      trackColor={{ false: colors.separator, true: colors.accent }}
+      thumbColor="#FFFFFF"
+      ios_backgroundColor={colors.separator}
+    />
+  );
+};
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -26,6 +54,9 @@ const SettingsScreen = ({ navigation }) => {
     setTimerSettingsPref,
   } = useBrowser();
 
+  const theme = getTheme(isDarkMode);
+  const { colors, spacing, borderRadius, typography, shadows, animation, touchTarget } = theme;
+
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
   const [localLimitMinutes, setLocalLimitMinutes] = useState(Math.round(dailyLimitMs / 60000));
 
@@ -34,24 +65,11 @@ const SettingsScreen = ({ navigation }) => {
     setLocalLimitMinutes(Math.round(dailyLimitMs / 60000));
   }, [dailyLimitMs]);
 
-  // Colors based on theme
-  const colors = {
-    bg: isDarkMode ? '#121212' : '#fff',
-    card: isDarkMode ? '#1e1e1e' : '#fff',
-    text: isDarkMode ? '#e0e0e0' : '#333',
-    subtext: isDarkMode ? '#999' : '#666',
-    border: isDarkMode ? '#333' : '#eee',
-    accent: '#2196F3',
-    success: '#4CAF50',
-    warning: '#FF9800',
-  };
-
   const handleExportHistory = useCallback(() => {
     // Future: Implement export functionality
     alert('Export functionality will be available in a future update');
   }, []);
 
-  // handleAbout is no longer used in the new UI, but kept as per instruction format
   const handleAbout = useCallback(() => {
     alert(
       'SquareBrowser\n\n' +
@@ -61,302 +79,376 @@ const SettingsScreen = ({ navigation }) => {
     );
   }, [appVersion]);
 
-  // handleViewHistory and handleViewBookmarks are now directly in onPress
-  // const handleViewHistory = () => {
-  //   navigation.navigate('History');
-  // };
+  // Pressable style function: transform-only press feedback, native driver friendly.
+  const pressStyle = ({ pressed }) => [
+    pressed && {
+      transform: [{ scale: animation.pressScale }],
+      opacity: animation.pressOpacity,
+    },
+  ];
 
-  // const handleViewBookmarks = () => {
-  //   navigation.navigate('Bookmarks');
-  // };
+  const renderPositionButton = (label, active, onPress) => (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.positionButton,
+        {
+          borderColor: active ? colors.accent : colors.border,
+          backgroundColor: active ? colors.accent : colors.surface,
+        },
+        pressed && {
+          transform: [{ scale: animation.pressScale }],
+          opacity: animation.pressOpacity,
+        },
+      ]}
+    >
+      <Text style={[styles.positionButtonText, { color: active ? colors.textOnPrimary : colors.textSecondary }]}>
+        {label}
+      </Text>
+      {active && <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} style={styles.positionButtonCheck} />}
+    </Pressable>
+  );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
-          style={styles.backButton}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
+      <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
+        <Pressable
+          style={({ pressed }) => [styles.backButton, pressed && { opacity: animation.pressOpacity }]}
           onPress={() => navigation.goBack()}
+          hitSlop={8}
         >
           <Ionicons name="arrow-back" size={24} color={colors.accent} />
-        </TouchableOpacity>
+        </Pressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
       </View>
 
-      <ScrollView style={styles.container}>
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Browser Settings</Text>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Browser Settings</Text>
 
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="desktop-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Desktop Mode</Text>
-          </View>
-          <Switch
-            value={desktopMode}
-            onValueChange={setDesktopMode}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={desktopMode ? colors.accent : "#f4f3f4"}
-          />
-        </View>
-
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="shield-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Ad Blocker</Text>
-          </View>
-          <Switch
-            value={adBlockEnabled}
-            onValueChange={setAdBlockEnabled}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={adBlockEnabled ? colors.accent : "#f4f3f4"}
-          />
-        </View>
-
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="globe-outline" size={24} color={colors.subtext} />
-            <View>
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Enhanced Compatibility</Text>
-              <Text style={[styles.menuItemSubtext, { color: colors.subtext, paddingLeft: 0 }]}>Helps load sites with Cloudflare protection</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="desktop-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Desktop Mode</Text>
             </View>
-          </View>
-          <Switch
-            value={enhancedCompatEnabled !== false}
-            onValueChange={setEnhancedCompatPref}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={enhancedCompatEnabled !== false ? colors.accent : "#f4f3f4"}
-          />
-        </View>
+            <ThemedSwitch value={desktopMode} onValueChange={setDesktopMode} theme={theme} />
+          </Pressable>
 
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name={isDarkMode ? "moon" : "sunny-outline"} size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
-          </View>
-          <Switch
-            value={isDarkMode}
-            onValueChange={toggleDarkMode}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={isDarkMode ? colors.accent : "#f4f3f4"}
-          />
-        </View>
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="code-working-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>URL Bar Position</Text>
-          </View>
-          <View style={styles.positionButtons}>
-            <TouchableOpacity
-              style={[styles.positionButton, urlBarPosition === 'top' && styles.positionButtonActive, { borderColor: urlBarPosition === 'top' ? colors.accent : colors.border }]}
-              onPress={() => setUrlBarPositionPref('top')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.positionButtonText, { color: urlBarPosition === 'top' ? colors.accent : colors.subtext }]}>Top</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.positionButton, urlBarPosition === 'bottom' && styles.positionButtonActive, { borderColor: urlBarPosition === 'bottom' ? colors.accent : colors.border }]}
-              onPress={() => setUrlBarPositionPref('bottom')}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.positionButtonText, { color: urlBarPosition === 'bottom' ? colors.accent : colors.subtext }]}>Bottom</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Ad Blocker</Text>
+            </View>
+            <ThemedSwitch value={adBlockEnabled} onValueChange={setAdBlockEnabled} theme={theme} />
+          </Pressable>
 
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="eye-off-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Auto-Hide URL Bar</Text>
-          </View>
-          <Switch
-            value={autoHideNavBar}
-            onValueChange={setAutoHideNavBarPref}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={autoHideNavBar ? colors.accent : "#f4f3f4"}
-          />
-        </View>
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Daily Timer</Text>
-
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="timer-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Daily Browsing Limit</Text>
-          </View>
-          <Switch
-            value={timerEnabled}
-            onValueChange={(val) => setTimerSettingsPref({ enabled: val, limitMs: localLimitMinutes * 60000, strict: strictMode })}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={timerEnabled ? colors.accent : "#f4f3f4"}
-          />
-        </View>
-
-        {timerEnabled && (
-          <>
-            <View style={[styles.menuItem, { borderBottomColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', paddingBottom: 12 }]}>
-              <View style={[styles.menuItemLeft, { marginBottom: 10 }]}>
-                <Ionicons name="hourglass-outline" size={24} color={colors.subtext} />
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Time Limit</Text>
-              </View>
-              <View style={styles.timerPresets}>
-                {[30, 60, 120, 180, 360].map(mins => (
-                  <TouchableOpacity
-                    key={mins}
-                    style={[styles.positionButton, localLimitMinutes === mins && styles.positionButtonActive, { borderColor: localLimitMinutes === mins ? colors.accent : colors.border }]}
-                    onPress={() => {
-                      setLocalLimitMinutes(mins);
-                      setTimerSettingsPref({ enabled: true, limitMs: mins * 60000, strict: strictMode });
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.positionButtonText, { color: localLimitMinutes === mins ? colors.accent : colors.subtext }]}>
-                      {mins < 60 ? `${mins}m` : `${mins / 60}h`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.timerAdjust}>
-                <TouchableOpacity
-                  style={[styles.positionButton, { borderColor: colors.border }]}
-                  onPress={() => {
-                    const newMins = Math.max(5, localLimitMinutes - 15);
-                    setLocalLimitMinutes(newMins);
-                    setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.positionButtonText, { color: colors.subtext }]}>−15m</Text>
-                </TouchableOpacity>
-                <Text style={[styles.timerCurrentValue, { color: colors.text }]}>
-                  {localLimitMinutes < 60
-                    ? `${localLimitMinutes}m`
-                    : localLimitMinutes % 60 === 0
-                      ? `${localLimitMinutes / 60}h`
-                      : `${Math.floor(localLimitMinutes / 60)}h ${localLimitMinutes % 60}m`}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.positionButton, { borderColor: colors.border }]}
-                  onPress={() => {
-                    const newMins = Math.min(1435, localLimitMinutes + 15);
-                    setLocalLimitMinutes(newMins);
-                    setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.positionButtonText, { color: colors.subtext }]}>+15m</Text>
-                </TouchableOpacity>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="globe-outline" size={22} color={colors.accent} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Enhanced Compatibility</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>Helps load sites with Cloudflare protection</Text>
               </View>
             </View>
+            <ThemedSwitch value={enhancedCompatEnabled !== false} onValueChange={setEnhancedCompatPref} theme={theme} />
+          </Pressable>
 
-            <View style={[styles.menuItem, { borderBottomColor: colors.border, flexDirection: 'column', alignItems: 'flex-start' }]}>
-              <View style={[styles.menuItemRow, { width: '100%' }]}>
-                <View style={styles.menuItemLeft}>
-                  <Ionicons name="lock-closed-outline" size={24} color={colors.subtext} />
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Strict Mode</Text>
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name={isDarkMode ? 'moon' : 'sunny-outline'} size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
+            </View>
+            <ThemedSwitch value={isDarkMode} onValueChange={toggleDarkMode} theme={theme} />
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="code-working-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>URL Bar Position</Text>
+            </View>
+            <View style={styles.positionButtons}>
+              {renderPositionButton('Top', urlBarPosition === 'top', () => setUrlBarPositionPref('top'))}
+              {renderPositionButton('Bottom', urlBarPosition === 'bottom', () => setUrlBarPositionPref('bottom'))}
+            </View>
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="eye-off-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Auto-Hide URL Bar</Text>
+            </View>
+            <ThemedSwitch value={autoHideNavBar} onValueChange={setAutoHideNavBarPref} theme={theme} />
+          </Pressable>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Timer</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="timer-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Daily Browsing Limit</Text>
+            </View>
+            <ThemedSwitch
+              value={timerEnabled}
+              onValueChange={(val) => setTimerSettingsPref({ enabled: val, limitMs: localLimitMinutes * 60000, strict: strictMode })}
+              theme={theme}
+            />
+          </Pressable>
+
+          {timerEnabled && (
+            <>
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+              <View style={styles.menuItemColumn}>
+                <View style={[styles.menuItemLeft, { marginBottom: spacing.sm }]}>
+                  <Ionicons name="hourglass-outline" size={22} color={colors.accent} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>Time Limit</Text>
                 </View>
-                <Switch
-                  value={strictMode}
-                  onValueChange={(val) => setTimerSettingsPref({ enabled: true, limitMs: localLimitMinutes * 60000, strict: val })}
-                  trackColor={{ false: "#767577", true: "#81b0ff" }}
-                  thumbColor={strictMode ? colors.accent : "#f4f3f4"}
-                />
+                <View style={styles.timerPresets}>
+                  {[30, 60, 120, 180, 360].map((mins) => (
+                    <Pressable
+                      key={mins}
+                      onPress={() => {
+                        setLocalLimitMinutes(mins);
+                        setTimerSettingsPref({ enabled: true, limitMs: mins * 60000, strict: strictMode });
+                      }}
+                      style={({ pressed }) => [
+                        styles.positionButton,
+                        {
+                          borderColor: localLimitMinutes === mins ? colors.accent : colors.border,
+                          backgroundColor: localLimitMinutes === mins ? colors.accent : colors.surface,
+                        },
+                        pressed && {
+                          transform: [{ scale: animation.pressScale }],
+                          opacity: animation.pressOpacity,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.positionButtonText, { color: localLimitMinutes === mins ? colors.textOnPrimary : colors.textSecondary }]}>
+                        {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                      </Text>
+                      {localLimitMinutes === mins && (
+                        <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} style={styles.positionButtonCheck} />
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={styles.timerAdjust}>
+                  <Pressable
+                    onPress={() => {
+                      const newMins = Math.max(5, localLimitMinutes - 15);
+                      setLocalLimitMinutes(newMins);
+                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                    }}
+                    style={({ pressed }) => [
+                      styles.positionButton,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      pressed && {
+                        transform: [{ scale: animation.pressScale }],
+                        opacity: animation.pressOpacity,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>−15m</Text>
+                  </Pressable>
+                  <Text style={[styles.timerCurrentValue, { color: colors.text }]}>
+                    {localLimitMinutes < 60
+                      ? `${localLimitMinutes}m`
+                      : localLimitMinutes % 60 === 0
+                        ? `${localLimitMinutes / 60}h`
+                        : `${Math.floor(localLimitMinutes / 60)}h ${localLimitMinutes % 60}m`}
+                  </Text>
+                  <Pressable
+                    onPress={() => {
+                      const newMins = Math.min(1435, localLimitMinutes + 15);
+                      setLocalLimitMinutes(newMins);
+                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                    }}
+                    style={({ pressed }) => [
+                      styles.positionButton,
+                      { borderColor: colors.border, backgroundColor: colors.surface },
+                      pressed && {
+                        transform: [{ scale: animation.pressScale }],
+                        opacity: animation.pressOpacity,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>+15m</Text>
+                  </Pressable>
+                </View>
               </View>
-              <Text style={[styles.menuItemSubtext, { color: colors.warning }]}>
-                Browser locks until midnight — cannot be bypassed.
-              </Text>
+
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+              <View style={styles.menuItemColumn}>
+                <View style={styles.menuItemRow}>
+                  <View style={styles.menuItemLeft}>
+                    <Ionicons name="lock-closed-outline" size={22} color={colors.accent} />
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>Strict Mode</Text>
+                  </View>
+                  <ThemedSwitch
+                    value={strictMode}
+                    onValueChange={(val) => setTimerSettingsPref({ enabled: true, limitMs: localLimitMinutes * 60000, strict: val })}
+                    theme={theme}
+                  />
+                </View>
+                <Text style={[styles.menuItemSubtext, { color: colors.warning }]}>
+                  Browser locks until midnight — cannot be bypassed.
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Quick Access</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('History')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="time-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Browsing History</Text>
             </View>
-          </>
-        )}
+            <View style={styles.menuItemRight}>
+              <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
+                <Text style={styles.buttonBadgeText}>{history.length}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </View>
+          </Pressable>
 
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>Quick Access</Text>
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('History')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="time-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Browsing History</Text>
-          </View>
-          <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
-            <Text style={styles.buttonBadgeText}>{history.length}</Text>
-          </View>
-        </TouchableOpacity>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('Bookmarks')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="bookmark-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Bookmarks</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
+                <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </View>
+          </Pressable>
 
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('Bookmarks')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="bookmark-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Bookmarks</Text>
-          </View>
-          <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
-            <Text style={styles.buttonBadgeText}>{bookmarks.length}</Text>
-          </View>
-        </TouchableOpacity>
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('Products')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="apps-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Products</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.border} />
-        </TouchableOpacity>
-
-        <Text style={[styles.sectionTitle, { color: colors.accent }]}>About & Legal</Text>
-        
-        <TouchableOpacity 
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('PrivacyPolicy')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="shield-half-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy Policy</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.border} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('TermsOfService')}
-        >
-          <View style={styles.menuItemLeft}>
-            <Ionicons name="document-text-outline" size={24} color={colors.subtext} />
-            <Text style={[styles.menuItemText, { color: colors.text }]}>Terms of Service</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.border} />
-        </TouchableOpacity>
-
-        <View style={styles.aboutContainer}>
-          <Text style={[styles.aboutText, { color: colors.subtext }]}>
-            SquareBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits.
-            With no incognito or hidden modes, SquareBrowser ensures complete transparency in all your online activity.
-          </Text>
-          <Text style={[styles.aboutText, { color: colors.subtext }]}>
-            Your history is permanent and your time is precious. Every minute you spend here is recorded for your own accountability.
-          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('Products')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="apps-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Products</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
         </View>
 
-        <View style={[styles.infoSection, { borderTopColor: colors.border }]}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.subtext }]}>App Name</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>SquareBrowser</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={handleExportHistory}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="share-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Export History</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About & Legal</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-half-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy Policy</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('TermsOfService')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="document-text-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>Terms of Service</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <View style={styles.aboutContainer}>
+            <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
+              SquareBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits.
+              With no incognito or hidden modes, SquareBrowser ensures complete transparency in all your online activity.
+            </Text>
+            <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
+              Your history is permanent and your time is precious. Every minute you spend here is recorded for your own accountability.
+            </Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Version</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{appVersion}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.subtext }]}>Status</Text>
-            <Text style={[styles.infoValue, { color: colors.success || '#4CAF50' }]}>Active Accountability</Text>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <View style={styles.infoSection}>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>App Name</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>SquareBrowser</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Version</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{appVersion}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</Text>
+              <Text style={[styles.infoValue, { color: colors.success }]}>Active Accountability</Text>
+            </View>
           </View>
         </View>
 
-        <Text style={[styles.footerText, { color: colors.subtext }]}>
+        <Text style={[styles.footerText, { color: colors.textTertiary }]}>
           SquareBrowser v{appVersion} • Honest Browsing
         </Text>
       </ScrollView>
@@ -371,59 +463,94 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'android' ? 40 : 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    padding: 8,
+    padding: 12,
     marginRight: 8,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   container: {
     flex: 1,
   },
+  contentContainer: {
+    paddingBottom: 40,
+  },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginTop: 24,
     marginBottom: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+  },
+  card: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    minHeight: 44,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+  },
+  menuItemColumn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flexShrink: 1,
+  },
+  menuItemTextWrap: {
+    flexShrink: 1,
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: 17,
+  },
+  menuItemSubtext: {
+    fontSize: 13,
+    marginTop: 2,
+    lineHeight: 17,
+  },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 50,
   },
   buttonBadge: {
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
+    minWidth: 24,
+    alignItems: 'center',
   },
   buttonBadgeText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#fff',
   },
   aboutContainer: {
     padding: 16,
-    marginTop: 20,
   },
   aboutText: {
     fontSize: 14,
@@ -432,9 +559,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   infoSection: {
-    marginTop: 20,
     padding: 16,
-    borderTopWidth: 1,
   },
   infoRow: {
     flexDirection: 'row',
@@ -442,33 +567,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 15,
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
   },
   footerText: {
     fontSize: 12,
     textAlign: 'center',
-    marginTop: 30,
-    marginBottom: 40,
+    marginTop: 8,
+    marginBottom: 24,
   },
   positionButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   positionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  positionButtonActive: {
-    backgroundColor: 'transparent',
+  positionButtonCheck: {
+    marginLeft: 2,
   },
   positionButtonText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
   },
   menuItemRow: {
@@ -476,22 +605,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  menuItemSubtext: {
-    fontSize: 12,
-    marginTop: 4,
-    paddingLeft: 36,
-  },
   timerPresets: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingLeft: 36,
     marginBottom: 10,
   },
   timerAdjust: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 36,
     gap: 12,
   },
   timerCurrentValue: {
@@ -503,4 +625,3 @@ const styles = StyleSheet.create({
 });
 
 export default SettingsScreen;
-

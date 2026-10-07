@@ -4,9 +4,10 @@
  * ProductsScreen.js - Products and projects listing
  */
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Platform, Linking } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
 
 const PRODUCTS = [
   {
@@ -37,16 +38,8 @@ const PRODUCTS = [
 
 const ProductsScreen = ({ navigation }) => {
   const { navigateTo, isDarkMode } = useBrowser();
-
-  const colors = {
-    bg: isDarkMode ? '#121212' : '#fff',
-    headerBg: isDarkMode ? '#1e1e1e' : '#f5f5f5',
-    text: isDarkMode ? '#e0e0e0' : '#333',
-    subtext: isDarkMode ? '#999' : '#666',
-    border: isDarkMode ? '#333' : '#e0e0e0',
-    itemBorder: isDarkMode ? '#2c2c2c' : '#f0f0f0',
-    accent: '#2196F3',
-  };
+  const theme = getTheme(isDarkMode);
+  const { colors } = theme;
 
   const handleProductPress = useCallback((url) => {
     navigation.navigate('Browser');
@@ -55,9 +48,15 @@ const ProductsScreen = ({ navigation }) => {
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
-      style={[styles.productItem, { backgroundColor: colors.bg, borderBottomColor: colors.itemBorder }]}
+      style={({ pressed }) => [
+        styles.productItem,
+        { backgroundColor: pressed ? colors.surfaceAlt : colors.surface, borderBottomColor: colors.separator },
+        pressed && { opacity: 0.6 },
+      ]}
       onPress={() => handleProductPress(item.url)}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${item.name}`}
     >
       <View style={[styles.productIcon, { backgroundColor: item.color + '20' }]}>
         <Ionicons name={item.icon} size={28} color={item.color} />
@@ -66,32 +65,43 @@ const ProductsScreen = ({ navigation }) => {
         <Text style={[styles.productTitle, { color: colors.text }]}>
           {item.name}
         </Text>
-        <Text style={[styles.productDescription, { color: colors.subtext }]}>
+        <Text style={[styles.productDescription, { color: colors.textSecondary }]}>
           {item.description}
         </Text>
         <Text style={[styles.productUrl, { color: colors.accent }]} numberOfLines={1}>
           {item.url.replace('https://', '').replace('http://', '').replace(/\/$/, '')}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.border} style={styles.chevron} />
+      <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} style={styles.chevron} />
     </TouchableOpacity>
   );
 
+  const renderEmpty = () => (
+    <View style={styles.emptyState}>
+      <Ionicons name="cube-outline" size={48} color={colors.textSecondary} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No products yet</Text>
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+        Check back soon for new projects.
+      </Text>
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.headerBg }]}>
-      <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
+      <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
+        <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityLabel="Go back"
             accessibilityRole="button"
+            activeOpacity={0.7}
           >
             <Ionicons name="arrow-back" size={24} color={colors.accent} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Products</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.subtext }]}>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
               Explore other projects
             </Text>
           </View>
@@ -103,6 +113,7 @@ const ProductsScreen = ({ navigation }) => {
           renderItem={renderProductItem}
           scrollEnabled={true}
           contentContainerStyle={styles.listContent}
+          ListEmptyComponent={renderEmpty}
           accessibilityLabel="Products list"
           accessibilityRole="list"
         />
@@ -125,7 +136,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: 8,
+    padding: 12,
     marginRight: 8,
   },
   headerContent: {
@@ -141,6 +152,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 16,
+    flexGrow: 1,
   },
   productItem: {
     flexDirection: 'row',
@@ -176,6 +188,21 @@ const styles = StyleSheet.create({
   chevron: {
     marginLeft: 8,
   },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
 });
-
-export default ProductsScreen;

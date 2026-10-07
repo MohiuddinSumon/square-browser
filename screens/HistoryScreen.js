@@ -3,43 +3,87 @@
  *
  * HistoryScreen - Displays browsing history grouped by date with collapsible date sections
  */
-import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  View, Text, FlatList, Pressable, StyleSheet, SafeAreaView, TextInput, Animated,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
+
+const TIME_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'today', label: 'Today' },
+  { key: 'week', label: 'This Week' },
+];
 
 const HistoryScreen = ({ navigation }) => {
   const { history, navigateTo, isDarkMode } = useBrowser();
+  const theme = getTheme(isDarkMode);
+  const colors = theme.colors;
 
   // Track collapsed state for each date
   const [collapsedDates, setCollapsedDates] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [timeFilter, setTimeFilter] = useState('all');
 
-  const colors = {
-    bg: isDarkMode ? '#121212' : '#fff',
-    card: isDarkMode ? '#1e1e1e' : '#fff',
-    headerBg: isDarkMode ? '#1e1e1e' : '#f5f5f5',
-    text: isDarkMode ? '#e0e0e0' : '#333',
-    subtext: isDarkMode ? '#999' : '#666',
-    border: isDarkMode ? '#333' : '#e0e0e0',
-    itemBorder: isDarkMode ? '#2c2c2c' : '#f0f0f0',
-    sectionHeader: isDarkMode ? '#1a1a1a' : '#f9f9f9',
-    accent: '#2196F3',
+  // Animated values per date group (chevron rotation + content fade/slide)
+  const animatedValues = useRef({});
+
+  const getAnimValue = (dateKey) => {
+    if (!animatedValues.current[dateKey]) {
+      animatedValues.current[dateKey] = new Animated.Value(1);
+    }
+    return animatedValues.current[dateKey];
   };
 
-  // Toggle collapse state for a date
+  // Toggle collapse state for a date, animating chevron + content smoothly
   const toggleDateCollapse = (dateKey) => {
-    setCollapsedDates(prev => ({
-      ...prev,
-      [dateKey]: !prev[dateKey]
-    }));
+    const anim = getAnimValue(dateKey);
+    const willCollapse = !collapsedDates[dateKey];
+    if (willCollapse) {
+      Animated.timing(anim, {
+        toValue: 0,
+        duration: theme.animation.normal,
+        useNativeDriver: true,
+      }).start(() => {
+        setCollapsedDates(prev => ({ ...prev, [dateKey]: true }));
+      });
+    } else {
+      setCollapsedDates(prev => ({ ...prev, [dateKey]: false }));
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: theme.animation.normal,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
-  // Group history by date
+  // Filter history by search query and time window
+  const filteredHistory = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+
+    const q = searchQuery.trim().toLowerCase();
+    return history.filter((entry) => {
+      const ts = new Date(entry.timestamp);
+      if (timeFilter === 'today' && ts < startOfToday) return false;
+      if (timeFilter === 'week' && ts < startOfWeek) return false;
+      if (q) {
+        const title = (entry.title || '').toLowerCase();
+        const url = (entry.url || '').toLowerCase();
+        if (!title.includes(q) && !url.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [history, searchQuery, timeFilter]);
+
+  // Group filtered history by date
   const groupedHistory = useMemo(() => {
     const groups = {};
-    const sortedHistory = [...history].reverse(); // Most recent first
-
-    sortedHistory.forEach((entry) => {
+    [...filteredHistory].reverse().forEach((entry) => {
       const date = new Date(entry.timestamp);
       const dateKey = date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -58,7 +102,7 @@ const HistoryScreen = ({ navigation }) => {
       entries,
       dateKey: date.replace(/[^a-zA-Z0-9]/g, '_'), // Create a valid key for state
     }));
-  }, [history]);
+  }, [filteredHistory]);
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
@@ -73,118 +117,164 @@ const HistoryScreen = ({ navigation }) => {
     navigateTo(url);
   };
 
-  const renderHistoryItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.historyItem}
-      onPress={() => handleHistoryItemPress(item.url)}
+  const renderHistoryItem = (entry) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.historyItem,
+        pressed && { opacity: theme.animation.pressOpacity },
+      ]}
+      onPress={() => handleHistoryItemPress(entry.url)}
     >
       <View style={styles.historyItemContent}>
         <View style={styles.historyItemHeader}>
-          <Text style={styles.historyTitle} numberOfLines={1}>
-            {item.title}
+          <Text style={[styles.historyTitle, { color: colors.text }]} numberOfLines={1}>
+            {entry.title}
           </Text>
-          <Text style={styles.historyTime}>{formatTime(item.timestamp)}</Text>
+          <Text style={[styles.historyTime, { color: colors.textTertiary }]}>{formatTime(entry.timestamp)}</Text>
         </View>
-        <Text style={styles.historyUrl} numberOfLines={1}>
-          {item.url}
+        <Text style={[styles.historyUrl, { color: colors.textSecondary }]} numberOfLines={1}>
+          {entry.url}
         </Text>
-        {item.visitCount > 1 && (
-          <Text style={styles.visitCount}>
-            Visited {item.visitCount} times
+        {entry.visitCount > 1 && (
+          <Text style={[styles.visitCount, { color: colors.textTertiary }]}>
+            Visited {entry.visitCount} times
           </Text>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#ccc" />
-    </TouchableOpacity>
+      <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+    </Pressable>
   );
 
-  const renderSectionHeader = ({ section }) => {
-    const isCollapsed = collapsedDates[section.dateKey];
+  const renderGroup = ({ item }) => {
+    const isCollapsed = collapsedDates[item.dateKey];
+    const anim = getAnimValue(item.dateKey);
+    const chevronRotate = anim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] });
+    const contentStyle = {
+      opacity: anim,
+      transform: [
+        { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) },
+      ],
+    };
 
     return (
-      <TouchableOpacity
-        style={[styles.sectionHeader, { backgroundColor: colors.sectionHeader, borderBottomColor: colors.border }]}
-        onPress={() => toggleDateCollapse(section.dateKey)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.sectionHeaderLeft}>
-          <Text style={[styles.sectionHeaderText, { color: colors.subtext }]}>{section.date}</Text>
-          <Text style={[styles.entryCount, { color: colors.subtext }]}>
-            ({section.entries.length} {section.entries.length === 1 ? 'entry' : 'entries'})
-          </Text>
-        </View>
-        <Ionicons
-          name={isCollapsed ? 'chevron-forward' : 'chevron-down'}
-          size={20}
-          color={colors.subtext}
-        />
-      </TouchableOpacity>
+      <View style={[styles.card, { backgroundColor: colors.surface }, theme.shadows.sm]}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.sectionHeader,
+            pressed && { opacity: theme.animation.pressOpacity },
+          ]}
+          onPress={() => toggleDateCollapse(item.dateKey)}
+        >
+          <View style={styles.sectionHeaderLeft}>
+            <Text style={[styles.sectionHeaderText, { color: colors.textSecondary }]}>{item.date}</Text>
+            <Text style={[styles.entryCount, { color: colors.textTertiary }]}>
+              ({item.entries.length} {item.entries.length === 1 ? 'entry' : 'entries'})
+            </Text>
+          </View>
+          <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+            <Ionicons name="chevron-down" size={20} color={colors.textTertiary} />
+          </Animated.View>
+        </Pressable>
+        {!isCollapsed && (
+          <Animated.View style={contentStyle}>
+            {item.entries.map((entry, index) => (
+              <View key={entry.id || `${item.dateKey}-${index}`}>
+                {index > 0 && <View style={[styles.itemSeparator, { backgroundColor: colors.separator }]} />}
+                {renderHistoryItem(entry)}
+              </View>
+            ))}
+          </Animated.View>
+        )}
+      </View>
     );
   };
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="time-outline" size={64} color="#ccc" />
-      <Text style={styles.emptyText}>No browsing history yet</Text>
-      <Text style={styles.emptySubtext}>
-        Your browsing history will appear here
-      </Text>
+  const renderSearchBar = () => (
+    <View style={[styles.searchBar, { backgroundColor: colors.surfaceAlt }]}>
+      <Ionicons name="search" size={18} color={colors.textTertiary} />
+      <TextInput
+        style={[styles.searchInput, { color: colors.text }]}
+        placeholder="Search history"
+        placeholderTextColor={colors.textTertiary}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+      {searchQuery.length > 0 && (
+        <Pressable onPress={() => setSearchQuery('')} hitSlop={8} style={styles.searchClear}>
+          <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+        </Pressable>
+      )}
     </View>
   );
 
-  // Flatten grouped history for FlatList, excluding collapsed sections
-  const flatListData = useMemo(() => {
-    const result = [];
-
-    groupedHistory.forEach((group) => {
-      // Always add the header (include entries for count display)
-      result.push({ type: 'header', date: group.date, dateKey: group.dateKey, entries: group.entries });
-
-      // Only add entries if not collapsed
-      if (!collapsedDates[group.dateKey]) {
-        group.entries.forEach((entry) => {
-          result.push({ type: 'item', ...entry });
-        });
-      }
-    });
-
-    return result;
-  }, [groupedHistory, collapsedDates]);
+  const renderFilterPills = () => (
+    <View style={styles.filterRow}>
+      {TIME_FILTERS.map((f) => {
+        const active = timeFilter === f.key;
+        return (
+          <Pressable
+            key={f.key}
+            style={({ pressed }) => [
+              styles.filterPill,
+              { backgroundColor: active ? colors.accent : colors.surfaceAlt },
+              pressed && { opacity: theme.animation.pressOpacity },
+            ]}
+            onPress={() => setTimeFilter(f.key)}
+          >
+            <Text
+              style={[
+                styles.filterPillText,
+                { color: active ? colors.textOnPrimary : colors.textSecondary },
+              ]}
+            >
+              {f.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.headerBg }]}>
-      <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
+      <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
+        <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && { opacity: theme.animation.pressOpacity },
+            ]}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </TouchableOpacity>
+          </Pressable>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Browsing History</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.subtext }]}>
-              {history.length} {history.length === 1 ? 'entry' : 'entries'}
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              {filteredHistory.length} {filteredHistory.length === 1 ? 'entry' : 'entries'}
             </Text>
           </View>
         </View>
+        <View style={[styles.searchContainer, { borderBottomColor: colors.separator }]}>
+          {renderSearchBar()}
+          {renderFilterPills()}
+        </View>
         <FlatList
-          data={flatListData}
-          keyExtractor={(item, index) =>
-            item.type === 'header' ? `header-${item.date}` : item.id || `item-${index}`
-          }
-          renderItem={({ item }) => {
-            if (item.type === 'header') {
-              return renderSectionHeader({ section: item });
-            }
-            return renderHistoryItem({ item });
-          }}
+          data={groupedHistory}
+          keyExtractor={(item) => item.dateKey}
+          renderItem={renderGroup}
           ListEmptyComponent={() => (
             <View style={styles.emptyContainer}>
-              <Ionicons name="time-outline" size={64} color={isDarkMode ? '#333' : '#ccc'} />
-              <Text style={[styles.emptyText, { color: colors.subtext }]}>No browsing history yet</Text>
-              <Text style={[styles.emptySubtext, { color: colors.subtext }]}>
-                Your browsing history will appear here
+              <Ionicons name="time-outline" size={64} color={colors.textTertiary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                {searchQuery || timeFilter !== 'all' ? 'No matching history' : 'No browsing history yet'}
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
+                {searchQuery || timeFilter !== 'all'
+                  ? 'Try adjusting your search or filters'
+                  : 'Your browsing history will appear here'}
               </Text>
             </View>
           )}
@@ -196,55 +286,90 @@ const HistoryScreen = ({ navigation }) => {
   );
 };
 
-// Helper for relative time
-const formatDurationLabel = (timestamp) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-};
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    padding: 8,
-    marginRight: 8,
+    padding: 12,
+    marginRight: 4,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerContent: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 15,
+    marginTop: 2,
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 17,
+    marginLeft: 8,
+    padding: 0,
+  },
+  searchClear: {
+    padding: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  filterPill: {
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: theme.touchTarget.min,
+    justifyContent: 'center',
+  },
+  filterPillText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   listContent: {
-    paddingBottom: 16,
+    padding: 16,
+    paddingBottom: 32,
+  },
+  card: {
+    borderRadius: 10,
+    marginBottom: 20,
+    overflow: 'hidden',
   },
   sectionHeader: {
-    backgroundColor: '#f9f9f9',
-    paddingVertical: 12,
+    minHeight: 44,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -255,22 +380,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionHeaderText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#666',
     textTransform: 'uppercase',
   },
   entryCount: {
     fontSize: 13,
-    color: '#999',
+  },
+  itemSeparator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 16,
   },
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 44,
   },
   historyItemContent: {
     flex: 1,
@@ -283,24 +409,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   historyTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '500',
-    color: '#333',
     flex: 1,
     marginRight: 8,
   },
   historyTime: {
     fontSize: 12,
-    color: '#999',
   },
   historyUrl: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
     marginBottom: 4,
   },
   visitCount: {
     fontSize: 12,
-    color: '#999',
     fontStyle: 'italic',
   },
   emptyContainer: {
@@ -308,16 +430,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
+    paddingTop: 80,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#666',
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
     marginTop: 8,
     textAlign: 'center',
   },
