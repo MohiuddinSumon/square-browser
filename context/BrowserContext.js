@@ -80,6 +80,13 @@ export const BrowserProvider = ({ children }) => {
     activeTabIndexRef.current = activeTabIndex;
   }, [activeTabIndex]);
 
+  // Refs so the AppState listener always reads fresh tabs/tabsInitialized
+  // without needing to re-register on every tab change.
+  const tabsRef = React.useRef(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+  const tabsInitializedRef = React.useRef(tabsInitialized);
+  useEffect(() => { tabsInitializedRef.current = tabsInitialized; }, [tabsInitialized]);
+
   // User Agents — last updated 2026-04-16, refresh every ~6 months as Chrome versions advance
   const MOBILE_UA = Platform.OS === 'ios'
     ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1'
@@ -329,9 +336,9 @@ export const BrowserProvider = ({ children }) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         recordCurrentActivity();
         // Save tabs when app goes to background
-        if (tabsInitialized) {
-          saveTabs(tabs);
-          saveActiveTabIndex(activeTabIndex);
+        if (tabsInitializedRef.current) {
+          saveTabs(tabsRef.current);
+          saveActiveTabIndex(activeTabIndexRef.current);
         }
         // Flush timer progress to AsyncStorage
         const ref = timerStateRef.current;
@@ -364,7 +371,7 @@ export const BrowserProvider = ({ children }) => {
     });
 
     return () => subscription.remove();
-  }, [recordCurrentActivity, tabs, activeTabIndex, tabsInitialized]);
+  }, [recordCurrentActivity]);
 
   // Save tabs whenever they change (after initialization)
   useEffect(() => {
@@ -379,12 +386,7 @@ export const BrowserProvider = ({ children }) => {
    */
   const addHistoryEntry = useCallback(async (url, title) => {
     try {
-      console.log('[BrowserContext] addHistoryEntry called with:', url, title);
-      
-      // Load current history to calculate visit count accurately
       const currentHistory = await loadHistory();
-      console.log('[BrowserContext] Current history length:', currentHistory.length);
-      
       const visitCount = currentHistory.filter(h => h.url === url).length + 1;
 
       const entry = {
@@ -395,14 +397,9 @@ export const BrowserProvider = ({ children }) => {
         visitCount,
       };
 
-      console.log('[BrowserContext] Saving history entry:', entry);
       const success = await saveHistory(entry);
-      console.log('[BrowserContext] Save success:', success);
-      
       if (success) {
-        // Reload history from storage to ensure consistency
         const updatedHistory = await loadHistory();
-        console.log('[BrowserContext] Updated history length:', updatedHistory.length);
         setHistory(updatedHistory);
       }
     } catch (error) {
