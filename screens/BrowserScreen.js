@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share } from 'react-native';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Dimensions, PanResponder, Pressable } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
+import { getTheme } from '../theme.js';
 
 /**
  * Bot-detection bypass script injected BEFORE page content loads.
@@ -64,13 +65,13 @@ const BOT_BYPASS_SCRIPT = `
         loadTimes: function() {
           return {
             commitLoadTime: Date.now() / 1000,
-            connectionInfo: 'h2',
+            connectionInfo: 'http2',
             finishDocumentLoadTime: 0,
             finishLoadTime: 0,
             firstPaintAfterLoadTime: 0,
             firstPaintTime: 0,
             navigationType: 'Other',
-            npnNegotiatedProtocol: 'h2',
+            npnNegotiatedProtocol: 'http2',
             requestTime: Date.now() / 1000 - 0.1,
             startLoadTime: Date.now() / 1000 - 0.05,
             wasAlternateProtocolAvailable: false,
@@ -289,6 +290,7 @@ const BrowserTab = ({
   onChallengeDetected,
   autoHideEnabled,
   onLinkLongPress,
+  theme,
 }) => {
   // Track the navRequestId we last acted on — avoids reloading on WebView-internal
   // URL changes (redirects, link clicks) that also update tab.url in context.
@@ -567,7 +569,7 @@ true;
           so Cloudflare challenge pages remain visible and interactive during load */}
       {isLoading && (
         <View style={styles.progressBarTrack} pointerEvents="none">
-          <View style={[styles.progressBarFill, { width: `${Math.round(loadProgress * 100)}%` }]} />
+          <View style={[styles.progressBarFill, { backgroundColor: theme.colors.accent, width: `${Math.round(loadProgress * 100)}%` }]} />
         </View>
       )}
     </View>
@@ -606,6 +608,9 @@ const BrowserScreen = ({ navigation }) => {
     extendTimer,
     setTimerScreenActive,
   } = useBrowser();
+
+  const theme = getTheme(isDarkMode);
+  const { colors, spacing, borderRadius, animation, typography } = theme;
 
   const showSoftOverlay = timerEnabled && limitReached && !strictMode;
   const showStrictWall = timerEnabled && limitReached && strictMode;
@@ -691,7 +696,7 @@ const BrowserScreen = ({ navigation }) => {
       keyboardDidHideListener.remove();
     };
   }, []);
-  
+
   // Refs to track WebViews for all tabs
   const activeWebViewRef = useRef(null);
 
@@ -706,10 +711,10 @@ const BrowserScreen = ({ navigation }) => {
 
   // Navigation State Handler (Multi-tab aware)
   const handleTabUpdate = useCallback((navState, index) => {
-    if (navState.url !== tabs[index].url || 
-        navState.canGoBack !== tabs[index].canGoBack || 
+    if (navState.url !== tabs[index].url ||
+        navState.canGoBack !== tabs[index].canGoBack ||
         navState.canGoForward !== tabs[index].canGoForward) {
-      
+
       updateTabState(index, {
         canGoBack: navState.canGoBack,
         canGoForward: navState.canGoForward,
@@ -754,12 +759,12 @@ const BrowserScreen = ({ navigation }) => {
       Animated.parallel([
         Animated.timing(navbarTranslateY, {
           toValue: hideValue,
-          duration: 200,
+          duration: animation.normal,
           useNativeDriver: true,
         }),
         Animated.timing(contentPadding, {
           toValue: urlBarPosition === 'top' ? statusBarHeight : statusBarHeight,
-          duration: 200,
+          duration: animation.normal,
           useNativeDriver: false,
         }),
       ]).start();
@@ -768,19 +773,19 @@ const BrowserScreen = ({ navigation }) => {
       Animated.parallel([
         Animated.timing(navbarTranslateY, {
           toValue: 0,
-          duration: 200,
+          duration: animation.normal,
           useNativeDriver: true,
         }),
         Animated.timing(contentPadding, {
           toValue: urlBarPosition === 'top' ? totalTopBarHeight : statusBarHeight,
-          duration: 200,
+          duration: animation.normal,
           useNativeDriver: false,
         }),
       ]).start();
     }
 
     lastScrollDirection.current = direction;
-  }, [autoHideNavBar, navbarTranslateY, urlBarPosition, contentPadding, totalTopBarHeight, statusBarHeight]);
+  }, [autoHideNavBar, navbarTranslateY, urlBarPosition, contentPadding, totalTopBarHeight, statusBarHeight, animation]);
 
   // Reset navbar visibility and CF banner when URL changes
   useEffect(() => {
@@ -815,7 +820,7 @@ const BrowserScreen = ({ navigation }) => {
         setShowTabSwitcher(false);
         return true;
       }
-      
+
       // If we have an active webview, try to go back
       if (currentUrl !== 'about:blank' && activeWebViewRef.current) {
         const activeTab = tabs[activeTabIndex];
@@ -837,7 +842,7 @@ const BrowserScreen = ({ navigation }) => {
         setExitModalVisible(true);
         return true;
       }
-      
+
       return false;
     };
 
@@ -850,9 +855,9 @@ const BrowserScreen = ({ navigation }) => {
   }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
+        style={[styles.container, { backgroundColor: colors.groupedBackground }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Address Bar - Top or Bottom based on setting */}
@@ -861,8 +866,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.topBar,
               {
-                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
-                borderBottomColor: isDarkMode ? '#333' : '#eee',
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.separator,
                 transform: [{ translateY: navbarTranslateY }]
               }
             ]}
@@ -880,10 +885,10 @@ const BrowserScreen = ({ navigation }) => {
             urlBarPosition === 'top'
               ? { top: totalTopBarHeight }
               : { bottom: (keyboardHeight || 0) + (Platform.OS === 'ios' ? 80 : 70) },
-            { backgroundColor: isDarkMode ? '#2a2000' : '#fff8e1' },
+            { backgroundColor: colors.surfaceAlt },
           ]}>
-            <Ionicons name="shield-checkmark-outline" size={16} color="#FF9800" />
-            <Text style={[styles.cfBannerText, { color: isDarkMode ? '#ffd54f' : '#7a5800' }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.warning} />
+            <Text style={[styles.cfBannerText, { color: colors.textSecondary }]}>
               Cloudflare is verifying your browser — please wait…
             </Text>
             <TouchableOpacity
@@ -891,14 +896,14 @@ const BrowserScreen = ({ navigation }) => {
               onPress={() => activeWebViewRef.current && activeWebViewRef.current.reload()}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="refresh" size={16} color="#FF9800" />
+              <Ionicons name="refresh" size={16} color={colors.warning} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.cfBannerClose}
               onPress={() => setIsCloudflareChallenge(false)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={16} color={isDarkMode ? '#ffd54f' : '#7a5800'} />
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -930,6 +935,7 @@ const BrowserScreen = ({ navigation }) => {
                 onScroll={handleScroll}
                 autoHideEnabled={autoHideNavBar}
                 onLinkLongPress={isActive ? handleLinkLongPress : undefined}
+                theme={theme}
               />
             );
           })}
@@ -941,8 +947,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.bottomBar,
               {
-                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
-                borderTopColor: isDarkMode ? '#333' : '#eee',
+                backgroundColor: colors.surface,
+                borderTopColor: colors.separator,
                 transform: [{ translateY: navbarTranslateY }],
                 bottom: keyboardHeight || 0,
                 paddingBottom: keyboardHeight > 0 ? 0 : (Platform.OS === 'ios' ? 10 : 5), // Remove padding when keyboard is open
@@ -955,8 +961,8 @@ const BrowserScreen = ({ navigation }) => {
 
       </KeyboardAvoidingView>
 
-      <ExitModal 
-        visible={exitModalVisible} 
+      <ExitModal
+        visible={exitModalVisible}
         onClose={() => setExitModalVisible(false)}
         onConfirm={() => {
           if (dontAskAgain) {
@@ -964,7 +970,7 @@ const BrowserScreen = ({ navigation }) => {
           }
           BackHandler.exitApp();
         }}
-        isDarkMode={isDarkMode}
+        theme={theme}
         dontAskAgain={dontAskAgain}
         setDontAskAgain={setDontAskAgain}
       />
@@ -972,13 +978,14 @@ const BrowserScreen = ({ navigation }) => {
       <TabSwitcher
         visible={showTabSwitcher}
         onClose={() => setShowTabSwitcher(false)}
+        theme={theme}
       />
 
       <TimerSoftOverlay
         visible={showSoftOverlay}
         onExtend={extendTimer}
         extensionMs={extensionMs}
-        isDarkMode={isDarkMode}
+        theme={theme}
       />
 
       <LinkContextMenu
@@ -990,44 +997,61 @@ const BrowserScreen = ({ navigation }) => {
         onCopyLink={handleCopyLink}
         onShare={handleShareLink}
         onAddBookmark={handleAddBookmark}
-        isDarkMode={isDarkMode}
+        theme={theme}
       />
 
       <TimerStrictWall
         visible={showStrictWall}
-        isDarkMode={isDarkMode}
+        theme={theme}
       />
     </SafeAreaView>
   );
 };
 
-const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setDontAskAgain }) => {
+const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAskAgain }) => {
+  const { colors, borderRadius, animation } = theme;
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
-      <View style={[styles.modalOverlay, { justifyContent: 'center' }]}>
-        <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
-          <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Exit SquareBrowser?</Text>
-          <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
+      <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: colors.scrim }]}>
+        <View style={[styles.confirmModal, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
+          <Text style={[styles.confirmTitle, { color: colors.text }]}>Exit SquareBrowser?</Text>
+          <Text style={[styles.confirmText, { color: colors.textSecondary }]}>
             Are you sure you want to close the application?
           </Text>
-          
-          <TouchableOpacity 
-            style={styles.checkboxContainer} 
+
+          <Pressable
+            style={({ pressed }) => [styles.checkboxContainer, pressed && { opacity: animation.pressOpacity }]}
             onPress={() => setDontAskAgain(!dontAskAgain)}
           >
-            <View style={[styles.checkbox, dontAskAgain && styles.checkboxChecked]}>
-              {dontAskAgain && <Ionicons name="checkmark" size={14} color="#fff" />}
+            <View style={[styles.checkbox, { borderColor: colors.accent }, dontAskAgain && { backgroundColor: colors.accent }]}>
+              {dontAskAgain && <Ionicons name="checkmark" size={16} color={colors.textOnPrimary} />}
             </View>
-            <Text style={[styles.checkboxLabel, { color: isDarkMode ? '#ccc' : '#666' }]}>Don't ask me again</Text>
-          </TouchableOpacity>
+            <Text style={[styles.checkboxLabel, { color: colors.textSecondary }]}>Don't ask me again</Text>
+          </Pressable>
 
           <View style={styles.confirmButtons}>
-            <TouchableOpacity style={[styles.confirmButton, styles.cancelButton]} onPress={onClose}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.confirmButton, styles.exitButton]} onPress={onConfirm}>
-              <Text style={styles.exitButtonText}>Exit</Text>
-            </TouchableOpacity>
+            <Pressable
+              style={({ pressed }) => [
+                styles.confirmButton,
+                styles.cancelButton,
+                { backgroundColor: colors.surfaceAlt },
+                pressed && { transform: [{ scale: animation.pressScale }] },
+              ]}
+              onPress={onClose}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.confirmButton,
+                styles.exitButton,
+                { backgroundColor: colors.accent },
+                pressed && { transform: [{ scale: animation.pressScale }] },
+              ]}
+              onPress={onConfirm}
+            >
+              <Text style={[styles.exitButtonText, { color: colors.textOnPrimary }]}>Exit</Text>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -1035,10 +1059,46 @@ const ExitModal = ({ visible, onClose, onConfirm, isDarkMode, dontAskAgain, setD
   );
 };
 
-const TabSwitcher = ({ visible, onClose }) => {
-  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, isDarkMode } = useBrowser();
+const TabSwitcher = ({ visible, onClose, theme }) => {
+  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab } = useBrowser();
   const [processingIndex, setProcessingIndex] = useState(null);
   const insets = useSafeAreaInsets();
+  const { colors, spacing, borderRadius, animation, iosSheet, typography } = theme;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scrimOpacity = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(false);
+  const sheetOffset = Dimensions.get('window').height;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      translateY.setValue(sheetOffset);
+      scrimOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, ...animation.spring }),
+        Animated.timing(scrimOpacity, { toValue: 1, duration: animation.fast, useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: sheetOffset, duration: animation.normal, useNativeDriver: true }),
+        Animated.timing(scrimOpacity, { toValue: 0, duration: animation.normal, useNativeDriver: true }),
+      ]).start(() => setMounted(false));
+    }
+  }, [visible, mounted]);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+    onPanResponderMove: (_, g) => {
+      if (g.dy > 0) translateY.setValue(g.dy);
+    },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 100 || g.vy > 0.8) {
+        onClose();
+      } else {
+        Animated.spring(translateY, { toValue: 0, ...animation.spring }).start();
+      }
+    },
+  }), [onClose, translateY, animation]);
 
   const getTabTitle = (url) => {
     if (url === 'about:blank') return 'Home';
@@ -1060,97 +1120,140 @@ const TabSwitcher = ({ visible, onClose }) => {
     if (processingIndex === 'add') return; // Prevent multiple rapid clicks
     setProcessingIndex('add');
     addTab();
+    onClose(); // Create the tab AND close the sheet immediately (Chrome/iOS Safari behavior)
     setTimeout(() => setProcessingIndex(null), 300);
   };
 
+  if (!mounted) return null;
+
+  const hasTabs = tabs.some((t) => t.url !== 'about:blank');
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true}>
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff', paddingBottom: insets.bottom || 16 }]}>
+    <Modal visible={mounted} transparent={true} animationType="none" onRequestClose={onClose}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: scrimOpacity }]}>
+          <Pressable style={{ flex: 1 }} onPress={onClose} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.modalContent,
+            {
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: iosSheet.sheetRadius,
+              borderTopRightRadius: iosSheet.sheetRadius,
+              paddingBottom: insets.bottom || spacing.lg,
+              maxHeight: Dimensions.get('window').height * iosSheet.maxHeightRatio,
+              transform: [{ translateY }],
+            },
+          ]}
+        >
+          <View style={styles.grabHandle} {...panResponder.panHandlers}>
+            <View style={[styles.grabHandleBar, { width: iosSheet.grabHandleWidth, height: iosSheet.grabHandleHeight, borderRadius: iosSheet.grabHandleRadius, backgroundColor: colors.textTertiary }]} />
+          </View>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Tabs ({tabs.length})</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={isDarkMode ? '#fff' : '#333'} />
-            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text, fontSize: typography.fontSizes.title3 }]}>Tabs ({tabs.length})</Text>
+            <Pressable
+              style={({ pressed }) => [styles.sheetCloseButton, pressed && { opacity: animation.pressOpacity }]}
+              onPress={onClose}
+              hitSlop={8}
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </Pressable>
           </View>
 
-          <FlatList
-            data={tabs}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                style={[styles.tabItemCompact, { backgroundColor: isDarkMode ? '#2A2A2A' : '#f5f5f5', borderColor: activeTabIndex === index ? '#2196F3' : 'transparent' }]}
-                onPress={() => {
-                  if (processingIndex === null) {
-                    setActiveTabIndex(index);
-                    onClose();
-                  }
-                }}
-                activeOpacity={processingIndex !== null ? 0.5 : 0.7}
-              >
-                <View style={styles.tabInfoCompact}>
-                  <Ionicons name="globe" size={16} color={activeTabIndex === index ? '#2196F3' : '#666'} />
-                  <Text style={[styles.tabTitleCompact, { color: isDarkMode ? '#fff' : '#000' }]} numberOfLines={1}>
-                    {getTabTitle(item.url)}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.closeTabButtonCompact, processingIndex === index && { opacity: 0.5 }]}
-                  onPress={() => handleCloseTab(index)}
-                  activeOpacity={0.7}
+          {hasTabs ? (
+            <FlatList
+              data={tabs}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.tabItemCompact,
+                    {
+                      backgroundColor: colors.surfaceAlt,
+                      borderColor: activeTabIndex === index ? colors.accent : 'transparent',
+                    },
+                    pressed && { transform: [{ scale: animation.pressScale }] },
+                  ]}
+                  onPress={() => {
+                    if (processingIndex === null) {
+                      setActiveTabIndex(index);
+                      onClose();
+                    }
+                  }}
                 >
-                  <Ionicons name="close" size={18} color="#F44336" />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.tabListCompact}
-          />
+                  <View style={styles.tabInfoCompact}>
+                    <Ionicons name="globe" size={16} color={activeTabIndex === index ? colors.accent : colors.textSecondary} />
+                    <Text style={[styles.tabTitleCompact, { color: colors.text }]} numberOfLines={1}>
+                      {getTabTitle(item.url)}
+                    </Text>
+                  </View>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.closeTabButtonCompact,
+                      processingIndex === index && { opacity: 0.5 },
+                      pressed && { backgroundColor: colors.dangerSoft },
+                    ]}
+                    onPress={() => handleCloseTab(index)}
+                  >
+                    <Ionicons name="close" size={18} color={colors.danger} />
+                  </Pressable>
+                </Pressable>
+              )}
+              contentContainerStyle={styles.tabListCompact}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="albums-outline" size={48} color={colors.textTertiary} />
+              <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                No open tabs — tap New Tab to start
+              </Text>
+            </View>
+          )}
 
-          <TouchableOpacity
-            style={[styles.newTabButtonCompact, processingIndex === 'add' && { opacity: 0.5 }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.newTabButtonCompact,
+              { backgroundColor: colors.accent },
+              processingIndex === 'add' && { opacity: 0.5 },
+              pressed && { transform: [{ scale: animation.pressScale }] },
+            ]}
             onPress={handleAddTab}
-            activeOpacity={0.7}
           >
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.newTabButtonTextCompact}>New Tab</Text>
-          </TouchableOpacity>
-        </View>
+            <Ionicons name="add" size={20} color={colors.textOnPrimary} />
+            <Text style={[styles.newTabButtonTextCompact, { color: colors.textOnPrimary }]}>New Tab</Text>
+          </Pressable>
+        </Animated.View>
       </View>
     </Modal>
   );
 };
 
 const MAX_EXTENSIONS = 3;
-const TimerSoftOverlay = ({ visible, onExtend, extensionMs, isDarkMode }) => {
+const TimerSoftOverlay = ({ visible, onExtend, extensionMs, theme }) => {
   const usedExtensions = Math.round((extensionMs || 0) / 600000);
   const remaining = MAX_EXTENSIONS - usedExtensions;
   const canExtend = remaining > 0;
+  const { colors, spacing, borderRadius } = theme;
 
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
-      <View style={[styles.modalOverlay, { justifyContent: 'center' }]}>
-        <View style={[styles.confirmModal, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
-          <Ionicons name="timer-outline" size={48} color="#FF9800" style={{ marginBottom: 12 }} />
-          <Text style={[styles.confirmTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
-          <Text style={[styles.confirmText, { color: isDarkMode ? '#ccc' : '#666' }]}>
+      <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: colors.scrim }]}>
+        <View style={[styles.confirmModal, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
+          <Ionicons name="timer-outline" size={48} color={colors.warning} style={{ marginBottom: spacing.md }} />
+          <Text style={[styles.confirmTitle, { color: colors.text }]}>Daily Limit Reached</Text>
+          <Text style={[styles.confirmText, { color: colors.textSecondary }]}>
             {canExtend
               ? `You've used your daily browsing time. You can extend by 10 minutes — ${remaining} extension${remaining === 1 ? '' : 's'} remaining today.`
               : "You've used all your extensions for today. Browser access resumes at midnight."}
           </Text>
           {canExtend && (
             <TouchableOpacity
-              style={{
-                width: '100%',
-                height: 48,
-                borderRadius: 12,
-                backgroundColor: '#FF9800',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginTop: 16,
-              }}
+              style={[styles.extendButton, { backgroundColor: colors.warning, borderRadius: borderRadius.md, marginTop: spacing.lg }]}
               onPress={onExtend}
+              activeOpacity={0.7}
             >
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Give me 10 more minutes</Text>
+              <Text style={[styles.extendButtonText, { color: colors.textOnPrimary }]}>Give me 10 more minutes</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1166,8 +1269,9 @@ const getMsUntilMidnight = () => {
   return midnight - now;
 };
 
-const TimerStrictWall = ({ visible, isDarkMode }) => {
+const TimerStrictWall = ({ visible, theme }) => {
   const [msUntilMidnight, setMsUntilMidnight] = useState(getMsUntilMidnight());
+  const { colors } = theme;
 
   useEffect(() => {
     if (!visible) return;
@@ -1184,14 +1288,14 @@ const TimerStrictWall = ({ visible, isDarkMode }) => {
 
   return (
     <Modal visible={visible} transparent={false} animationType="fade" onRequestClose={() => {}}>
-      <View style={[styles.timerWall, { backgroundColor: isDarkMode ? '#0A0A0A' : '#fff' }]}>
-        <Ionicons name="lock-closed" size={64} color="#F44336" />
-        <Text style={[styles.timerWallTitle, { color: isDarkMode ? '#fff' : '#000' }]}>Daily Limit Reached</Text>
-        <Text style={[styles.timerWallSubtext, { color: isDarkMode ? '#999' : '#666' }]}>
+      <View style={[styles.timerWall, { backgroundColor: colors.groupedBackground }]}>
+        <Ionicons name="lock-closed" size={64} color={colors.danger} />
+        <Text style={[styles.timerWallTitle, { color: colors.text }]}>Daily Limit Reached</Text>
+        <Text style={[styles.timerWallSubtext, { color: colors.textSecondary }]}>
           You've set a strict limit. Browser access will resume at midnight.
         </Text>
-        <Text style={[styles.timerWallCountdown, { color: '#F44336' }]}>{countdown}</Text>
-        <Text style={[styles.timerWallUntil, { color: isDarkMode ? '#666' : '#999' }]}>until midnight</Text>
+        <Text style={[styles.timerWallCountdown, { color: colors.danger }]}>{countdown}</Text>
+        <Text style={[styles.timerWallUntil, { color: colors.textTertiary }]}>until midnight</Text>
       </View>
     </Modal>
   );
@@ -1206,13 +1310,45 @@ const LinkContextMenu = ({
   onCopyLink,
   onShare,
   onAddBookmark,
-  isDarkMode,
+  theme,
 }) => {
   const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
-  const menuBg = isDarkMode ? '#1e1e1e' : '#fff';
-  const textColor = isDarkMode ? '#fff' : '#000';
-  const subtitleColor = isDarkMode ? '#999' : '#666';
-  const dividerColor = isDarkMode ? '#333' : '#eee';
+  const { colors, spacing, animation, iosSheet, typography } = theme;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scrimOpacity = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(false);
+  const sheetOffset = Dimensions.get('window').height;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      translateY.setValue(sheetOffset);
+      scrimOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(translateY, { toValue: 0, ...animation.spring }),
+        Animated.timing(scrimOpacity, { toValue: 1, duration: animation.fast, useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      Animated.parallel([
+        Animated.timing(translateY, { toValue: sheetOffset, duration: animation.normal, useNativeDriver: true }),
+        Animated.timing(scrimOpacity, { toValue: 0, duration: animation.normal, useNativeDriver: true }),
+      ]).start(() => setMounted(false));
+    }
+  }, [visible, mounted]);
+
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+    onPanResponderMove: (_, g) => {
+      if (g.dy > 0) translateY.setValue(g.dy);
+    },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 100 || g.vy > 0.8) {
+        onClose();
+      } else {
+        Animated.spring(translateY, { toValue: 0, ...animation.spring }).start();
+      }
+    },
+  }), [onClose, translateY, animation]);
 
   const items = [
     { icon: 'open-outline',         label: 'Open in New Tab',        onPress: onOpenInNewTab },
@@ -1222,35 +1358,53 @@ const LinkContextMenu = ({
     { icon: 'bookmark-outline',     label: 'Add Bookmark',           onPress: onAddBookmark },
   ];
 
+  if (!mounted) return null;
+
   return (
-    <Modal visible={visible} transparent={true} animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.contextMenuOverlay} activeOpacity={1} onPress={onClose}>
-        <View
-          style={[styles.contextMenuSheet, { backgroundColor: menuBg }]}
-          onStartShouldSetResponder={() => true}
+    <Modal visible={mounted} transparent={true} animationType="none" onRequestClose={onClose}>
+      <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim, opacity: scrimOpacity }]}>
+          <Pressable style={{ flex: 1 }} onPress={onClose} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.contextMenuSheet,
+            {
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: iosSheet.sheetRadius,
+              borderTopRightRadius: iosSheet.sheetRadius,
+              paddingBottom: spacing.xl,
+              transform: [{ translateY }],
+            },
+          ]}
         >
-          <View style={[styles.contextMenuHandle]} />
-          <View style={[styles.contextMenuHeader, { borderBottomColor: dividerColor }]}>
-            <Ionicons name="link" size={14} color={subtitleColor} />
-            <Text style={[styles.contextMenuUrl, { color: subtitleColor }]} numberOfLines={1}>
+          <View style={styles.grabHandle} {...panResponder.panHandlers}>
+            <View style={[styles.grabHandleBar, { width: iosSheet.grabHandleWidth, height: iosSheet.grabHandleHeight, borderRadius: iosSheet.grabHandleRadius, backgroundColor: colors.textTertiary }]} />
+          </View>
+          <View style={[styles.contextMenuHeader, { borderBottomColor: colors.separator }]}>
+            <Ionicons name="link" size={14} color={colors.textSecondary} />
+            <Text style={[styles.contextMenuUrl, { color: colors.textSecondary, fontSize: typography.fontSizes.footnote }]} numberOfLines={1}>
               {displayUrl}
             </Text>
           </View>
           {items.map(({ icon, label, onPress }) => (
-            <TouchableOpacity key={label} style={styles.contextMenuItem} onPress={onPress} activeOpacity={0.7}>
-              <Ionicons name={icon} size={20} color={textColor} style={styles.contextMenuIcon} />
-              <Text style={[styles.contextMenuItemText, { color: textColor }]}>{label}</Text>
-            </TouchableOpacity>
+            <Pressable
+              key={label}
+              style={({ pressed }) => [styles.contextMenuItem, pressed && { backgroundColor: colors.surfaceAlt }]}
+              onPress={onPress}
+            >
+              <Ionicons name={icon} size={20} color={colors.text} style={styles.contextMenuIcon} />
+              <Text style={[styles.contextMenuItemText, { color: colors.text }]}>{label}</Text>
+            </Pressable>
           ))}
-          <TouchableOpacity
-            style={[styles.contextMenuCancel, { borderTopColor: dividerColor }]}
+          <Pressable
+            style={({ pressed }) => [styles.contextMenuCancel, { borderTopColor: colors.separator }, pressed && { opacity: animation.pressOpacity }]}
             onPress={onClose}
-            activeOpacity={0.7}
           >
-            <Text style={styles.contextMenuCancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+            <Text style={[styles.contextMenuCancelText, { color: colors.accent }]}>Cancel</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
 };
@@ -1332,7 +1486,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: 3,
-    backgroundColor: '#2196F3',
   },
   loadingContainer: {
     position: 'absolute',
@@ -1363,15 +1516,21 @@ const styles = StyleSheet.create({
   },
   cfBannerText: {
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: 18,
   },
   cfBannerReload: {
-    padding: 2,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cfBannerClose: {
-    padding: 2,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -1380,9 +1539,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: '60%',
     padding: 16,
   },
   modalHeader: {
@@ -1392,8 +1548,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 18,
     fontWeight: '600',
+  },
+  sheetCloseButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  grabHandle: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  grabHandleBar: {
+    backgroundColor: '#ccc',
   },
   tabListCompact: {
     paddingBottom: 16,
@@ -1419,11 +1588,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   closeTabButtonCompact: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
   },
   newTabButtonCompact: {
     flexDirection: 'row',
-    backgroundColor: '#2196F3',
     padding: 12,
     borderRadius: 10,
     justifyContent: 'center',
@@ -1432,14 +1604,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   newTabButtonTextCompact: {
-    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
+  },
+  emptyState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    marginTop: 12,
+    fontSize: 15,
+    textAlign: 'center',
   },
   confirmModal: {
     width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     marginHorizontal: '7.5%',
@@ -1472,21 +1652,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
+    minHeight: 44,
     marginBottom: 24,
     paddingLeft: 4,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#2196F3',
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#2196F3',
   },
   checkboxLabel: {
     fontSize: 14,
@@ -1516,6 +1693,16 @@ const styles = StyleSheet.create({
   },
   exitButtonText: {
     color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  extendButton: {
+    width: '100%',
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  extendButtonText: {
     fontWeight: '600',
     fontSize: 16,
   },
@@ -1554,8 +1741,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   contextMenuSheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     paddingBottom: 24,
     ...Platform.select({
       android: { elevation: 8 },
@@ -1567,14 +1752,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  contextMenuHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#ccc',
-    alignSelf: 'center',
-    marginVertical: 8,
-  },
   contextMenuHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1585,11 +1762,11 @@ const styles = StyleSheet.create({
   },
   contextMenuUrl: {
     flex: 1,
-    fontSize: 12,
   },
   contextMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
@@ -1608,9 +1785,7 @@ const styles = StyleSheet.create({
   contextMenuCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2196F3',
   },
 });
 
 export default BrowserScreen;
-
