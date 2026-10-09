@@ -33,11 +33,11 @@ cd android && ./gradlew bundleRelease
 ## Architecture Overview
 
 ### Technology Stack
-- **Frontend**: React Native 0.81.5 with React 19.1.0
-- **Platform**: Expo ~54.0.30 with Expo Dev Client
+- **Frontend**: React Native 0.86 with React 19.2
+- **Platform**: Expo SDK 57 with Expo Dev Client
 - **Navigation**: React Navigation v7 (Stack for screens, custom bottom nav for main controls)
 - **Storage**: AsyncStorage for local data persistence
-- **Web Rendering**: react-native-webview 13.16.0
+- **Web Rendering**: react-native-webview 13.16
 
 ### Core Design Principles
 
