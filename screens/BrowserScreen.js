@@ -13,6 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
+import {
+  attachToWebView,
+  setBlockedDomains,
+  setNativeAdBlockEnabled,
+} from '../modules/square-adblock';
 
 /**
  * Bot-detection bypass script injected BEFORE page content loads.
@@ -159,6 +164,9 @@ const AD_DOMAINS = [
   'scorecardresearch.com', 'quantserve.com', 'chartbeat.com',
   'adsymptotic.com', 'amazon-adsystem.com',
 ];
+
+// Share the domain list with the native request filter (no-op where unavailable).
+setBlockedDomains(AD_DOMAINS);
 
 /** Returns true if the hostname belongs to a known ad/tracking domain */
 const isAdHostname = (hostname = '') =>
@@ -322,6 +330,11 @@ const BrowserTab = ({
   const handleWebViewRef = useCallback((node) => {
     webViewRef.current = node;
   }, []);
+
+  // Keep the native request filter in sync with the ad-block setting.
+  useEffect(() => {
+    setNativeAdBlockEnabled(adBlockEnabled);
+  }, [adBlockEnabled]);
 
   // Register ref with parent only when active status changes
   useEffect(() => {
@@ -515,7 +528,11 @@ true;
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
-        onLoadStart={() => { setIsLoading(true); setLoadProgress(0.1); }}
+        onLoadStart={() => {
+          attachToWebView(webViewRef.current);
+          setIsLoading(true);
+          setLoadProgress(0.1);
+        }}
         onLoadProgress={({ nativeEvent }) => setLoadProgress(nativeEvent.progress)}
         onLoadEnd={(e) => {
           setIsLoading(false);
