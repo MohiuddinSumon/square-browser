@@ -6,7 +6,7 @@
  * logic is read from BrowserContext unchanged.
  */
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Pressable, ActivityIndicator, StyleSheet, Platform, Keyboard, Animated } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Platform, Keyboard, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import TimerChip from './TimerChip';
@@ -26,16 +26,10 @@ const AddressBar = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [navError, setNavError] = useState(false);
 
-  // Animated values for the trailing controls (slide/fade on keyboard) and the
-  // loading progress bar (opacity only — transform/opacity, native driver).
+  // Animated values for the trailing controls (slide/fade on keyboard).
   const actionsOpacity = useRef(new Animated.Value(1)).current;
   const actionsTranslateY = useRef(new Animated.Value(0)).current;
-  const progressOpacity = useRef(new Animated.Value(0)).current;
-
-  const loadTimer = useRef(null);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -64,15 +58,6 @@ const AddressBar = () => {
     ]).start();
   }, [keyboardVisible, actionsOpacity, actionsTranslateY, animation.normal]);
 
-  // Fade the thin progress bar in/out with the loading state.
-  useEffect(() => {
-    Animated.timing(progressOpacity, {
-      toValue: isLoading ? 1 : 0,
-      duration: animation.fast,
-      useNativeDriver: true,
-    }).start();
-  }, [isLoading, progressOpacity, animation.fast]);
-
   // Sync with currentUrl ONLY when not focused
   useEffect(() => {
     if (!isFocused) {
@@ -89,40 +74,11 @@ const AddressBar = () => {
     }
   }, [currentUrl, checkIsBookmarked]);
 
-  // Begin a load: show the progress bar, clear any prior error, and settle after
-  // a short window. If the page never left about:blank, surface an inline error
-  // with a retry affordance. Compares against the target URL actually being
-  // navigated to (passed in), not the render-closure currentUrl, so a valid
-  // navigation from home doesn't false-positive and a real failure from a real
-  // page isn't a false negative.
-  const beginLoad = (targetUrl) => {
-    setNavError(false);
-    setIsLoading(true);
-    clearTimeout(loadTimer.current);
-    loadTimer.current = setTimeout(() => {
-      if (targetUrl === 'about:blank') {
-        setNavError(true);
-      }
-      setIsLoading(false);
-    }, 2500);
-  };
-
-  useEffect(() => {
-    return () => clearTimeout(loadTimer.current);
-  }, []);
-
   const handleGo = () => {
     const target = urlInput.trim();
     if (target) {
-      beginLoad(target);
       navigateTo(target);
     }
-  };
-
-  const handleRetry = () => {
-    const target = urlInput.trim() || currentUrl;
-    beginLoad(target);
-    navigateTo(target);
   };
 
   const handleBookmarkToggle = () => {
@@ -165,16 +121,12 @@ const AddressBar = () => {
     >
       <View style={styles.addressBarContainer}>
         <View style={[styles.urlContainer, { backgroundColor: colors.surface, borderColor: colors.separator }]}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.accent} style={styles.lockIcon} />
-          ) : (
-            <Ionicons
-              name={getSecureIcon()}
-              size={14}
-              color={currentIconColor}
-              style={styles.lockIcon}
-            />
-          )}
+          <Ionicons
+            name={getSecureIcon()}
+            size={14}
+            color={currentIconColor}
+            style={styles.lockIcon}
+          />
           <TextInput
             style={[styles.urlInput, { color: colors.text }]}
             value={urlInput}
@@ -225,25 +177,6 @@ const AddressBar = () => {
           </View>
         </View>
       </View>
-
-      {/* Thin progress bar under the URL field (opacity-only animation). */}
-      <Animated.View
-        style={[
-          styles.progressBar,
-          { backgroundColor: colors.accent, opacity: progressOpacity },
-        ]}
-      />
-
-      {navError && (
-        <View style={styles.errorRow}>
-          <Text style={[styles.errorText, { color: colors.danger }]}>
-            Couldn't load that page.
-          </Text>
-          <TouchableOpacity onPress={handleRetry} hitSlop={8}>
-            <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 };
@@ -332,29 +265,6 @@ const styles = StyleSheet.create({
     width: 66,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  progressBar: {
-    position: 'absolute',
-    left: 8,
-    right: 8,
-    bottom: 0,
-    height: 2,
-    borderRadius: 1,
-  },
-  errorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingTop: 4,
-    paddingBottom: 2,
-  },
-  errorText: {
-    fontSize: 13,
-  },
-  retryText: {
-    fontSize: 13,
-    fontWeight: '600',
   },
 });
 

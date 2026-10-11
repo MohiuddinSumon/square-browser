@@ -72,13 +72,13 @@ const BOT_BYPASS_SCRIPT = `
         loadTimes: function() {
           return {
             commitLoadTime: Date.now() / 1000,
-            connectionInfo: 'http2',
+            connectionInfo: 'h2',
             finishDocumentLoadTime: 0,
             finishLoadTime: 0,
             firstPaintAfterLoadTime: 0,
             firstPaintTime: 0,
             navigationType: 'Other',
-            npnNegotiatedProtocol: 'http2',
+            npnNegotiatedProtocol: 'h2',
             requestTime: Date.now() / 1000 - 0.1,
             startLoadTime: Date.now() / 1000 - 0.05,
             wasAlternateProtocolAvailable: false,
@@ -1285,7 +1285,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
         Animated.timing(scrimOpacity, { toValue: 0, duration: animation.normal, useNativeDriver: true }),
       ]).start(() => setMounted(false));
     }
-  }, [visible, mounted]);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const panResponder = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
@@ -1327,7 +1327,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
 
   if (!mounted) return null;
 
-  const hasTabs = tabs.some((t) => t.url !== 'about:blank');
+  const hasTabs = tabs.length > 0;
 
   return (
     <Modal visible={mounted} transparent={true} animationType="none" onRequestClose={onClose}>
@@ -1535,7 +1535,7 @@ const LinkContextMenu = ({
         Animated.timing(scrimOpacity, { toValue: 0, duration: animation.normal, useNativeDriver: true }),
       ]).start(() => setMounted(false));
     }
-  }, [visible, mounted]);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const panResponder = useMemo(() => PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,

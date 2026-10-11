@@ -67,11 +67,6 @@ const SettingsScreen = ({ navigation }) => {
     setLocalLimitMinutes(Math.round(dailyLimitMs / 60000));
   }, [dailyLimitMs]);
 
-  const handleExportHistory = useCallback(() => {
-    // Future: Implement export functionality
-    alert('Export functionality will be available in a future update');
-  }, []);
-
   const handleAbout = useCallback(() => {
     alert(
       'SquareBrowser\n\n' +
@@ -392,21 +387,6 @@ const SettingsScreen = ({ navigation }) => {
             <View style={styles.menuItemLeft}>
               <Ionicons name="apps-outline" size={22} color={colors.accent} />
               <Text style={[styles.menuItemText, { color: colors.text }]}>Products</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
-          </Pressable>
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Data</Text>
-
-        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
-          <Pressable
-            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
-            onPress={handleExportHistory}
-          >
-            <View style={styles.menuItemLeft}>
-              <Ionicons name="share-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Export History</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>

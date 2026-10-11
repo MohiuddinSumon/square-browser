@@ -25,7 +25,7 @@ const NavigationControls = () => {
   // Home destination: about:blank — keep in sync with App.js CustomBottomNav's
   // handleHome so the two home affordances behave identically.
   const handleHome = () => {
-    navigateTo('about:blank');
+    navigateTo('https://www.google.com');
   };
 
   const iconColor = (enabled) => (enabled ? colors.accent : colors.textTertiary);
