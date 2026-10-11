@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    minHeight: theme.touchTarget.min,
+    minHeight: getTheme(false).touchTarget.min, // touch target size is the same in both modes
     justifyContent: 'center',
   },
   filterPillText: {
