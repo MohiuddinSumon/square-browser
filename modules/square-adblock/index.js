@@ -40,3 +40,6 @@ export const attachToWebView = async (viewTag) => {
     return false;
   }
 };
+
+/** Number of domains loaded from the bundled list (0 until the background load finishes). */
+export const getBundledCount = () => (Native ? Native.getBundledCount() : 0);
