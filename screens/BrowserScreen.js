@@ -700,7 +700,7 @@ true;
           so Cloudflare challenge pages remain visible and interactive during load */}
       {isLoading && (
         <View style={styles.progressBarTrack} pointerEvents="none">
-          <View style={[styles.progressBarFill, { backgroundColor: theme.colors.accent, width: `${Math.round(loadProgress * 100)}%` }]} />
+          <View style={[styles.progressBarFill, { width: `${Math.round(loadProgress * 100)}%` }]} />
         </View>
       )}
     </View>
@@ -1053,9 +1053,9 @@ const BrowserScreen = ({ navigation }) => {
   }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.groupedBackground }]}
+        style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Address Bar - Top or Bottom based on setting */}
@@ -1064,8 +1064,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.topBar,
               {
-                backgroundColor: colors.surface,
-                borderBottomColor: colors.separator,
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
+                borderBottomColor: isDarkMode ? '#333' : '#eee',
                 transform: [{ translateY: navbarTranslateY }]
               }
             ]}
@@ -1083,10 +1083,10 @@ const BrowserScreen = ({ navigation }) => {
             urlBarPosition === 'top'
               ? { top: totalTopBarHeight }
               : { bottom: (keyboardHeight || 0) + (Platform.OS === 'ios' ? 80 : 70) },
-            { backgroundColor: colors.surfaceAlt },
+            { backgroundColor: isDarkMode ? '#2a2000' : '#fff8e1' },
           ]}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={colors.warning} />
-            <Text style={[styles.cfBannerText, { color: colors.textSecondary }]}>
+            <Ionicons name="shield-checkmark-outline" size={16} color="#FF9800" />
+            <Text style={[styles.cfBannerText, { color: isDarkMode ? '#ffd54f' : '#7a5800' }]}>
               Cloudflare is verifying your browser — please wait…
             </Text>
             <TouchableOpacity
@@ -1094,14 +1094,14 @@ const BrowserScreen = ({ navigation }) => {
               onPress={() => activeWebViewRef.current && activeWebViewRef.current.reload()}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="refresh" size={16} color={colors.warning} />
+              <Ionicons name="refresh" size={16} color="#FF9800" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.cfBannerClose}
               onPress={() => setIsCloudflareChallenge(false)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={16} color={colors.textSecondary} />
+              <Ionicons name="close" size={16} color={isDarkMode ? '#ffd54f' : '#7a5800'} />
             </TouchableOpacity>
           </View>
         )}
@@ -1148,8 +1148,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.bottomBar,
               {
-                backgroundColor: colors.surface,
-                borderTopColor: colors.separator,
+                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
+                borderTopColor: isDarkMode ? '#333' : '#eee',
                 transform: [{ translateY: navbarTranslateY }],
                 bottom: keyboardHeight || 0,
                 paddingBottom: keyboardHeight > 0 ? 0 : (Platform.OS === 'ios' ? 10 : 5), // Remove padding when keyboard is open
@@ -1687,6 +1687,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: 3,
+    backgroundColor: '#2196F3',
   },
   loadingContainer: {
     position: 'absolute',
@@ -1717,21 +1718,15 @@ const styles = StyleSheet.create({
   },
   cfBannerText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
-    lineHeight: 18,
+    lineHeight: 16,
   },
   cfBannerReload: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 2,
   },
   cfBannerClose: {
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 2,
   },
   modalOverlay: {
     flex: 1,

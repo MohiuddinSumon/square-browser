@@ -1,98 +1,54 @@
-/**
- * Copyright (c) 2025 SquareBrowser Contributors
- *
- * NavigationControls — the browser back/forward/refresh/home control row.
- * Visual/UX only: navigation logic and the single active-tab webViewRef
- * wiring are untouched.
- *
- * DESIGN LANGUAGE: iOS HIG. Colors come from theme.js tokens via
- * getTheme(isDarkMode) so light/dark never drift. Buttons are pill-shaped
- * Pressables with transform-only press feedback (scale 0.97 / opacity 0.6),
- * useNativeDriver:true, no new dependencies.
- */
-
 import React from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
-import { getTheme } from '../theme';
 
 const NavigationControls = () => {
-  const { canGoBack, canGoForward, goBack, goForward, refresh, navigateTo, isDarkMode } = useBrowser();
-  const theme = getTheme(isDarkMode);
-  const { colors, animation, touchTarget } = theme;
+  const { canGoBack, canGoForward, goBack, goForward, refresh, navigateTo } = useBrowser();
 
-  // Home destination: about:blank — keep in sync with App.js CustomBottomNav's
-  // handleHome so the two home affordances behave identically.
   const handleHome = () => {
     navigateTo('https://www.google.com');
   };
 
-  const iconColor = (enabled) => (enabled ? colors.accent : colors.textTertiary);
-
   return (
     <View style={styles.container}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          pressed && {
-            transform: [{ scale: animation.pressScale }],
-            opacity: animation.pressOpacity,
-          },
-        ]}
+      <TouchableOpacity
+        style={[styles.button, !canGoBack && styles.buttonDisabled]}
         onPress={goBack}
         disabled={!canGoBack}
-        accessibilityLabel="Back"
-        accessibilityRole="button"
       >
-        <Ionicons name="arrow-back" size={24} color={iconColor(canGoBack)} />
-      </Pressable>
+        <Ionicons 
+          name="arrow-back" 
+          size={24} 
+          color={canGoBack ? '#2196F3' : '#ccc'} 
+        />
+      </TouchableOpacity>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          pressed && {
-            transform: [{ scale: animation.pressScale }],
-            opacity: animation.pressOpacity,
-          },
-        ]}
+      <TouchableOpacity
+        style={[styles.button, !canGoForward && styles.buttonDisabled]}
         onPress={goForward}
         disabled={!canGoForward}
-        accessibilityLabel="Forward"
-        accessibilityRole="button"
       >
-        <Ionicons name="arrow-forward" size={24} color={iconColor(canGoForward)} />
-      </Pressable>
+        <Ionicons 
+          name="arrow-forward" 
+          size={24} 
+          color={canGoForward ? '#2196F3' : '#ccc'} 
+        />
+      </TouchableOpacity>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          pressed && {
-            transform: [{ scale: animation.pressScale }],
-            opacity: animation.pressOpacity,
-          },
-        ]}
+      <TouchableOpacity
+        style={styles.button}
         onPress={refresh}
-        accessibilityLabel="Refresh"
-        accessibilityRole="button"
       >
-        <Ionicons name="refresh" size={24} color={colors.accent} />
-      </Pressable>
+        <Ionicons name="refresh" size={24} color="#2196F3" />
+      </TouchableOpacity>
 
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          pressed && {
-            transform: [{ scale: animation.pressScale }],
-            opacity: animation.pressOpacity,
-          },
-        ]}
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleHome}
-        accessibilityLabel="Home"
-        accessibilityRole="button"
       >
-        <Ionicons name="home" size={24} color={colors.accent} />
-      </Pressable>
+        <Ionicons name="home" size={24} color="#2196F3" />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -109,10 +65,13 @@ const styles = StyleSheet.create({
   button: {
     padding: 6,
     minWidth: 40,
-    minHeight: 44, // Apple HIG minimum touch target
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
 });
 
 export default NavigationControls;
+
