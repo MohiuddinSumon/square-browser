@@ -707,6 +707,7 @@ true;
           (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : '')
         }
         javaScriptEnabled={true}
+        allowsFullscreenVideo={true}
         mediaPlaybackRequiresUserAction={false}
         domStorageEnabled={true}
         allowsBackForwardNavigationGestures={true}
