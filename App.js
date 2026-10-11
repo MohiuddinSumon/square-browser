@@ -21,6 +21,7 @@ import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from './screens/TermsOfServiceScreen';
 import LandingPage from './components/LandingPage';
 import { StatusBar } from 'expo-status-bar';
+import { getTheme } from './theme';
 
 const Stack = createStackNavigator();
 
@@ -45,17 +46,18 @@ const CustomBottomNav = () => {
     navigation.navigate('Settings');
   };
 
+  const theme = getTheme(isDarkMode);
   const colors = {
-    bg: isDarkMode ? '#1e1e1e' : '#fff',
-    border: isDarkMode ? '#333' : '#e0e0e0',
-    icon: isDarkMode ? '#999' : '#2196F3',
-    badge: '#2196F3',
-    badgeText: '#fff',
-    badgeBorder: isDarkMode ? '#1e1e1e' : '#fff',
+    bg: theme.colors.surface,
+    border: theme.colors.separator,
+    icon: isDarkMode ? theme.colors.textSecondary : theme.colors.accent,
+    badge: theme.colors.accent,
+    badgeText: theme.colors.textOnPrimary,
+    badgeBorder: theme.colors.surface,
   };
 
   return (
-    <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: insets.bottom || 8 }]}>
+    <View style={[styles.bottomNav, { backgroundColor: colors.bg, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom - 8, 6) }]}>
       <TouchableOpacity
         style={[styles.navButton, timerWallActive && styles.navButtonDisabled]}
         onPress={timerWallActive ? undefined : handleHome}
@@ -127,6 +129,13 @@ const UrlHandler = () => {
   return null;
 };
 
+// Status bar styled from the app's own theme. Without this the icons follow the *system*
+// theme, so they turn dark-on-dark (invisible) in dark mode whenever a page is showing.
+const ThemedStatusBar = () => {
+  const { isDarkMode } = useBrowser();
+  return <StatusBar style={isDarkMode ? 'light' : 'dark'} />;
+};
+
 // Main App Component
 function AppNavigator() {
   // Show landing page on web, browser app on mobile
@@ -160,7 +169,7 @@ export default function App() {
     <SafeAreaProvider>
       <BrowserProvider>
         <NavigationContainer>
-          <StatusBar style="auto" />
+          <ThemedStatusBar />
           <AppNavigator />
         </NavigationContainer>
       </BrowserProvider>
@@ -179,10 +188,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
-    paddingTop: 6,
+    paddingTop: 2,
   },
   navButton: {
-    padding: 6,
+    padding: 3,
     minWidth: 45,
     alignItems: 'center',
     justifyContent: 'center',

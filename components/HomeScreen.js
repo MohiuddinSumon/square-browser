@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, Platform, Dimensions, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
+import { getTheme } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,17 +53,18 @@ const HomeScreen = () => {
   }, [bookmarks]);
 
   // Colors based on theme
+  const theme = getTheme(isDarkMode);
   const colors = {
-    bg: isDarkMode ? '#0A0A0A' : '#F5F7FA',
-    card: isDarkMode ? '#1A1A1A' : '#FFFFFF',
-    text: isDarkMode ? '#E0E0E0' : '#1A1A1A',
-    subtext: isDarkMode ? '#888' : '#666',
-    border: isDarkMode ? '#2A2A2A' : '#E0E0E0',
-    accent: '#2196F3',
-    accentGradient: ['#2196F3', '#1976D2'],
-    danger: '#F44336',
-    success: '#4CAF50',
-    warning: '#FF9800',
+    bg: theme.colors.groupedBackground,
+    card: theme.colors.surface,
+    text: theme.colors.text,
+    subtext: theme.colors.textSecondary,
+    border: theme.colors.separator,
+    accent: theme.colors.accent,
+    accentGradient: [theme.colors.accent, '#0062CC'],
+    danger: theme.colors.danger,
+    success: theme.colors.success,
+    warning: theme.colors.warning,
   };
 
   const randomQuote = useMemo(() => {
@@ -155,7 +157,7 @@ const HomeScreen = () => {
           {new URL(site.url).hostname}
         </Text>
       </View>
-      <View style={[styles.visitCount, { backgroundColor: isDarkMode ? '#2A2A2A' : '#F0F0F0' }]}>
+      <View style={[styles.visitCount, { backgroundColor: theme.colors.surfaceAlt }]}>
         <Text style={[styles.visitCountText, { color: colors.subtext }]}>{site.visitCount}</Text>
       </View>
     </TouchableOpacity>
@@ -171,7 +173,7 @@ const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Quick Stats Header */}
-        <View style={[styles.statsHeader, { backgroundColor: isDarkMode ? '#1A1A1A' : '#fff' }]}>
+        <View style={[styles.statsHeader, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.quickStats}>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.accent }]}>{formatDuration(totalToday)}</Text>

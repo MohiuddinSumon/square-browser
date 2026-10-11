@@ -4,6 +4,7 @@
  * TimerChip - Displays remaining daily browsing time in the address bar.
  * Pure presentational component — no context calls.
  */
+import { getTheme } from '../theme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -24,11 +25,11 @@ const TimerChip = ({ remainingMs }) => {
 
   let chipColor;
   if (remainingMs <= 120000) {
-    chipColor = '#F44336'; // red — ≤2 min
+    chipColor = getTheme(false).colors.danger; // red — ≤2 min
   } else if (remainingMs <= 600000) {
-    chipColor = '#FF9800'; // amber — ≤10 min
+    chipColor = getTheme(false).colors.warning; // amber — ≤10 min
   } else {
-    chipColor = '#4CAF50'; // green
+    chipColor = getTheme(false).colors.success; // green
   }
 
   return (

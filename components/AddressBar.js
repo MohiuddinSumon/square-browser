@@ -3,6 +3,7 @@ import { View, TextInput, TouchableOpacity, StyleSheet, Platform, Keyboard } fro
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import TimerChip from './TimerChip';
+import { getTheme } from '../theme';
 
 const AddressBar = () => {
   const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode,
@@ -11,14 +12,15 @@ const AddressBar = () => {
   const remainingMs = Math.max(0, dailyLimitMs + (extensionMs || 0) - todayElapsedMs);
   const showChip = timerEnabled && !limitReached;
   
+  const theme = getTheme(isDarkMode);
   const colors = {
-    bg: isDarkMode ? '#1e1e1e' : '#fff',
-    inputBg: isDarkMode ? '#2c2c2c' : '#fff',
-    text: isDarkMode ? '#e0e0e0' : '#333',
-    border: isDarkMode ? '#333' : '#e0e0e0',
-    accent: '#2196F3',
-    secure: '#4CAF50',
-    warning: '#FF9800'
+    bg: theme.colors.surface,
+    inputBg: isDarkMode ? theme.colors.surfaceAlt : theme.colors.surface,
+    text: theme.colors.text,
+    border: theme.colors.separator,
+    accent: theme.colors.accent,
+    secure: theme.colors.success,
+    warning: theme.colors.warning,
   };
   const [urlInput, setUrlInput] = useState(currentUrl === 'about:blank' ? '' : currentUrl);
   const [isBookmarked, setIsBookmarked] = useState(false);

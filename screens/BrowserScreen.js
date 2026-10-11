@@ -1053,9 +1053,9 @@ const BrowserScreen = ({ navigation }) => {
   }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: isDarkMode ? '#1e1e1e' : '#fff' }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: isDarkMode ? '#121212' : '#fff' }]}
+        style={[styles.container, { backgroundColor: colors.groupedBackground }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Address Bar - Top or Bottom based on setting */}
@@ -1064,8 +1064,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.topBar,
               {
-                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
-                borderBottomColor: isDarkMode ? '#333' : '#eee',
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.separator,
                 transform: [{ translateY: navbarTranslateY }]
               }
             ]}
@@ -1148,8 +1148,8 @@ const BrowserScreen = ({ navigation }) => {
             style={[
               styles.bottomBar,
               {
-                backgroundColor: isDarkMode ? '#1e1e1e' : '#fff',
-                borderTopColor: isDarkMode ? '#333' : '#eee',
+                backgroundColor: colors.surface,
+                borderTopColor: colors.separator,
                 transform: [{ translateY: navbarTranslateY }],
                 bottom: keyboardHeight || 0,
                 paddingBottom: keyboardHeight > 0 ? 0 : (Platform.OS === 'ios' ? 10 : 5), // Remove padding when keyboard is open
