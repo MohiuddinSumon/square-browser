@@ -180,6 +180,8 @@ const AD_DOMAINS = [
   'adspyglass.com', 'ero-advertising.com', 'tubecorporate.com', 'trafficforce.com',
   'adtng.com', 'smartyads.com', 'bidvertiser.com', 'revcontent.com',
   'mgid.com', 'adskeeper.com', 'richpush.co', 'popmyads.com',
+  // Seen on movie-streaming sites: pop-under redirect targets, ad-exchange and tracker hosts
+  'zeloru.com', 'acscdn.com', 'adexchangerapid.com', 'usrpubtrk.com',
   // Tracking / measurement (pure trackers, not login providers)
   'scorecardresearch.com', 'quantserve.com', 'chartbeat.com',
   'adsymptotic.com', 'amazon-adsystem.com',
