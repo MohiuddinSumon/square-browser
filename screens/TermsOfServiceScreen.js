@@ -95,3 +95,4 @@ const styles = StyleSheet.create({
   text: { fontSize: 17, lineHeight: 24 },
   footer: { marginTop: 10, fontSize: 14, fontStyle: 'italic', textAlign: 'center' },
 });
+export default TermsOfServiceScreen;

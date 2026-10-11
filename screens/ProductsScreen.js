@@ -206,3 +206,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 });
+export default ProductsScreen;
