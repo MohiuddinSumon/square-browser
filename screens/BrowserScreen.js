@@ -1019,6 +1019,11 @@ const BrowserScreen = ({ navigation }) => {
         return true;
       }
 
+      // The browser stays mounted underneath Settings, History, etc. When another screen
+      // is on top, let the navigator pop it (back to where the user came from) instead of
+      // handling the gesture as a browser back / exit prompt.
+      if (!navigation.isFocused()) return false;
+
       // If we have an active webview, try to go back
       if (currentUrl !== 'about:blank' && activeWebViewRef.current) {
         const activeTab = tabs[activeTabIndex];
@@ -1050,7 +1055,7 @@ const BrowserScreen = ({ navigation }) => {
     );
 
     return () => backHandler.remove();
-  }, [currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
+  }, [navigation, currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
