@@ -5,7 +5,7 @@
  * sub-resource requests (scripts, images, iframes, XHR) before they download.
  * Every call is a no-op on platforms without the native module.
  */
-import { Platform, findNodeHandle } from 'react-native';
+import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
 
 const Native = Platform.OS === 'android' ? requireOptionalNativeModule('SquareAdBlock') : null;
@@ -26,13 +26,16 @@ export const resetBlockedCount = () => {
   if (Native) Native.resetBlockedCount();
 };
 
-/** Installs the request filter on a react-native-webview ref. Resolves true on success. */
-export const attachToWebView = async (webViewRef) => {
-  if (!Native || !webViewRef) return false;
+/**
+ * Installs the request filter on a react-native-webview. Pass the native view tag
+ * (the `target` of any WebView event, e.g. onLoadStart); react-native-webview's ref is
+ * an imperative handle, not a component, so findNodeHandle cannot resolve it.
+ * Resolves true on success.
+ */
+export const attachToWebView = async (viewTag) => {
+  if (!Native || typeof viewTag !== 'number') return false;
   try {
-    const tag = findNodeHandle(webViewRef);
-    if (tag == null) return false;
-    return await Native.attach(tag);
+    return await Native.attach(viewTag);
   } catch (e) {
     return false;
   }

@@ -44,6 +44,7 @@ export const BrowserProvider = ({ children }) => {
   const [autoHideNavBar, setAutoHideNavBar] = useState(false);
   // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
+  const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
 
   // Daily browsing timer state
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -142,6 +143,11 @@ export const BrowserProvider = ({ children }) => {
         setEnhancedCompatEnabled(savedEnhancedCompat !== 'false');
       }
 
+      const savedBackgroundPlay = await AsyncStorage.getItem('@squarebrowser_background_play');
+      if (savedBackgroundPlay !== null) {
+        setBackgroundPlayEnabled(savedBackgroundPlay !== 'false');
+      }
+
       // Load timer settings and today's elapsed time
       const timerSettings = await loadTimerSettings();
       setTimerEnabled(timerSettings.enabled);
@@ -199,6 +205,11 @@ export const BrowserProvider = ({ children }) => {
   const setEnhancedCompatPref = async (enabled) => {
     setEnhancedCompatEnabled(enabled);
     await AsyncStorage.setItem('@squarebrowser_enhanced_compat', enabled ? 'true' : 'false');
+  };
+
+  const setBackgroundPlayPref = async (enabled) => {
+    setBackgroundPlayEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_background_play', enabled ? 'true' : 'false');
   };
 
   /**
@@ -658,6 +669,8 @@ export const BrowserProvider = ({ children }) => {
     setAutoHideNavBarPref,
     enhancedCompatEnabled,
     setEnhancedCompatPref,
+    backgroundPlayEnabled,
+    setBackgroundPlayPref,
     userAgent,
     navigateTo,
     navigateToNewTab,
@@ -675,7 +688,7 @@ export const BrowserProvider = ({ children }) => {
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
-    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled,
+    isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);
