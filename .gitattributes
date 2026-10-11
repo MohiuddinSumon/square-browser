@@ -1,1 +1,2 @@
 patches/*.patch text eol=lf
+modules/square-adblock/android/src/main/assets/adlist.txt text eol=lf

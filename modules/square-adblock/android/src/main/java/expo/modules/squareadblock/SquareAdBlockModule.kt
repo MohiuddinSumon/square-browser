@@ -13,9 +13,15 @@ class SquareAdBlockModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SquareAdBlock")
 
+    // Load the bundled domain list in the background as soon as the module exists.
+    OnCreate {
+      appContext.reactContext?.let { AdBlockEngine.loadBundled(it) }
+    }
+
     Function("setDomains") { domains: List<String> -> AdBlockEngine.setDomains(domains) }
     Function("setEnabled") { enabled: Boolean -> AdBlockEngine.enabled = enabled }
     Function("getBlockedCount") { AdBlockEngine.blockedCount() }
+    Function("getBundledCount") { AdBlockEngine.bundledCount() }
     Function("resetBlockedCount") { AdBlockEngine.resetBlockedCount() }
 
     // Wraps the WebView client of the react-native-webview instance with the given

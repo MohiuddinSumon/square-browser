@@ -22,3 +22,115 @@ index 80c6803..a520ac3 100644
      protected @Nullable
      String injectedJS;
      protected @Nullable
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewManagerImpl.kt b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewManagerImpl.kt
+index f83033b..0f9f093 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewManagerImpl.kt
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebViewManagerImpl.kt
+@@ -150,6 +150,87 @@ class RNCWebViewManagerImpl(private val newArch: Boolean = false) {
+                         return Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888)
+                     }
+ 
++                    // --- SquareBrowser patch: fullscreen video niceties -----------------------------
++                    // Landscape on enter, a rotate button, free rotation once the phone is turned,
++                    // and the system back gesture exits fullscreen.
++                    private var rotateButton: View? = null
++                    private var orientationListener: android.view.OrientationEventListener? = null
++                    private var pendingUnlock = 0 // 1 = waiting for the phone to be landscape, 2 = portrait
++                    private var backCallback: androidx.activity.OnBackPressedCallback? = null
++
++                    private fun isLandscape(): Boolean =
++                        activity.resources.configuration.orientation ==
++                            android.content.res.Configuration.ORIENTATION_LANDSCAPE
++
++                    private fun lockOrientation(requested: Int, toLandscape: Boolean) {
++                        activity.requestedOrientation = requested
++                        pendingUnlock = if (toLandscape) 1 else 2
++                        if (orientationListener == null) {
++                            orientationListener = object : android.view.OrientationEventListener(activity) {
++                                override fun onOrientationChanged(deg: Int) {
++                                    if (deg == ORIENTATION_UNKNOWN || pendingUnlock == 0) return
++                                    val landscape = deg in 60..120 || deg in 240..300
++                                    val portrait = deg <= 30 || deg >= 330 || deg in 150..210
++                                    if ((pendingUnlock == 1 && landscape) || (pendingUnlock == 2 && portrait)) {
++                                        // The phone now matches the forced orientation: let it rotate freely.
++                                        pendingUnlock = 0
++                                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
++                                    }
++                                }
++                            }
++                        }
++                        orientationListener?.let { if (it.canDetectOrientation()) it.enable() }
++                    }
++
++                    private fun addRotateButton(root: ViewGroup) {
++                        val density = activity.resources.displayMetrics.density
++                        val button = android.widget.ImageButton(activity)
++                        button.setImageResource(android.R.drawable.ic_menu_rotate)
++                        button.setColorFilter(Color.WHITE)
++                        button.contentDescription = "Rotate screen"
++                        button.alpha = 0.85f
++                        button.background = android.graphics.drawable.GradientDrawable().apply {
++                            shape = android.graphics.drawable.GradientDrawable.OVAL
++                            setColor(0x99000000.toInt())
++                        }
++                        button.setOnClickListener {
++                            if (isLandscape()) {
++                                lockOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT, false)
++                            } else {
++                                lockOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, true)
++                            }
++                        }
++                        val size = (44 * density).toInt()
++                        val params = android.widget.FrameLayout.LayoutParams(
++                            size, size, android.view.Gravity.TOP or android.view.Gravity.END
++                        )
++                        params.setMargins(0, (56 * density).toInt(), (12 * density).toInt(), 0)
++                        root.addView(button, params)
++                        rotateButton = button
++                    }
++
++                    private fun registerBack() {
++                        val owner = activity as? androidx.activity.ComponentActivity ?: return
++                        val callback = object : androidx.activity.OnBackPressedCallback(true) {
++                            override fun handleOnBackPressed() {
++                                onHideCustomView()
++                            }
++                        }
++                        owner.onBackPressedDispatcher.addCallback(owner, callback)
++                        backCallback = callback
++                    }
++
++                    private fun cleanupFullscreenExtras(root: ViewGroup) {
++                        rotateButton?.let { root.removeView(it) }
++                        rotateButton = null
++                        orientationListener?.disable()
++                        orientationListener = null
++                        pendingUnlock = 0
++                        backCallback?.remove()
++                        backCallback = null
++                    }
++                    // ---------------------------------------------------------------------------
++
+                     override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                         if (mVideoView != null) {
+                             callback.onCustomViewHidden()
+@@ -182,6 +263,11 @@ class RNCWebViewManagerImpl(private val newArch: Boolean = false) {
+                             mWebView.visibility = View.GONE
+                         }
+                         mWebView.themedReactContext.addLifecycleEventListener(this)
++
++                        // SquareBrowser patch: movies are landscape; offer a rotate button; back exits.
++                        lockOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE, true)
++                        addRotateButton(rootView)
++                        registerBack()
+                     }
+ 
+                     override fun onHideCustomView() {
+@@ -199,6 +285,7 @@ class RNCWebViewManagerImpl(private val newArch: Boolean = false) {
+                         }
+                         activity.window.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+                         rootView.removeView(mVideoView)
++                        cleanupFullscreenExtras(rootView)
+                         mCustomViewCallback.onCustomViewHidden()
+                         mVideoView = null
+                         mCustomViewCallback = null

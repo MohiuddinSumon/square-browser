@@ -1,0 +1,9 @@
+# Extra ad / pop-under / tracker domains the upstream list misses (mostly newer or rotating
+# networks seen on streaming and forum sites). One registrable domain per line.
+gotrackier.com
+zeloru.com
+acscdn.com
+adexchangerapid.com
+usrpubtrk.com
+bkcdn.net
+bxcdn.net
