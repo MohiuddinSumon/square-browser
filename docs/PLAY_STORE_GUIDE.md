@@ -76,58 +76,55 @@ android/app/build/outputs/bundle/release/app-release.aab
    - Recommended size: 1080x1920px (or similar 9:16 ratio)
    - Show key features: home screen, browsing, settings, dark mode
 
-4. **Short Description**: 80 characters max
+4. **Short Description**: 80 characters max (plain text only, Play does not render markdown)
    ```
-   Privacy-focused mobile browser with permanent history tracking for mindful browsing.
+   Browser with permanent history, daily time limits and Strict Mode. No ads.
+   ```
+   (75 chars. Alternative: "Accountability browser: permanent history, daily limits, Strict Mode. No ads.")
+
+5. **Full Description**: 4000 characters max. Plain text only: Play does not render markdown (`**bold**` shows as literal asterisks). Do not add keyword lists, hashtags or "keywords for SEO" blocks; Play's metadata policy treats them as keyword stuffing and can reject or suspend the listing. Use keywords naturally in sentences.
+   ```
+   Square Browser is an accountability browser for Android. It keeps an honest, permanent record of where you browse, limits how long you can spend online each day, and keeps everything on your phone.
+
+   WHAT MAKES IT DIFFERENT
+
+   Permanent history
+   Your history cannot be deleted inside the app and there is no incognito mode. Knowing the record is always there helps you browse with intention.
+
+   Daily time limit
+   Set how many minutes you want to spend browsing each day. When the limit is reached, the browser stops you.
+
+   Strict Mode
+   When the daily limit is reached, Strict Mode locks you out completely instead of letting you dismiss the warning.
+
+   Usage stats
+   See how much time you spend on each site, day by day.
+
+   PRIVATE BY DESIGN
+   - Everything stays on your device. No account, no servers, no analytics, no tracking.
+   - Built-in ad, pop-up and tracker blocking that works offline.
+   - The code is open source, so you can check these claims yourself.
+
+   EVERYDAY BROWSING
+   - Multiple tabs, bookmarks and a clean home screen
+   - Dark mode
+   - Desktop site mode
+   - Open links in other apps, with a prompt before leaving the browser
+   - Keep audio playing in the background with notification controls
+   - Fullscreen video with landscape rotation
+
+   WHO IT IS FOR
+   People who want to cut down on screen time, build healthier browsing habits, or hold themselves accountable, without handing their data to anyone.
+
+   Questions or feedback? Visit https://squarebrowser.com or open an issue on GitHub.
    ```
 
-5. **Full Description**: 4000 characters max
-   ```
-   SquareBrowser - Privacy-First Mobile Browser
-
-   SquareBrowser is a privacy-focused mobile browser designed to promote mindful internet usage through permanent, local-only history tracking.
-
-   KEY FEATURES:
-
-   🔒 Privacy First
-   • All data stored locally on your device
-   • No external servers, no data collection
-   • No tracking, analytics, or telemetry
-   • Open source - verify our privacy claims
-
-   📊 Accountability Focus
-   • Permanent browsing history (cannot be deleted)
-   • Encourages mindful internet usage
-   • Daily usage statistics
-   • No incognito/private mode
-
-   🎨 Modern Interface
-   • Clean, intuitive design
-   • Dark mode support
-   • Smooth navigation
-   • Tab management
-
-   ⚡ Powerful Features
-   • Multiple tabs support
-   • Bookmarks management
-   • Desktop mode toggle
-   • Built-in ad blocking
-   • Usage statistics
-
-   WHY SQUAREBROWSER?
-
-   In an age of constant tracking and data collection, SquareBrowser puts you in control. All your browsing data stays on your device - we don't collect, transmit, or store anything on external servers.
-
-   Perfect for:
-   • Privacy-conscious users
-   • Those seeking accountability in their browsing habits
-   • Anyone who wants full control over their data
-   • Users who value transparency (open source)
-
-   SquareBrowser is completely open source. You can review the code, verify our privacy claims, and even contribute to the project.
-
-   Download SquareBrowser today and take control of your browsing experience.
-   ```
+   Store listing tips (from the October 2026 audit):
+   - Title: consider a keyword title such as "Square Browser: Focus & Limits" (30 chars max).
+   - Lead every screenshot with a short benefit caption ("History you can't delete", "Daily limit lock", "Usage stats per site", "Strict Mode", "Ad blocker", "No data collected"). Keep them all portrait and the same style; leave out blank settings screens.
+   - Never describe the SDK, framework or storage engine in the listing.
+   - Write a real "What's new" for each release (see CHANGELOG.md).
+   - Add a Bengali (bn-BD) listing: translate the title, both descriptions and the screenshot captions.
 
 ### App Information
 

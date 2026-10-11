@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Native ad, pop-under and tracker blocking with a bundled offline domain list.
+- Background audio playback with a media notification.
+- Fullscreen video with landscape rotation and a rotate button.
+- Open-in-app prompt for external app links.
+- Refreshed interface with a dark-mode status bar and slimmer navigation bar.
+- Back gesture closes Settings.
+- Smoother tab switcher animation.
+
 ### Changed
 - Moved project documentation into the `docs/` directory.
 
