@@ -43,6 +43,7 @@
             "favicon": "./assets/favicon.png"
         },
         "plugins": [
+            "./plugins/withReleaseSigning",
             [
                 "expo-build-properties",
                 {
