@@ -163,10 +163,23 @@ const AD_DOMAINS = [
   // Mobile ad networks
   'adcolony.com', 'applovin.com', 'mopub.com', 'chartboost.com',
   'vungle.com', 'ironsrc.com', 'admob.com',
-  // Pop-under / click-hijack networks common on streaming sites
+  // Pop-under / click-hijack / native-ad networks common on streaming, forum and adult sites
   'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
   'exoclick.com', 'juicyads.com', 'hilltopads.net', 'onclickads.net',
   'adcash.com', 'clickadu.com',
+  // ExoClick family (ad servers, native widgets, pop-under loaders, creative CDNs)
+  'exosrv.com', 'exdynsrv.com', 'realsrv.com', 'magsrv.com', 'pemsrv.com',
+  'bkcdn.net', 'bxcdn.net',
+  // Other pop-under / push / native networks
+  'juicyads.net', 'jads.co', 'trafficjunky.net', 'trafficjunky.com',
+  'trafficstars.com', 'tsyndicate.com', 'trafficfactory.biz', 'traffichaus.com',
+  'plugrush.com', 'adxpansion.com', 'clickaine.com', 'hilltopads.com',
+  'highperformancegate.com', 'effectivegatecpm.com', 'profitablecpmrate.com',
+  'propellerclick.com', 'onclkds.com', 'ad-maven.com', 'admaven.com', 'a-ads.com',
+  'monetag.com', 'clickadilla.com', 'zeropark.com', 'evadav.com',
+  'adspyglass.com', 'ero-advertising.com', 'tubecorporate.com', 'trafficforce.com',
+  'adtng.com', 'smartyads.com', 'bidvertiser.com', 'revcontent.com',
+  'mgid.com', 'adskeeper.com', 'richpush.co', 'popmyads.com',
   // Tracking / measurement (pure trackers, not login providers)
   'scorecardresearch.com', 'quantserve.com', 'chartbeat.com',
   'adsymptotic.com', 'amazon-adsystem.com',
@@ -452,6 +465,9 @@ const BrowserTab = ({
     '[class*="AdWrapper"]','[class*="ad-wrap"]','[id*="adbox"]',
     '[id*="ad-container"]','[id*="ad_container"]',
     '[id*="banner_ad"]','[id*="ad-banner"]','[id*="AdContainer"]',
+    /* Native-ad widgets (ExoClick and similar) */
+    '[class*="native-widget"]','[class*="exo-native"]','[class*="msg-native"]',
+    '[id^="ad_"][id$="_css"]',
     /* Outbrain & Taboola */
     '#outbrain','.outbrain','[id^="outbrain"]',
     '#taboola','.taboola-container','[id^="taboola"]','.widget_taboola',
@@ -477,14 +493,46 @@ const BrowserTab = ({
     });
   }
 
+  /* Pop-under networks inject a full-viewport layer with a huge z-index (often right after
+     the first tap) that either is an invisible click-catcher or holds an ad. Remove those,
+     but keep anything that looks like a real dialog (form controls or real text). */
+  function removeFullscreenOverlays() {
+    try {
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var nodes = document.body ? document.body.children : [];
+      Array.prototype.slice.call(nodes).forEach(function(el) {
+        var cs = window.getComputedStyle(el);
+        if (cs.position !== 'fixed' && cs.position !== 'absolute') return;
+        if ((parseInt(cs.zIndex) || 0) < 1000000) return;
+        var r = el.getBoundingClientRect();
+        if (r.width < vw * 0.9 || r.height < vh * 0.9) return;
+        if (el.querySelector('input, select, textarea, button, form')) return;
+        var textLen = (el.innerText || '').trim().length;
+        var hasFrame = !!el.querySelector('iframe');
+        var hasLink = !!el.querySelector('a[href]');
+        if (hasFrame || textLen < 40 || (hasLink && textLen < 200)) el.remove();
+      });
+    } catch (e) {}
+  }
+  document.addEventListener('click', function() {
+    setTimeout(removeFullscreenOverlays, 60);
+    setTimeout(removeFullscreenOverlays, 500);
+    setTimeout(removeFullscreenOverlays, 1500);
+  }, true);
+
   removeAds();
+  removeFullscreenOverlays();
   setTimeout(removeAds, 800);
   setTimeout(removeAds, 2500);
 
   /* Watch for dynamically injected ads */
   try {
-    new MutationObserver(function() { removeAds(); })
-      .observe(document.documentElement, { childList: true, subtree: true });
+    var _ovTimer = null;
+    new MutationObserver(function() {
+      removeAds();
+      clearTimeout(_ovTimer);
+      _ovTimer = setTimeout(removeFullscreenOverlays, 150);
+    }).observe(document.documentElement, { childList: true, subtree: true });
   } catch(e) {}
 
   /* Block click-through to ad domains AND all target="_blank" pop-up attempts.
@@ -752,6 +800,7 @@ const BrowserScreen = ({ navigation }) => {
   const [isCloudflareChallenge, setIsCloudflareChallenge] = useState(false);
   const [linkMenuVisible, setLinkMenuVisible] = useState(false);
   const [longPressedLink, setLongPressedLink] = useState({ url: '', text: '' });
+
 
   const handleChallengeDetected = useCallback((detected) => {
     setIsCloudflareChallenge(detected);
