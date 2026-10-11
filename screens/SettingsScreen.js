@@ -20,6 +20,8 @@ const SettingsScreen = ({ navigation }) => {
     setAutoHideNavBarPref,
     enhancedCompatEnabled,
     setEnhancedCompatPref,
+    backgroundPlayEnabled,
+    setBackgroundPlayPref,
     timerEnabled,
     dailyLimitMs,
     strictMode,
@@ -114,7 +116,7 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
           <View style={styles.menuItemLeft}>
             <Ionicons name="globe-outline" size={24} color={colors.subtext} />
-            <View>
+            <View style={styles.menuItemTextWrap}>
               <Text style={[styles.menuItemText, { color: colors.text }]}>Enhanced Compatibility</Text>
               <Text style={[styles.menuItemSubtext, { color: colors.subtext, paddingLeft: 0 }]}>Helps load sites with Cloudflare protection</Text>
             </View>
@@ -126,6 +128,24 @@ const SettingsScreen = ({ navigation }) => {
             thumbColor={enhancedCompatEnabled !== false ? colors.accent : "#f4f3f4"}
           />
         </View>
+
+        {Platform.OS === 'android' && (
+          <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="musical-notes-outline" size={24} color={colors.subtext} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>Background Playback</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.subtext, paddingLeft: 0 }]}>Keep audio playing in background</Text>
+              </View>
+            </View>
+            <Switch
+              value={backgroundPlayEnabled !== false}
+              onValueChange={setBackgroundPlayPref}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={backgroundPlayEnabled !== false ? colors.accent : "#f4f3f4"}
+            />
+          </View>
+        )}
 
         <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
           <View style={styles.menuItemLeft}>
@@ -407,6 +427,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flexShrink: 1,
+  },
+  menuItemTextWrap: {
+    flexShrink: 1,
   },
   menuItemText: {
     fontSize: 16,

@@ -1,0 +1,24 @@
+diff --git a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+index 80c6803..a520ac3 100644
+--- a/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
++++ b/node_modules/react-native-webview/android/src/main/java/com/reactnativecommunity/webview/RNCWebView.java
+@@ -49,6 +49,19 @@ import java.util.Map;
+ import java.util.Set;
+ 
+ public class RNCWebView extends WebView implements LifecycleEventListener {
++    /**
++     * SquareBrowser patch: while true the WebView keeps reporting itself as visible when its
++     * window is hidden (app in the background / screen off). Chromium pauses <video> playback
++     * in a hidden WebView, so this is what lets background playback keep going. Set via
++     * reflection by the square-playback module while its foreground service is running.
++     */
++    public static volatile boolean keepVisibleInBackground = false;
++
++    @Override
++    protected void onWindowVisibilityChanged(int visibility) {
++        super.onWindowVisibilityChanged(keepVisibleInBackground ? View.VISIBLE : visibility);
++    }
++
+     protected @Nullable
+     String injectedJS;
+     protected @Nullable

@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share } from 'react-native';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -13,6 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import AddressBar from '../components/AddressBar';
 import HomeScreen from '../components/HomeScreen';
+import {
+  attachToWebView,
+  setBlockedDomains,
+  setNativeAdBlockEnabled,
+} from '../modules/square-adblock';
+import { updatePlayback, stopPlaybackService, addMediaActionListener, evaluateInWebView } from '../modules/square-playback';
+import { BACKGROUND_PLAY_SCRIPT } from './backgroundPlayScript';
 
 /**
  * Bot-detection bypass script injected BEFORE page content loads.
@@ -155,10 +162,89 @@ const AD_DOMAINS = [
   // Mobile ad networks
   'adcolony.com', 'applovin.com', 'mopub.com', 'chartboost.com',
   'vungle.com', 'ironsrc.com', 'admob.com',
+  // Pop-under / click-hijack networks common on streaming sites
+  'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
+  'exoclick.com', 'juicyads.com', 'hilltopads.net', 'onclickads.net',
+  'adcash.com', 'clickadu.com',
   // Tracking / measurement (pure trackers, not login providers)
   'scorecardresearch.com', 'quantserve.com', 'chartbeat.com',
   'adsymptotic.com', 'amazon-adsystem.com',
 ];
+
+// Share the domain list with the native request filter (no-op where unavailable).
+setBlockedDomains(AD_DOMAINS);
+
+// Schemes the WebView handles itself; everything else is an "open in app" link.
+const INTERNAL_SCHEMES = ['http', 'https', 'about', 'data', 'blob', 'javascript', 'file', 'content', 'ws', 'wss'];
+
+/**
+ * Classifies a URL the WebView is about to load. Returns null for normal pages, or
+ * { label, openUrl, packageName, stayUrl } for links that should open another app:
+ *   - custom schemes (whatsapp:, tg:, upi:, mailto:, tel:, market:, ...)
+ *   - Android intent:// links (converted to their real scheme)
+ *   - Play Store web links (converted to market://)
+ * `stayUrl` is set when the page can also be loaded in the browser.
+ */
+const getExternalAppLink = (url = '') => {
+  if (Platform.OS !== 'android') return null;
+  const scheme = (url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1]?.toLowerCase();
+  if (!scheme) return null;
+
+  if (scheme === 'http' || scheme === 'https') {
+    try {
+      const u = new URL(url);
+      if (u.hostname === 'play.google.com' && u.pathname.startsWith('/store/apps')) {
+        const id = u.searchParams.get('id');
+        if (id) return { label: 'Play Store', openUrl: `market://details?id=${encodeURIComponent(id)}`, stayUrl: url };
+      }
+    } catch (e) {}
+    return null;
+  }
+  if (INTERNAL_SCHEMES.includes(scheme)) return null;
+
+  if (scheme === 'intent') {
+    // intent://host/path#Intent;scheme=xyz;package=com.app;S.browser_fallback_url=...;end
+    const [base, extras = ''] = url.split('#Intent;');
+    const get = (key) => (extras.match(new RegExp('(?:^|;)' + key + '=([^;]*)')) || [])[1];
+    const realScheme = get('scheme');
+    const packageName = get('package');
+    if (!realScheme) return packageName
+      ? { label: packageName, openUrl: `market://details?id=${packageName}`, packageName }
+      : null;
+    return {
+      label: packageName || realScheme,
+      openUrl: realScheme + ':' + base.slice('intent:'.length),
+      packageName,
+    };
+  }
+  return { label: scheme === 'market' ? 'Play Store' : scheme, openUrl: url };
+};
+
+let externalPromptVisible = false;
+
+/** Asks the user whether to open a link in another app (one prompt at a time) */
+const promptOpenInApp = ({ label, openUrl, packageName }, onStayInBrowser) => {
+  if (externalPromptVisible) return;
+  externalPromptVisible = true;
+  const done = () => { externalPromptVisible = false; };
+  const open = () => {
+    Linking.openURL(openUrl).catch(() => {
+      if (packageName) {
+        Linking.openURL(`market://details?id=${packageName}`).catch(() => {});
+      } else {
+        Alert.alert('No app found', 'No installed app can open this link.');
+      }
+    });
+  };
+  const buttons = [
+    { text: 'Cancel', style: 'cancel', onPress: done },
+    { text: `Open ${label}`, onPress: () => { done(); open(); } },
+  ];
+  if (onStayInBrowser) {
+    buttons.splice(1, 0, { text: 'Stay in browser', onPress: () => { done(); onStayInBrowser(); } });
+  }
+  Alert.alert('Open in app?', 'This link wants to open another app (' + label + ').', buttons, { onDismiss: done });
+};
 
 /** Returns true if the hostname belongs to a known ad/tracking domain */
 const isAdHostname = (hostname = '') =>
@@ -289,12 +375,17 @@ const BrowserTab = ({
   onChallengeDetected,
   autoHideEnabled,
   onLinkLongPress,
+  onOpenWindow,
+  backgroundPlayEnabled,
+  onMediaState,
 }) => {
   // Track the navRequestId we last acted on — avoids reloading on WebView-internal
   // URL changes (redirects, link clicks) that also update tab.url in context.
   const lastNavRequestId = useRef(tab.navRequestId || 0);
   const [sourceUrl, setSourceUrl] = useState(tab.url);
   const webViewRef = useRef(null);
+  const allowedWebUrl = useRef(null);
+  const viewTag = useRef(null);
 
   // Only push a new URL into the WebView when an explicit external navigation was
   // requested (address bar submit). WebView-internal navigations (redirects, link
@@ -322,6 +413,11 @@ const BrowserTab = ({
   const handleWebViewRef = useCallback((node) => {
     webViewRef.current = node;
   }, []);
+
+  // Keep the native request filter in sync with the ad-block setting.
+  useEffect(() => {
+    setNativeAdBlockEnabled(adBlockEnabled);
+  }, [adBlockEnabled]);
 
   // Register ref with parent only when active status changes
   useEffect(() => {
@@ -515,7 +611,13 @@ true;
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
-        onLoadStart={() => { setIsLoading(true); setLoadProgress(0.1); }}
+        onLoadStart={(e) => {
+          // The event target is the native view tag the native modules need.
+          viewTag.current = e.nativeEvent.target;
+          attachToWebView(viewTag.current);
+          setIsLoading(true);
+          setLoadProgress(0.1);
+        }}
         onLoadProgress={({ nativeEvent }) => setLoadProgress(nativeEvent.progress)}
         onLoadEnd={(e) => {
           setIsLoading(false);
@@ -534,6 +636,8 @@ true;
               onScroll(data.direction, data.scrollY);
             } else if (data.type === 'linkLongPress' && onLinkLongPress) {
               onLinkLongPress(data.url, data.text);
+            } else if (data.type === 'mediaState' && onMediaState) {
+              onMediaState(tab.id, data, (js) => evaluateInWebView(viewTag.current, js));
             }
           } catch (e) {
             // Ignore non-JSON messages
@@ -543,10 +647,15 @@ true;
         userAgent={userAgent}
         injectedJavaScriptBeforeContentLoaded={
           (enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : 'true;') +
-          (adBlockEnabled ? AD_BLOCK_NETWORK_SCRIPT : 'true;')
+          (adBlockEnabled ? AD_BLOCK_NETWORK_SCRIPT : 'true;') +
+          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : 'true;')
         }
-        injectedJavaScript={adBlockScript + scrollTrackingScript + linkLongPressScript}
+        injectedJavaScript={
+          adBlockScript + scrollTrackingScript + linkLongPressScript +
+          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : '')
+        }
         javaScriptEnabled={true}
+        mediaPlaybackRequiresUserAction={false}
         domStorageEnabled={true}
         allowsBackForwardNavigationGestures={true}
         sharedCookiesEnabled={Platform.OS !== 'web'}
@@ -554,7 +663,29 @@ true;
         javaScriptCanOpenWindowsAutomatically={false}
         mixedContentMode="compatibility"
         pullToRefreshEnabled={true}
+        // Popups (window.open / target="_blank"). Our JS overrides only reach the main
+        // frame on Android, so ad pop-unders from cross-origin player iframes land here.
+        // Without this handler Android hands the URL to the system browser.
+        onOpenWindow={({ nativeEvent }) => {
+          if (adBlockEnabled) return;
+          if (onOpenWindow) onOpenWindow(nativeEvent.targetUrl);
+        }}
         onShouldStartLoadWithRequest={(request) => {
+          const external = getExternalAppLink(request.url);
+          if (external) {
+            // One-shot bypass so "Stay in browser" can load the web page.
+            if (allowedWebUrl.current === request.url) {
+              allowedWebUrl.current = null;
+              return true;
+            }
+            promptOpenInApp(external, external.stayUrl ? () => {
+              allowedWebUrl.current = request.url;
+              webViewRef.current?.injectJavaScript(
+                `window.location.href = ${JSON.stringify(request.url)}; true;`
+              );
+            } : null);
+            return false;
+          }
           if (!adBlockEnabled) return true;
           try {
             const hostname = new URL(request.url).hostname;
@@ -582,6 +713,7 @@ const BrowserScreen = ({ navigation }) => {
     setWebViewRef,
     adBlockEnabled,
     enhancedCompatEnabled,
+    backgroundPlayEnabled,
     userAgent,
     tabs,
     activeTabIndex,
@@ -619,6 +751,72 @@ const BrowserScreen = ({ navigation }) => {
   const handleChallengeDetected = useCallback((detected) => {
     setIsCloudflareChallenge(detected);
   }, []);
+
+  // Tabs that currently have media (playing or paused), most recent last. The foreground
+  // service and its media notification follow the tab that is playing (else the last paused).
+  const mediaTabs = useRef(new Map());
+  const currentMediaTab = useRef(null);
+  const askedNotificationPermission = useRef(false);
+  const stopTimer = useRef(null);
+
+  const syncPlayback = useCallback(() => {
+    const entries = [...mediaTabs.current.entries()];
+    const pick = entries.reverse().find(([, m]) => m.state === 'playing') ||
+      [...mediaTabs.current.entries()].reverse()[0];
+    clearTimeout(stopTimer.current);
+    if (!backgroundPlayEnabled || !pick) {
+      currentMediaTab.current = null;
+      // Wait before stopping: skipping to the previous video navigates the page, which
+      // briefly reports "no media", and the service cannot be restarted from the background.
+      stopTimer.current = setTimeout(stopPlaybackService, backgroundPlayEnabled ? 30000 : 0);
+      return;
+    }
+    const [tabId, m] = pick;
+    currentMediaTab.current = tabId;
+    updatePlayback({
+      playing: m.state === 'playing',
+      title: m.title,
+      artist: m.artist,
+      artwork: m.artwork,
+      hasPrev: m.hasPrev,
+      hasNext: m.hasNext,
+      seek: m.seek,
+    });
+  }, [backgroundPlayEnabled]);
+
+  const handleMediaState = useCallback((tabId, data, inject) => {
+    if (data.state === 'none') {
+      mediaTabs.current.delete(tabId);
+    } else {
+      // Re-insert so Map order reflects the most recently updated tab.
+      mediaTabs.current.delete(tabId);
+      mediaTabs.current.set(tabId, { ...data, inject });
+      // Android 13+: without this the service still runs, but its notification is hidden.
+      if (data.state === 'playing' && Platform.OS === 'android' && Platform.Version >= 33 &&
+          !askedNotificationPermission.current) {
+        askedNotificationPermission.current = true;
+        PermissionsAndroid.request('android.permission.POST_NOTIFICATIONS').catch(() => {});
+      }
+    }
+    syncPlayback();
+  }, [syncPlayback]);
+
+  // Notification / headset buttons -> the page that is playing.
+  useEffect(() => addMediaActionListener((action) => {
+    const entry = mediaTabs.current.get(currentMediaTab.current);
+    if (entry?.inject) {
+      entry.inject(`window.__sqMediaControl && window.__sqMediaControl(${JSON.stringify(action)}); true;`);
+    }
+  }), []);
+
+  // Drop closed tabs and react to the setting being toggled.
+  useEffect(() => {
+    const ids = new Set(tabs.map(t => t.id));
+    mediaTabs.current.forEach((_, id) => { if (!ids.has(id)) mediaTabs.current.delete(id); });
+    syncPlayback();
+  }, [tabs, syncPlayback]);
+
+  useEffect(() => () => stopPlaybackService(), []);
 
   const handleLinkLongPress = useCallback((url, text) => {
     if (!url || url.startsWith('javascript:')) return;
@@ -930,6 +1128,9 @@ const BrowserScreen = ({ navigation }) => {
                 onScroll={handleScroll}
                 autoHideEnabled={autoHideNavBar}
                 onLinkLongPress={isActive ? handleLinkLongPress : undefined}
+                onOpenWindow={isActive ? addTab : undefined}
+                backgroundPlayEnabled={backgroundPlayEnabled !== false}
+                onMediaState={handleMediaState}
               />
             );
           })}

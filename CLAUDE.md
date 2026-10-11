@@ -119,6 +119,11 @@ The `userAgent` is passed to all WebView instances and affects how websites rend
 ### Ad Blocking
 Basic ad blocking is implemented via injected JavaScript that removes common ad selectors. This runs on page load and after 2 seconds.
 
+On Android, `modules/square-adblock` (a local Expo module, Kotlin) also wraps each WebView's `WebViewClient` and drops sub-resource requests (scripts, images, iframes, XHR) to domains in `AD_DOMAINS` before they download. `BrowserScreen.js` pushes the list with `setBlockedDomains()` and attaches the filter in `onLoadStart`. It is a no-op on iOS/web and below Android 8 (API 26), where the JavaScript blocking still applies. Changing the module requires `npx expo prebuild --clean` and a native rebuild.
+
+### Background Playback
+`modules/square-playback` (Android, Kotlin) runs a `mediaPlayback` foreground service with a media notification (title, thumbnail, back/play-pause/forward) backed by a `MediaSession`, so audio keeps playing when the app is backgrounded. `screens/backgroundPlayScript.js` is injected into every page: it reports media state per tab (`mediaState` messages), exposes `window.__sqMediaControl(action)` for the notification buttons, and, on YouTube only, hides visibility/blur/freeze events so the site doesn't pause itself. The WebView has **no Media Session API**, so title/thumbnail come from the page (`document.title`, `og:image`, YouTube thumbnail from `?v=`), and previous/next seek -10s/+10s. **Chromium pauses `<video>` in a hidden WebView** (audio-only elements keep playing), so `patches/react-native-webview+13.16.1.patch` (applied by `patch-package` on `npm install`) adds `RNCWebView.keepVisibleInBackground`, which makes the WebView keep reporting itself visible; `PlaybackService` flips it by reflection while running. If react-native-webview is upgraded, regenerate the patch. YouTube's own Previous/Next buttons (`aria-label` "Previous video"/"Next video") are clicked for the notification's skip buttons. The service stops 30s after the last media disappears, since skipping to the previous video navigates the page and a service cannot be restarted from the background. The service starts when a tab starts playing (must happen in the foreground, Android 12+) and follows the playing tab. Controlled by the `backgroundPlayEnabled` setting. Notification buttons reach the page through `evaluateInWebView(viewTag, js)` (native `evaluateJavascript`), not `ref.injectJavaScript`, because React Native's UI command queue stalls in the background. The WebView ref is an imperative handle, so native modules get the view tag from `e.nativeEvent.target` (e.g. in `onLoadStart`), never `findNodeHandle`.
+
 ## File-Specific Notes
 
 ### App.js
@@ -142,7 +147,7 @@ Basic ad blocking is implemented via injected JavaScript that removes common ad 
 
 ### Android
 - Package name: `com.squarebrowser.app`
-- Production signing configured in `android/app/build.gradle`
+- Production signing is applied by the `plugins/withReleaseSigning.js` config plugin on every prebuild (`android/` is regenerated, so never edit its signing config by hand). It reads `keystore.properties` from the project root (or the path in `SQUARE_KEYSTORE_PROPERTIES`); the keystore and properties file are git-ignored, so keep backups elsewhere
 - Version info must match between `app.json` and `package.json`
 - Use Expo Dev Client for development builds
 
