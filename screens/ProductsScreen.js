@@ -13,7 +13,6 @@ const PRODUCTS = [
   {
     id: 'loveledger',
     name: 'LoveLedger',
-    description: 'Track your relationship journey',
     url: 'https://loveledger.squarebrowser.com/',
     icon: 'heart-outline',
     color: '#FF6B9D',
@@ -21,7 +20,6 @@ const PRODUCTS = [
   {
     id: 'logbook',
     name: 'Logbook',
-    description: 'Personal journaling and logging',
     url: 'https://logbook.squarebrowser.com/',
     icon: 'book-outline',
     color: '#4CAF50',
@@ -29,7 +27,6 @@ const PRODUCTS = [
   {
     id: 'fellowcoder',
     name: 'Fellow Coder',
-    description: 'Developer community and resources',
     url: 'https://www.fellowcoder.com/',
     icon: 'code-slash-outline',
     color: '#2196F3',
@@ -37,7 +34,7 @@ const PRODUCTS = [
 ];
 
 const ProductsScreen = ({ navigation }) => {
-  const { navigateTo, isDarkMode } = useBrowser();
+  const { navigateTo, isDarkMode, t } = useBrowser();
   const theme = getTheme(isDarkMode);
   const { colors } = theme;
 
@@ -56,7 +53,7 @@ const ProductsScreen = ({ navigation }) => {
       onPress={() => handleProductPress(item.url)}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${item.name}`}
+      accessibilityLabel={t('products.open', { name: item.name })}
     >
       <View style={[styles.productIcon, { backgroundColor: item.color + '20' }]}>
         <Ionicons name={item.icon} size={28} color={item.color} />
@@ -66,7 +63,7 @@ const ProductsScreen = ({ navigation }) => {
           {item.name}
         </Text>
         <Text style={[styles.productDescription, { color: colors.textSecondary }]}>
-          {item.description}
+          {t('products.' + item.id)}
         </Text>
         <Text style={[styles.productUrl, { color: colors.accent }]} numberOfLines={1}>
           {item.url.replace('https://', '').replace('http://', '').replace(/\/$/, '')}
@@ -79,9 +76,9 @@ const ProductsScreen = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyState}>
       <Ionicons name="cube-outline" size={48} color={colors.textSecondary} />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>No products yet</Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('products.empty')}</Text>
       <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-        Check back soon for new projects.
+        {t('products.emptyHint')}
       </Text>
     </View>
   );
@@ -93,16 +90,16 @@ const ProductsScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('products.goBack')}
             accessibilityRole="button"
             activeOpacity={0.7}
           >
             <Ionicons name="arrow-back" size={24} color={colors.accent} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Products</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('products.title')}</Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              Explore other projects
+              {t('products.subtitle')}
             </Text>
           </View>
         </View>
@@ -114,7 +111,7 @@ const ProductsScreen = ({ navigation }) => {
           scrollEnabled={true}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={renderEmpty}
-          accessibilityLabel="Products list"
+          accessibilityLabel={t('products.list')}
           accessibilityRole="list"
         />
       </View>

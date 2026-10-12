@@ -7,7 +7,7 @@ import { getTheme } from '../theme';
 
 const AddressBar = () => {
   const { currentUrl, navigateTo, toggleBookmark, checkIsBookmarked, isDarkMode,
-          timerEnabled, dailyLimitMs, todayElapsedMs, limitReached, extensionMs } = useBrowser();
+          timerEnabled, dailyLimitMs, todayElapsedMs, limitReached, extensionMs, t } = useBrowser();
 
   const remainingMs = Math.max(0, dailyLimitMs + (extensionMs || 0) - todayElapsedMs);
   const showChip = timerEnabled && !limitReached;
@@ -95,7 +95,7 @@ const AddressBar = () => {
             onSubmitEditing={handleGo}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder="Enter URL or search"
+            placeholder={t('address.placeholder')}
             placeholderTextColor={isDarkMode ? '#666' : '#999'}
             autoCapitalize="none"
             autoCorrect={false}
@@ -122,7 +122,7 @@ const AddressBar = () => {
             >
               <Ionicons name="arrow-forward" size={20} color={colors.accent} />
             </TouchableOpacity>
-            {showChip && <TimerChip remainingMs={remainingMs} />}
+            {showChip && <TimerChip remainingMs={remainingMs} t={t} />}
           </>
         )}
       </View>

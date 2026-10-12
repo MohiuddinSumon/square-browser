@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refreshed interface with a dark-mode status bar and slimmer navigation bar.
 - Back gesture closes Settings.
 - Smoother tab switcher animation.
+- Language setting with Russian, Polish and German (English stays the default).
 
 ### Changed
 - Moved project documentation into the `docs/` directory.

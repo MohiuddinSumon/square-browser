@@ -51,6 +51,7 @@ cd android && ./gradlew bundleRelease
 SquareBrowser/
 ├── App.js                    # Main entry point, navigation setup, URL handling
 ├── context/BrowserContext.js # Global state management (tabs, history, bookmarks, settings)
+├── i18n/                     # Translations (en.js is the source; ru.js, pl.js, de.js)
 ├── components/               # Reusable UI components
 │   ├── AddressBar.js        # URL input with navigation controls
 │   ├── HomeScreen.js        # Home screen with quick actions
@@ -128,6 +129,16 @@ The native filter also loads a bundled domain list (`modules/square-adblock/andr
 
 ### Background Playback
 `modules/square-playback` (Android, Kotlin) runs a `mediaPlayback` foreground service with a media notification (title, thumbnail, back/play-pause/forward) backed by a `MediaSession`, so audio keeps playing when the app is backgrounded. `screens/backgroundPlayScript.js` is injected into every page: it reports media state per tab (`mediaState` messages), exposes `window.__sqMediaControl(action)` for the notification buttons, and, on YouTube only, hides visibility/blur/freeze events so the site doesn't pause itself. The WebView has **no Media Session API**, so title/thumbnail come from the page (`document.title`, `og:image`, YouTube thumbnail from `?v=`), and previous/next seek -10s/+10s. **Chromium pauses `<video>` in a hidden WebView** (audio-only elements keep playing), so `patches/react-native-webview+13.16.1.patch` (applied by `patch-package` on `npm install`) adds `RNCWebView.keepVisibleInBackground`, which makes the WebView keep reporting itself visible; `PlaybackService` flips it by reflection while running. If react-native-webview is upgraded, regenerate the patch. YouTube's own Previous/Next buttons (`aria-label` "Previous video"/"Next video") are clicked for the notification's skip buttons. The service stops 30s after the last media disappears, since skipping to the previous video navigates the page and a service cannot be restarted from the background. The service starts when a tab starts playing (must happen in the foreground, Android 12+) and follows the playing tab. Controlled by the `backgroundPlayEnabled` setting. Notification buttons reach the page through `evaluateInWebView(viewTag, js)` (native `evaluateJavascript`), not `ref.injectJavaScript`, because React Native's UI command queue stalls in the background. The WebView ref is an imperative handle, so native modules get the view tag from `e.nativeEvent.target` (e.g. in `onLoadStart`), never `findNodeHandle`.
+
+### Translations (i18n/)
+English is the source of truth and the **default for everyone**; the app never follows the device language. The user opts in from Settings > Language (stored as `@squarebrowser_language`). `BrowserContext` owns `language` and exposes `t(key, vars)`, so UI code does `const { t } = useBrowser()`. Module-level helpers (such as `promptOpenInApp`) take `t` as a parameter.
+
+- Strings live in `i18n/<code>.js`, grouped by screen. Missing keys fall back to English, but run `npm run check:i18n` — it fails on missing/extra keys and on `{{placeholder}}` mismatches.
+- Plurals use objects (`one/few/many/other`) chosen by `vars.count`; the rules for ru/pl are hand-written in `i18n/index.js` (no `Intl.PluralRules`). `home.quotes` is a list in the same order as `QUOTE_STYLES` in `HomeScreen.js`.
+- Unit labels come from `units.h/m/s` and may include a leading space (`' мин'`).
+- Dates/times go through `formatLongDate` / `formatClock`. History groups by ISO date key, so non-Latin month names can never merge groups.
+- Wording is deliberately plain and conversational rather than literal. The Privacy Policy and Terms of Service screens stay English (legal text).
+- To add a language: add `i18n/<code>.js` with every key, register it in `LANGUAGES` and `DICTIONARIES` in `i18n/index.js`, and add its plural rule if it needs more than one/other. Right-to-left layouts are not supported yet.
 
 ### Fullscreen Video
 The WebView has `allowsFullscreenVideo` on, so a site's fullscreen button works (Android only handles it when that prop is set). The react-native-webview patch also makes fullscreen switch to landscape, adds a rotate button (top right), frees rotation once the phone is physically turned, and lets the system back gesture exit fullscreen (`RNCWebViewManagerImpl.kt` in `patches/`). If react-native-webview is upgraded, regenerate the patch.

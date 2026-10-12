@@ -8,7 +8,7 @@ import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
 
 const BookmarksScreen = ({ navigation }) => {
-  const { bookmarks, navigateTo, toggleBookmark, isDarkMode } = useBrowser();
+  const { bookmarks, navigateTo, toggleBookmark, isDarkMode, t } = useBrowser();
   const theme = getTheme(isDarkMode);
   const { colors, spacing, borderRadius, typography, shadows, animation, touchTarget } = theme;
 
@@ -21,12 +21,12 @@ const BookmarksScreen = ({ navigation }) => {
 
   const handleBookmarkRemove = (bookmark) => {
     Alert.alert(
-      'Remove Bookmark',
-      `Remove "${bookmark.title}" from bookmarks?`,
+      t('bookmarks.removeTitle'),
+      t('bookmarks.removeMessage', { title: bookmark.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: () => toggleBookmark(bookmark.url, bookmark.title),
         },
@@ -91,9 +91,9 @@ const BookmarksScreen = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="bookmark-outline" size={64} color={colors.textTertiary} />
-      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No bookmarks yet</Text>
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('bookmarks.empty')}</Text>
       <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-        Tap the bookmark icon in the address bar to save pages
+        {t('bookmarks.emptyHint')}
       </Text>
     </View>
   );
@@ -113,9 +113,9 @@ const BookmarksScreen = ({ navigation }) => {
             <Ionicons name="arrow-back" size={24} color={colors.accent} />
           </Pressable>
           <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Bookmarks</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('bookmarks.title')}</Text>
             <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
+              {t('bookmarks.count', { count: bookmarks.length })}
             </Text>
           </View>
         </View>
@@ -124,7 +124,7 @@ const BookmarksScreen = ({ navigation }) => {
           <Ionicons name="search" size={16} color={colors.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search bookmarks"
+            placeholder={t('bookmarks.search')}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
