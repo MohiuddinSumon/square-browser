@@ -6,6 +6,7 @@ import { View, Text, FlatList, Pressable, StyleSheet, Alert, SafeAreaView, Platf
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 
 const BookmarksScreen = ({ navigation }) => {
   const { bookmarks, navigateTo, toggleBookmark, isDarkMode, t } = useBrowser();
@@ -101,24 +102,11 @@ const BookmarksScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
-        <View style={[styles.header, { backgroundColor: colors.groupedBackground, borderBottomColor: colors.separator }]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backButton,
-              { opacity: pressed ? animation.pressOpacity : 1 },
-            ]}
-            hitSlop={4}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </Pressable>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('bookmarks.title')}</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {t('bookmarks.count', { count: bookmarks.length })}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title={t('bookmarks.title')}
+          subtitle={t('bookmarks.count', { count: bookmarks.length })}
+          onBack={() => navigation.goBack()}
+        />
 
         <View style={[styles.searchContainer, { backgroundColor: colors.surfaceAlt, borderRadius: borderRadius.md }]}>
           <Ionicons name="search" size={16} color={colors.textSecondary} />
@@ -161,33 +149,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 8,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
   },
   searchContainer: {
     flexDirection: 'row',

@@ -12,6 +12,7 @@ export default {
     cancel: 'Cancel',
     remove: 'Remove',
     exit: 'Exit',
+    back: 'Go back',
   },
 
   // Unit labels are appended to the number ("20m"); other languages may include a leading space.
@@ -96,7 +97,6 @@ export default {
     subtitle: 'Explore other projects',
     empty: 'No products yet',
     emptyHint: 'Check back soon for new projects.',
-    goBack: 'Go back',
     list: 'Products list',
     open: 'Open {{name}}',
     loveledger: 'Track your relationship journey',

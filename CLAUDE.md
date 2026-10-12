@@ -55,7 +55,8 @@ SquareBrowser/
 ├── components/               # Reusable UI components
 │   ├── AddressBar.js        # URL input with navigation controls
 │   ├── HomeScreen.js        # Home screen with quick actions
-│   └── NavigationControls.js # Browser control buttons
+│   ├── NavigationControls.js # Browser control buttons
+│   └── ScreenHeader.js      # The one header all stack screens use (safe-area aware)
 ├── screens/                  # Screen components
 │   ├── BrowserScreen.js     # Main browsing interface with tab management
 │   ├── BookmarksScreen.js   # Bookmark management
@@ -126,6 +127,9 @@ The native filter also loads a bundled domain list (`modules/square-adblock/andr
 
 ### Bot-protection compatibility
 `BOT_BYPASS_SCRIPT` (BrowserScreen.js, shown when Enhanced Compatibility is on) fakes Chrome details for Cloudflare-style checks. On **mobile user agents it does nothing**: real mobile Chrome has no PDF plugins and a different `window.chrome`, and those fakes made OLX's firewall reject logins (`error=waf_blocked`). Only desktop mode (Windows UA) gets the overrides. Re-test OLX and a Cloudflare site if you touch it.
+
+### Screen headers
+Stack screens (Settings, History, Bookmarks, Products, Privacy Policy, Terms) must use `components/ScreenHeader.js`. It pads the top with the real safe-area inset because RN's `SafeAreaView` does nothing on Android (otherwise titles end up behind the status bar or camera cutout). Do not hand-roll a header in a screen.
 
 ### Background Playback
 `modules/square-playback` (Android, Kotlin) runs a `mediaPlayback` foreground service with a media notification (title, thumbnail, back/play-pause/forward) backed by a `MediaSession`, so audio keeps playing when the app is backgrounded. `screens/backgroundPlayScript.js` is injected into every page: it reports media state per tab (`mediaState` messages), exposes `window.__sqMediaControl(action)` for the notification buttons, and, on YouTube only, hides visibility/blur/freeze events so the site doesn't pause itself. The WebView has **no Media Session API**, so title/thumbnail come from the page (`document.title`, `og:image`, YouTube thumbnail from `?v=`), and previous/next seek -10s/+10s. **Chromium pauses `<video>` in a hidden WebView** (audio-only elements keep playing), so `patches/react-native-webview+13.16.1.patch` (applied by `patch-package` on `npm install`) adds `RNCWebView.keepVisibleInBackground`, which makes the WebView keep reporting itself visible; `PlaybackService` flips it by reflection while running. If react-native-webview is upgraded, regenerate the patch. YouTube's own Previous/Next buttons (`aria-label` "Previous video"/"Next video") are clicked for the notification's skip buttons. The service stops 30s after the last media disappears, since skipping to the previous video navigates the page and a service cannot be restarted from the background. The service starts when a tab starts playing (must happen in the foreground, Android 12+) and follows the playing tab. Controlled by the `backgroundPlayEnabled` setting. Notification buttons reach the page through `evaluateInWebView(viewTag, js)` (native `evaluateJavascript`), not `ref.injectJavaScript`, because React Native's UI command queue stalls in the background. The WebView ref is an imperative handle, so native modules get the view tag from `e.nativeEvent.target` (e.g. in `onLoadStart`), never `findNodeHandle`.

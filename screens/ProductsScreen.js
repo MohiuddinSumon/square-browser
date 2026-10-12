@@ -4,10 +4,11 @@
  * ProductsScreen.js - Products and projects listing
  */
 import React, { useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 
 const PRODUCTS = [
   {
@@ -36,7 +37,7 @@ const PRODUCTS = [
 const ProductsScreen = ({ navigation }) => {
   const { navigateTo, isDarkMode, t } = useBrowser();
   const theme = getTheme(isDarkMode);
-  const { colors } = theme;
+  const { colors, borderRadius, shadows, animation } = theme;
 
   const handleProductPress = useCallback((url) => {
     navigation.navigate('Browser');
@@ -44,14 +45,13 @@ const ProductsScreen = ({ navigation }) => {
   }, [navigation, navigateTo]);
 
   const renderProductItem = ({ item }) => (
-    <TouchableOpacity
+    <Pressable
       style={({ pressed }) => [
         styles.productItem,
-        { backgroundColor: pressed ? colors.surfaceAlt : colors.surface, borderBottomColor: colors.separator },
-        pressed && { opacity: 0.6 },
+        { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm },
+        pressed && { opacity: animation.pressOpacity },
       ]}
       onPress={() => handleProductPress(item.url)}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={t('products.open', { name: item.name })}
     >
@@ -70,7 +70,7 @@ const ProductsScreen = ({ navigation }) => {
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} style={styles.chevron} />
-    </TouchableOpacity>
+    </Pressable>
   );
 
   const renderEmpty = () => (
@@ -86,23 +86,11 @@ const ProductsScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
-        <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityLabel={t('products.goBack')}
-            accessibilityRole="button"
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('products.title')}</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {t('products.subtitle')}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title={t('products.title')}
+          subtitle={t('products.subtitle')}
+          onBack={() => navigation.goBack()}
+        />
 
         <FlatList
           data={PRODUCTS}
@@ -126,27 +114,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 8,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
   listContent: {
     paddingBottom: 16,
     flexGrow: 1,
@@ -155,7 +122,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 12,
   },
   productIcon: {
     width: 56,

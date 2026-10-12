@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 import { formatLongDate, formatClock } from '../i18n';
 
 const TIME_FILTERS = [
@@ -228,23 +229,11 @@ const HistoryScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
-        <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && { opacity: theme.animation.pressOpacity },
-            ]}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </Pressable>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>{t('history.title')}</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {t('history.entries', { count: filteredHistory.length })}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title={t('history.title')}
+          subtitle={t('history.entries', { count: filteredHistory.length })}
+          onBack={() => navigation.goBack()}
+        />
         <View style={[styles.searchContainer, { borderBottomColor: colors.separator }]}>
           {renderSearchBar()}
           {renderFilterPills()}
@@ -280,33 +269,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 4,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    marginTop: 2,
   },
   searchContainer: {
     paddingHorizontal: 16,

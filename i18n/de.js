@@ -8,6 +8,7 @@ export default {
     cancel: 'Abbrechen',
     remove: 'Entfernen',
     exit: 'Beenden',
+    back: 'Zurück',
   },
 
   units: { h: ' Std', m: ' Min', s: ' s' },
@@ -90,7 +91,6 @@ export default {
     subtitle: 'Weitere Projekte entdecken',
     empty: 'Noch keine Produkte',
     emptyHint: 'Schau bald wieder vorbei – neue Projekte kommen.',
-    goBack: 'Zurück',
     list: 'Produktliste',
     open: '{{name}} öffnen',
     loveledger: 'Verfolge die Geschichte deiner Beziehung',

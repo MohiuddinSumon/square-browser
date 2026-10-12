@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 import { LANGUAGES } from '../i18n';
 
 /**
@@ -114,16 +115,7 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
-      <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: animation.pressOpacity }]}
-          onPress={() => navigation.goBack()}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.accent} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
-      </View>
+      <ScreenHeader title={t('settings.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.browserSettings')}</Text>
@@ -520,25 +512,6 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'android' ? 40 : 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 8,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
   },
   container: {
     flex: 1,

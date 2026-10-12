@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Back gesture closes Settings.
 - Smoother tab switcher animation.
 - Language setting with Russian, Polish and German (English stays the default).
+- One shared screen header, so every page has the same spacing and design.
 
 ### Changed
 - Moved project documentation into the `docs/` directory.
@@ -24,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved bottom navigation overflow.
 - Fixed the new tab bottom overlay issue.
 - Fixed login errors on sites with strict bot protection (such as OLX) when Enhanced Compatibility is on.
+- Fixed the Products page layout and headers sitting under the status bar or camera on History, Bookmarks and Products.
 
 ### Planned
 - iOS support
