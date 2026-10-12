@@ -8,44 +8,46 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, Pla
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import { formatDuration as formatDurationWith } from '../i18n';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const HomeScreen = () => {
-  const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats, isDarkMode } = useBrowser();
+// Icon + colour for each quote, in the same order as the "home.quotes" list in i18n/*.js
+const QUOTE_STYLES = [
+  { icon: 'hourglass-outline', color: '#FF9800' },
+  { icon: 'calendar-outline', color: '#9E9E9E' },
+  { icon: 'warning-outline', color: '#F44336' },
+  { icon: 'time-outline', color: '#FF9800' },
+  { icon: 'cash-outline', color: '#4CAF50' },
+  { icon: 'person-outline', color: '#2196F3' },
+  { icon: 'radio-button-on-outline', color: '#FF9800' },
+  { icon: 'sunny-outline', color: '#FFC107' },
+  { icon: 'hourglass-outline', color: '#9E9E9E' },
+  { icon: 'diamond-outline', color: '#9C27B0' },
+  { icon: 'flower-outline', color: '#E91E63' },
+  { icon: 'cloud-off-outline', color: '#9E9E9E' },
+  { icon: 'leaf-outline', color: '#4CAF50' },
+  { icon: 'moon-outline', color: '#3F51B5' },
+  { icon: 'water-outline', color: '#00BCD4' },
+  { icon: 'people-outline', color: '#795548' },
+  { icon: 'hourglass-outline', color: '#FF5722' },
+  { icon: 'heart-outline', color: '#E91E63' },
+  { icon: 'notifications-off-outline', color: '#607D8B' },
+  { icon: 'timer-outline', color: '#FF9800' },
+  { icon: 'eye-off-outline', color: '#F44336' },
+  { icon: 'git-branch-outline', color: '#4CAF50' },
+  { icon: 'trophy-outline', color: '#FFC107' },
+  { icon: 'hand-left-outline', color: '#F44336' },
+  { icon: 'ribbon-outline', color: '#9E9E9E' },
+  { icon: 'flash-outline', color: '#FFC107' },
+  { icon: 'notifications-outline', color: '#9E9E9E' },
+  { icon: 'compass-outline', color: '#00BCD4' },
+  { icon: 'swap-horizontal-outline', color: '#FF9800' },
+  { icon: 'barbell-outline', color: '#607D8B' },
+];
 
-  const lifeQuotes = [
-    { text: "You are the sum of your time. Don't throw yourself away.", icon: "hourglass-outline", color: "#FF9800" },
-    { text: "Yesterday is a part of your life that is gone forever. Look at what you gave it to.", icon: "calendar-outline", color: "#9E9E9E" },
-    { text: "Your life is leaking through your screen. Are these sites worth your soul?", icon: "warning-outline", color: "#F44336" },
-    { text: "Every minute you spend here is a minute you aren't living out there.", icon: "time-outline", color: "#FF9800" },
-    { text: "Time is the only currency you can't earn back. You are spending it right now.", icon: "cash-outline", color: "#4CAF50" },
-    { text: "You are a human being, not a data point. Reclaim your time.", icon: "person-outline", color: "#2196F3" },
-    { text: "Each click is a tick of your life's clock. Make it count.", icon: "radio-button-on-outline", color: "#FF9800" },
-    { text: "The screen glows, but your life grows dimmer. What are you chasing?", icon: "sunny-outline", color: "#FFC107" },
-    { text: "In 100 years, nobody will remember what you scrolled through today.", icon: "hourglass-outline", color: "#9E9E9E" },
-    { text: "Your attention is the most valuable thing you own. Who are you giving it to?", icon: "diamond-outline", color: "#9C27B0" },
-    { text: "This moment exists once. You're spending it on pixels.", icon: "flower-outline", color: "#E91E63" },
-    { text: "The internet promises everything but delivers only distraction.", icon: "cloud-off-outline", color: "#9E9E9E" },
-    { text: "You're not missing out by putting this down. You're missing out on real life.", icon: "leaf-outline", color: "#4CAF50" },
-    { text: "Hours vanish here, while your dreams gather dust.", icon: "moon-outline", color: "#3F51B5" },
-    { text: "Perfect moments are slipping away while you watch perfect videos.", icon: "water-outline", color: "#00BCD4" },
-    { text: "The world outside waits for no one, especially not those who wait for likes.", icon: "people-outline", color: "#795548" },
-    { text: "Your childhood is gone. Your adulthood is disappearing. How much of it have you spent here?", icon: "hourglass-outline", color: "#FF5722" },
-    { text: "This isn't living. It's numbing. Feel something real instead.", icon: "heart-outline", color: "#E91E63" },
-    { text: "Notifications are not priorities. They are someone else's agenda for your time.", icon: "notifications-off-outline", color: "#607D8B" },
-    { text: "You can't save time for later. It's being spent right now.", icon: "timer-outline", color: "#FF9800" },
-    { text: "The algorithm knows you better than you know yourself. That should scare you.", icon: "eye-off-outline", color: "#F44336" },
-    { text: "Everything you seek here - connection, meaning, purpose - exists out there, not in here.", icon: "git-branch-outline", color: "#4CAF50" },
-    { text: "Your heroes didn't build their legacy by watching others build theirs.", icon: "trophy-outline", color: "#FFC107" },
-    { text: "This screen is a thief, stealing moments you can never get back.", icon: "hand-left-outline", color: "#F44336" },
-    { text: "At the end, nobody's last words will be 'I wish I had scrolled more.'", icon: "ribbon-outline", color: "#9E9E9E" },
-    { text: "The past is gone, the future isn't guaranteed. All you have is now - and you're giving it away.", icon: "flash-outline", color: "#FFC107" },
-    { text: "Your dreams don't have a notification bell. They wait in silence while you chase noise.", icon: "notifications-outline", color: "#9E9E9E" },
-    { text: "Somewhere, someone is living the life you want. They're not on this screen.", icon: "compass-outline", color: "#00BCD4" },
-    { text: "You think you're passing time. Time is passing you.", icon: "swap-horizontal-outline", color: "#FF9800" },
-    { text: "Regret is heavy. Choose carefully how you fill your hours.", icon: "barbell-outline", color: "#607D8B" }
-  ];
+const HomeScreen = () => {
+  const { history, bookmarks, navigateTo, addTab, todayStats, yesterdayStats, isDarkMode, t } = useBrowser();
 
   // Recent bookmarks for quick access
   const quickBookmarks = useMemo(() => {
@@ -67,18 +69,11 @@ const HomeScreen = () => {
     warning: theme.colors.warning,
   };
 
-  const randomQuote = useMemo(() => {
-    return lifeQuotes[Math.floor(Math.random() * lifeQuotes.length)];
-  }, []);
+  // Pick the quote once per visit; the text follows the current language.
+  const quoteIndex = useMemo(() => Math.floor(Math.random() * QUOTE_STYLES.length), []);
+  const randomQuote = { ...QUOTE_STYLES[quoteIndex], text: t('home.quotes')[quoteIndex] };
 
-  const formatDuration = (ms) => {
-    const mins = Math.floor(ms / 60000);
-    const hours = Math.floor(mins / 60);
-    if (hours > 0) {
-      return `${hours}h ${mins % 60}m`;
-    }
-    return `${mins}m`;
-  };
+  const formatDuration = (ms) => formatDurationWith(t, ms);
 
   const totalToday = useMemo(() => Object.values(todayStats).reduce((a, b) => a + b, 0), [todayStats]);
 
@@ -110,12 +105,12 @@ const HomeScreen = () => {
 
   const handleSiteLongPress = (url) => {
     Alert.alert(
-      'Site Options',
+      t('home.siteOptions'),
       url,
       [
-        { text: 'Open in Current Tab', onPress: () => navigateTo(url) },
-        { text: 'Open in New Tab', onPress: () => addTab(url) },
-        { text: 'Cancel', style: 'cancel' }
+        { text: t('home.openCurrentTab'), onPress: () => navigateTo(url) },
+        { text: t('home.openNewTab'), onPress: () => addTab(url) },
+        { text: t('common.cancel'), style: 'cancel' }
       ]
     );
   };
@@ -177,17 +172,17 @@ const HomeScreen = () => {
           <View style={styles.quickStats}>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.accent }]}>{formatDuration(totalToday)}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Today</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>{t('home.today')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.text }]}>{history.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Visits</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>{t('home.visits')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.text }]}>{bookmarks.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.subtext }]}>Bookmarks</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>{t('home.bookmarks')}</Text>
             </View>
           </View>
         </View>
@@ -203,7 +198,7 @@ const HomeScreen = () => {
           {totalToday > 0 && (
             <View style={styles.quoteStats}>
               <Text style={[styles.quoteStatsText, { color: colors.subtext }]}>
-                You've spent {formatDuration(totalToday)} browsing today. Make it count.
+                {t('home.spentToday', { time: formatDuration(totalToday) })}
               </Text>
             </View>
           )}
@@ -212,7 +207,7 @@ const HomeScreen = () => {
         {/* Quick Access - Recent Bookmarks */}
         {quickBookmarks.length > 0 ? (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.quickAccess')}</Text>
             <View style={styles.shortcutsGrid}>
               {quickBookmarks.map((bookmark) => (
                 <BookmarkItem key={bookmark.id} bookmark={bookmark} />
@@ -221,9 +216,9 @@ const HomeScreen = () => {
           </View>
         ) : (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Access</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.quickAccess')}</Text>
             <Text style={[styles.emptyText, { color: colors.subtext }]}>
-              Bookmark some pages to see them here for quick access.
+              {t('home.quickAccessEmpty')}
             </Text>
           </View>
         )}
@@ -231,7 +226,7 @@ const HomeScreen = () => {
         {/* Most Visited */}
         {mostVisited.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Most Visited</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.mostVisited')}</Text>
             {mostVisited.map((site) => (
               <SiteItem key={site.id} site={site} />
             ))}

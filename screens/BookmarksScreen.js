@@ -6,9 +6,10 @@ import { View, Text, FlatList, Pressable, StyleSheet, Alert, SafeAreaView, Platf
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 
 const BookmarksScreen = ({ navigation }) => {
-  const { bookmarks, navigateTo, toggleBookmark, isDarkMode } = useBrowser();
+  const { bookmarks, navigateTo, toggleBookmark, isDarkMode, t } = useBrowser();
   const theme = getTheme(isDarkMode);
   const { colors, spacing, borderRadius, typography, shadows, animation, touchTarget } = theme;
 
@@ -21,12 +22,12 @@ const BookmarksScreen = ({ navigation }) => {
 
   const handleBookmarkRemove = (bookmark) => {
     Alert.alert(
-      'Remove Bookmark',
-      `Remove "${bookmark.title}" from bookmarks?`,
+      t('bookmarks.removeTitle'),
+      t('bookmarks.removeMessage', { title: bookmark.title }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: () => toggleBookmark(bookmark.url, bookmark.title),
         },
@@ -91,9 +92,9 @@ const BookmarksScreen = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="bookmark-outline" size={64} color={colors.textTertiary} />
-      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No bookmarks yet</Text>
+      <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('bookmarks.empty')}</Text>
       <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-        Tap the bookmark icon in the address bar to save pages
+        {t('bookmarks.emptyHint')}
       </Text>
     </View>
   );
@@ -101,30 +102,17 @@ const BookmarksScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
-        <View style={[styles.header, { backgroundColor: colors.groupedBackground, borderBottomColor: colors.separator }]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backButton,
-              { opacity: pressed ? animation.pressOpacity : 1 },
-            ]}
-            hitSlop={4}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </Pressable>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Bookmarks</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {bookmarks.length} {bookmarks.length === 1 ? 'bookmark' : 'bookmarks'}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title={t('bookmarks.title')}
+          subtitle={t('bookmarks.count', { count: bookmarks.length })}
+          onBack={() => navigation.goBack()}
+        />
 
         <View style={[styles.searchContainer, { backgroundColor: colors.surfaceAlt, borderRadius: borderRadius.md }]}>
           <Ionicons name="search" size={16} color={colors.textSecondary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search bookmarks"
+            placeholder={t('bookmarks.search')}
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -161,33 +149,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 8,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
   },
   searchContainer: {
     flexDirection: 'row',

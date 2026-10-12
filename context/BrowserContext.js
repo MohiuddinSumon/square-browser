@@ -4,10 +4,11 @@
  * BrowserContext - Main context provider for browser state management
  * Handles tabs, history, bookmarks, and app-wide browser functionality
  */
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex, saveTimerSettings, loadTimerSettings, saveTimerDaily, loadTimerDaily } from '../utils/storage';
+import { translate, DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n';
 
 const BrowserContext = createContext();
 
@@ -45,6 +46,9 @@ export const BrowserProvider = ({ children }) => {
   // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
+  // UI language. English unless the user picks another one in Settings (never follows the device).
+  const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
+  const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
 
   // Daily browsing timer state
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -148,6 +152,11 @@ export const BrowserProvider = ({ children }) => {
         setBackgroundPlayEnabled(savedBackgroundPlay !== 'false');
       }
 
+      const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
+      if (savedLanguage && isSupportedLanguage(savedLanguage)) {
+        setLanguage(savedLanguage);
+      }
+
       // Load timer settings and today's elapsed time
       const timerSettings = await loadTimerSettings();
       setTimerEnabled(timerSettings.enabled);
@@ -210,6 +219,12 @@ export const BrowserProvider = ({ children }) => {
   const setBackgroundPlayPref = async (enabled) => {
     setBackgroundPlayEnabled(enabled);
     await AsyncStorage.setItem('@squarebrowser_background_play', enabled ? 'true' : 'false');
+  };
+
+  const setLanguagePref = async (code) => {
+    if (!isSupportedLanguage(code)) return;
+    setLanguage(code);
+    await AsyncStorage.setItem('@squarebrowser_language', code);
   };
 
   /**
@@ -671,6 +686,9 @@ export const BrowserProvider = ({ children }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    language,
+    setLanguagePref,
+    t,
     userAgent,
     navigateTo,
     navigateToNewTab,
@@ -689,6 +707,7 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
+    language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);

@@ -4,13 +4,13 @@
  * TermsOfServiceScreen.js - Terms of service (legal) screen
  */
 import React from 'react';
-import { ScrollView, Text, StyleSheet, View, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ScrollView, Text, StyleSheet, View, SafeAreaView } from 'react-native';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
 
 const TermsOfServiceScreen = ({ navigation }) => {
-  const { isDarkMode } = useBrowser();
+  const { isDarkMode, t } = useBrowser();
   const theme = getTheme(isDarkMode);
   const { colors } = theme;
 
@@ -35,18 +35,7 @@ const TermsOfServiceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
-      <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.accent} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Terms of Service</Text>
-      </View>
+      <ScreenHeader title={t('settings.terms')} onBack={() => navigation.goBack()} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>Terms of Service</Text>
         <Text style={[styles.date, { color: colors.textSecondary }]}>Last Updated: January 4, 2026</Text>
@@ -75,14 +64,6 @@ const TermsOfServiceScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: { padding: 12, marginRight: 8 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold' },
   container: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },

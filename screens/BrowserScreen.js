@@ -43,13 +43,13 @@ const BOT_BYPASS_SCRIPT = `
 (function() {
   try {
     // 1. Clear the webdriver flag
-    Object.defineProperty(navigator, 'webdriver', {
+    if (!/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)) Object.defineProperty(navigator, 'webdriver', {
       get: () => false,
       configurable: false,
     });
 
     // 2. Inject a realistic window.chrome object
-    if (!window.chrome || !window.chrome.runtime) {
+    if (!/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent) && (!window.chrome || !window.chrome.runtime)) {
       const chrome = {
         app: {
           isInstalled: false,
@@ -94,7 +94,10 @@ const BOT_BYPASS_SCRIPT = `
       catch(e) { window.chrome = chrome; }
     }
 
-    // 3. Spoof navigator.plugins with realistic Chrome entries
+    // 3. Spoof navigator.plugins with realistic Chrome entries.
+    // Desktop only: real mobile Chrome has no plugins, so faking PDF viewers behind a
+    // mobile user agent is itself a bot signal (OLX's firewall rejected logins over it).
+    if (/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)) { return; }
     const pluginData = [
       { name: 'PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
       { name: 'Chrome PDF Viewer', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
@@ -239,7 +242,7 @@ const getExternalAppLink = (url = '') => {
 let externalPromptVisible = false;
 
 /** Asks the user whether to open a link in another app (one prompt at a time) */
-const promptOpenInApp = ({ label, openUrl, packageName }, onStayInBrowser) => {
+const promptOpenInApp = (t, { label, openUrl, packageName }, onStayInBrowser) => {
   if (externalPromptVisible) return;
   externalPromptVisible = true;
   const done = () => { externalPromptVisible = false; };
@@ -248,18 +251,18 @@ const promptOpenInApp = ({ label, openUrl, packageName }, onStayInBrowser) => {
       if (packageName) {
         Linking.openURL(`market://details?id=${packageName}`).catch(() => {});
       } else {
-        Alert.alert('No app found', 'No installed app can open this link.');
+        Alert.alert(t('browser.externalNoAppTitle'), t('browser.externalNoAppMessage'));
       }
     });
   };
   const buttons = [
-    { text: 'Cancel', style: 'cancel', onPress: done },
-    { text: `Open ${label}`, onPress: () => { done(); open(); } },
+    { text: t('common.cancel'), style: 'cancel', onPress: done },
+    { text: t('browser.externalOpen', { label }), onPress: () => { done(); open(); } },
   ];
   if (onStayInBrowser) {
-    buttons.splice(1, 0, { text: 'Stay in browser', onPress: () => { done(); onStayInBrowser(); } });
+    buttons.splice(1, 0, { text: t('browser.externalStay'), onPress: () => { done(); onStayInBrowser(); } });
   }
-  Alert.alert('Open in app?', 'This link wants to open another app (' + label + ').', buttons, { onDismiss: done });
+  Alert.alert(t('browser.externalTitle'), t('browser.externalMessage', { label }), buttons, { onDismiss: done });
 };
 
 /** Returns true if the hostname belongs to a known ad/tracking domain */
@@ -395,6 +398,7 @@ const BrowserTab = ({
   backgroundPlayEnabled,
   onMediaState,
   theme,
+  t,
 }) => {
   // Track the navRequestId we last acted on — avoids reloading on WebView-internal
   // URL changes (redirects, link clicks) that also update tab.url in context.
@@ -488,9 +492,72 @@ const BrowserTab = ({
     'iframe[id*="google_ads"]',
   ];
 
+  /* Popup ads lock page scrolling while they are open (overflow:hidden, position:fixed on the
+     body, "modal-open" style classes). The page's own close code would undo that, but we delete
+     the ad instead, so the lock stays and the page can no longer scroll. After removing a big
+     layer we undo the lock - only shortly afterwards, and never while another full-screen layer
+     (for example a real cookie dialog) is still showing. */
+  var _lastOverlayRemoval = 0;
+  var LOCK_CLASSES = ['modal-open','no-scroll','noscroll','no_scroll','scroll-lock','scroll-locked',
+    'lock-scroll','overflow-hidden','is-locked','popup-open','has-popup','body-fixed'];
+
+  function isBigLayer(el) {
+    try {
+      var cs = window.getComputedStyle(el);
+      if (cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+      var r = el.getBoundingClientRect();
+      return r.width >= window.innerWidth * 0.6 && r.height >= window.innerHeight * 0.6;
+    } catch (e) { return false; }
+  }
+
+  function hasFullscreenLayer() {
+    var vw = window.innerWidth, vh = window.innerHeight, found = false;
+    Array.prototype.slice.call(document.body ? document.body.children : []).forEach(function(el) {
+      if (found) return;
+      var cs = window.getComputedStyle(el);
+      if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      if (parseFloat(cs.opacity) < 0.05) return;
+      var r = el.getBoundingClientRect();
+      if (r.width >= vw * 0.9 && r.height >= vh * 0.9) found = true;
+    });
+    return found;
+  }
+
+  function releaseScrollLock() {
+    try {
+      if (Date.now() - _lastOverlayRemoval > 8000 || hasFullscreenLayer()) return;
+      var restoreTop = null;
+      [document.documentElement, document.body].forEach(function(el) {
+        if (!el) return;
+        var cs = window.getComputedStyle(el);
+        var fixedBody = el === document.body && cs.position === 'fixed';
+        if (cs.overflowY !== 'hidden' && !fixedBody) return;
+        if (fixedBody) restoreTop = parseInt(cs.top) || 0;
+        LOCK_CLASSES.forEach(function(c) { el.classList.remove(c); });
+        ['overflow','overflow-y','position','top','left','right','width'].forEach(function(prop) {
+          if (prop === 'overflow' || prop === 'overflow-y' || fixedBody) el.style.removeProperty(prop);
+        });
+        cs = window.getComputedStyle(el);
+        if (cs.overflowY === 'hidden') el.style.setProperty('overflow-y', 'auto', 'important');
+        if (el === document.body && cs.position === 'fixed') el.style.setProperty('position', 'static', 'important');
+      });
+      if (restoreTop) window.scrollTo(0, -restoreTop);
+    } catch (e) {}
+  }
+
+  function noteOverlayRemoved() {
+    _lastOverlayRemoval = Date.now();
+    [0, 150, 600, 1500].forEach(function(ms) { setTimeout(releaseScrollLock, ms); });
+  }
+
   function removeAds() {
     adSelectors.forEach(function(s) {
-      try { document.querySelectorAll(s).forEach(function(el) { el.remove(); }); }
+      try {
+        document.querySelectorAll(s).forEach(function(el) {
+          if (isBigLayer(el)) noteOverlayRemoved();
+          el.remove();
+        });
+      }
       catch(e) {}
     });
   }
@@ -512,7 +579,7 @@ const BrowserTab = ({
         var textLen = (el.innerText || '').trim().length;
         var hasFrame = !!el.querySelector('iframe');
         var hasLink = !!el.querySelector('a[href]');
-        if (hasFrame || textLen < 40 || (hasLink && textLen < 200)) el.remove();
+        if (hasFrame || textLen < 40 || (hasLink && textLen < 200)) { el.remove(); noteOverlayRemoved(); }
       });
     } catch (e) {}
   }
@@ -526,6 +593,16 @@ const BrowserTab = ({
   removeFullscreenOverlays();
   setTimeout(removeAds, 800);
   setTimeout(removeAds, 2500);
+
+  /* A popup script may re-apply its scroll lock after we removed the layer */
+  try {
+    var _lockObserver = new MutationObserver(function() {
+      if (Date.now() - _lastOverlayRemoval < 8000) releaseScrollLock();
+    });
+    [document.documentElement, document.body].forEach(function(el) {
+      if (el) _lockObserver.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+  } catch(e) {}
 
   /* Watch for dynamically injected ads */
   try {
@@ -731,7 +808,7 @@ true;
               allowedWebUrl.current = null;
               return true;
             }
-            promptOpenInApp(external, external.stayUrl ? () => {
+            promptOpenInApp(t, external, external.stayUrl ? () => {
               allowedWebUrl.current = request.url;
               webViewRef.current?.injectJavaScript(
                 `window.location.href = ${JSON.stringify(request.url)}; true;`
@@ -790,6 +867,7 @@ const BrowserScreen = ({ navigation }) => {
     extensionMs,
     extendTimer,
     setTimerScreenActive,
+    t,
   } = useBrowser();
 
   const theme = getTheme(isDarkMode);
@@ -1144,7 +1222,7 @@ const BrowserScreen = ({ navigation }) => {
           ]}>
             <Ionicons name="shield-checkmark-outline" size={16} color="#FF9800" />
             <Text style={[styles.cfBannerText, { color: isDarkMode ? '#ffd54f' : '#7a5800' }]}>
-              Cloudflare is verifying your browser — please wait…
+              {t('browser.cloudflareVerifying')}
             </Text>
             <TouchableOpacity
               style={styles.cfBannerReload}
@@ -1194,6 +1272,7 @@ const BrowserScreen = ({ navigation }) => {
                 backgroundPlayEnabled={backgroundPlayEnabled !== false}
                 onMediaState={handleMediaState}
                 theme={theme}
+                t={t}
               />
             );
           })}
@@ -1268,13 +1347,14 @@ const BrowserScreen = ({ navigation }) => {
 
 const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAskAgain }) => {
   const { colors, borderRadius, animation } = theme;
+  const { t } = useBrowser();
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: colors.scrim }]}>
         <View style={[styles.confirmModal, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
-          <Text style={[styles.confirmTitle, { color: colors.text }]}>Exit SquareBrowser?</Text>
+          <Text style={[styles.confirmTitle, { color: colors.text }]}>{t('browser.exitTitle')}</Text>
           <Text style={[styles.confirmText, { color: colors.textSecondary }]}>
-            Are you sure you want to close the application?
+            {t('browser.exitMessage')}
           </Text>
 
           <Pressable
@@ -1284,7 +1364,7 @@ const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAs
             <View style={[styles.checkbox, { borderColor: colors.accent }, dontAskAgain && { backgroundColor: colors.accent }]}>
               {dontAskAgain && <Ionicons name="checkmark" size={16} color={colors.textOnPrimary} />}
             </View>
-            <Text style={[styles.checkboxLabel, { color: colors.textSecondary }]}>Don't ask me again</Text>
+            <Text style={[styles.checkboxLabel, { color: colors.textSecondary }]}>{t('browser.dontAskAgain')}</Text>
           </Pressable>
 
           <View style={styles.confirmButtons}>
@@ -1297,7 +1377,7 @@ const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAs
               ]}
               onPress={onClose}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [
@@ -1308,7 +1388,7 @@ const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAs
               ]}
               onPress={onConfirm}
             >
-              <Text style={[styles.exitButtonText, { color: colors.textOnPrimary }]}>Exit</Text>
+              <Text style={[styles.exitButtonText, { color: colors.textOnPrimary }]}>{t('common.exit')}</Text>
             </Pressable>
           </View>
         </View>
@@ -1318,7 +1398,7 @@ const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAs
 };
 
 const TabSwitcher = ({ visible, onClose, theme }) => {
-  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab } = useBrowser();
+  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, t } = useBrowser();
   const [processingIndex, setProcessingIndex] = useState(null);
   const insets = useSafeAreaInsets();
   const { colors, spacing, borderRadius, animation, iosSheet, typography } = theme;
@@ -1359,7 +1439,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
   }), [onClose, translateY, animation]);
 
   const getTabTitle = (url) => {
-    if (url === 'about:blank') return 'Home';
+    if (url === 'about:blank') return t('browser.homeTab');
     try {
       return new URL(url).hostname.replace('www.', '');
     } catch {
@@ -1409,7 +1489,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
             <View style={[styles.grabHandleBar, { width: iosSheet.grabHandleWidth, height: iosSheet.grabHandleHeight, borderRadius: iosSheet.grabHandleRadius, backgroundColor: colors.textTertiary }]} />
           </View>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text, fontSize: typography.fontSizes.title3 }]}>Tabs ({tabs.length})</Text>
+            <Text style={[styles.modalTitle, { color: colors.text, fontSize: typography.fontSizes.title3 }]}>{t('browser.tabsTitle', { count: tabs.length })}</Text>
             <Pressable
               style={({ pressed }) => [styles.sheetCloseButton, pressed && { opacity: animation.pressOpacity }]}
               onPress={onClose}
@@ -1464,7 +1544,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
             <View style={styles.emptyState}>
               <Ionicons name="albums-outline" size={48} color={colors.textTertiary} />
               <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                No open tabs — tap New Tab to start
+                {t('browser.noTabs')}
               </Text>
             </View>
           )}
@@ -1479,7 +1559,7 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
             onPress={handleAddTab}
           >
             <Ionicons name="add" size={20} color={colors.textOnPrimary} />
-            <Text style={[styles.newTabButtonTextCompact, { color: colors.textOnPrimary }]}>New Tab</Text>
+            <Text style={[styles.newTabButtonTextCompact, { color: colors.textOnPrimary }]}>{t('browser.newTab')}</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -1493,17 +1573,18 @@ const TimerSoftOverlay = ({ visible, onExtend, extensionMs, theme }) => {
   const remaining = MAX_EXTENSIONS - usedExtensions;
   const canExtend = remaining > 0;
   const { colors, spacing, borderRadius } = theme;
+  const { t } = useBrowser();
 
   return (
     <Modal visible={visible} transparent={true} animationType="fade">
       <View style={[styles.modalOverlay, { justifyContent: 'center', backgroundColor: colors.scrim }]}>
         <View style={[styles.confirmModal, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
           <Ionicons name="timer-outline" size={48} color={colors.warning} style={{ marginBottom: spacing.md }} />
-          <Text style={[styles.confirmTitle, { color: colors.text }]}>Daily Limit Reached</Text>
+          <Text style={[styles.confirmTitle, { color: colors.text }]}>{t('browser.limitReached')}</Text>
           <Text style={[styles.confirmText, { color: colors.textSecondary }]}>
             {canExtend
-              ? `You've used your daily browsing time. You can extend by 10 minutes — ${remaining} extension${remaining === 1 ? '' : 's'} remaining today.`
-              : "You've used all your extensions for today. Browser access resumes at midnight."}
+              ? t('browser.limitCanExtend', { count: remaining })
+              : t('browser.limitNoExtensions')}
           </Text>
           {canExtend && (
             <TouchableOpacity
@@ -1511,7 +1592,7 @@ const TimerSoftOverlay = ({ visible, onExtend, extensionMs, theme }) => {
               onPress={onExtend}
               activeOpacity={0.7}
             >
-              <Text style={[styles.extendButtonText, { color: colors.textOnPrimary }]}>Give me 10 more minutes</Text>
+              <Text style={[styles.extendButtonText, { color: colors.textOnPrimary }]}>{t('browser.extendButton')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1530,6 +1611,7 @@ const getMsUntilMidnight = () => {
 const TimerStrictWall = ({ visible, theme }) => {
   const [msUntilMidnight, setMsUntilMidnight] = useState(getMsUntilMidnight());
   const { colors } = theme;
+  const { t } = useBrowser();
 
   useEffect(() => {
     if (!visible) return;
@@ -1548,12 +1630,12 @@ const TimerStrictWall = ({ visible, theme }) => {
     <Modal visible={visible} transparent={false} animationType="fade" onRequestClose={() => {}}>
       <View style={[styles.timerWall, { backgroundColor: colors.groupedBackground }]}>
         <Ionicons name="lock-closed" size={64} color={colors.danger} />
-        <Text style={[styles.timerWallTitle, { color: colors.text }]}>Daily Limit Reached</Text>
+        <Text style={[styles.timerWallTitle, { color: colors.text }]}>{t('browser.limitReached')}</Text>
         <Text style={[styles.timerWallSubtext, { color: colors.textSecondary }]}>
-          You've set a strict limit. Browser access will resume at midnight.
+          {t('browser.strictWall')}
         </Text>
         <Text style={[styles.timerWallCountdown, { color: colors.danger }]}>{countdown}</Text>
-        <Text style={[styles.timerWallUntil, { color: colors.textTertiary }]}>until midnight</Text>
+        <Text style={[styles.timerWallUntil, { color: colors.textTertiary }]}>{t('browser.untilMidnight')}</Text>
       </View>
     </Modal>
   );
@@ -1571,6 +1653,7 @@ const LinkContextMenu = ({
   theme,
 }) => {
   const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+  const { t } = useBrowser();
   const { colors, spacing, animation, iosSheet, typography } = theme;
   const translateY = useRef(new Animated.Value(0)).current;
   const scrimOpacity = useRef(new Animated.Value(0)).current;
@@ -1609,11 +1692,11 @@ const LinkContextMenu = ({
   }), [onClose, translateY, animation]);
 
   const items = [
-    { icon: 'open-outline',         label: 'Open in New Tab',        onPress: onOpenInNewTab },
-    { icon: 'browsers-outline',     label: 'Open in Background Tab', onPress: onOpenInBackground },
-    { icon: 'copy-outline',         label: 'Copy Link',              onPress: onCopyLink },
-    { icon: 'share-social-outline', label: 'Share',                  onPress: onShare },
-    { icon: 'bookmark-outline',     label: 'Add Bookmark',           onPress: onAddBookmark },
+    { icon: 'open-outline',         label: t('browser.linkOpenNewTab'),     onPress: onOpenInNewTab },
+    { icon: 'browsers-outline',     label: t('browser.linkOpenBackground'), onPress: onOpenInBackground },
+    { icon: 'copy-outline',         label: t('browser.linkCopy'),           onPress: onCopyLink },
+    { icon: 'share-social-outline', label: t('browser.linkShare'),          onPress: onShare },
+    { icon: 'bookmark-outline',     label: t('browser.linkAddBookmark'),    onPress: onAddBookmark },
   ];
 
   if (!mounted) return null;
@@ -1659,7 +1742,7 @@ const LinkContextMenu = ({
             style={({ pressed }) => [styles.contextMenuCancel, { borderTopColor: colors.separator }, pressed && { opacity: animation.pressOpacity }]}
             onPress={onClose}
           >
-            <Text style={[styles.contextMenuCancelText, { color: colors.accent }]}>Cancel</Text>
+            <Text style={[styles.contextMenuCancelText, { color: colors.accent }]}>{t('common.cancel')}</Text>
           </Pressable>
         </Animated.View>
       </View>

@@ -10,15 +10,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
+import { formatLongDate, formatClock } from '../i18n';
 
 const TIME_FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'today', label: 'Today' },
-  { key: 'week', label: 'This Week' },
+  { key: 'all', labelKey: 'history.filterAll' },
+  { key: 'today', labelKey: 'history.filterToday' },
+  { key: 'week', labelKey: 'history.filterWeek' },
 ];
 
 const HistoryScreen = ({ navigation }) => {
-  const { history, navigateTo, isDarkMode } = useBrowser();
+  const { history, navigateTo, isDarkMode, language, t } = useBrowser();
   const theme = getTheme(isDarkMode);
   const colors = theme.colors;
 
@@ -80,37 +82,24 @@ const HistoryScreen = ({ navigation }) => {
     });
   }, [history, searchQuery, timeFilter]);
 
-  // Group filtered history by date
+  // Group filtered history by day. The key is the ISO date so it stays the same in every
+  // language (collapse state is stored by key); only the label is localised.
   const groupedHistory = useMemo(() => {
     const groups = {};
     [...filteredHistory].reverse().forEach((entry) => {
       const date = new Date(entry.timestamp);
-      const dateKey = date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
+      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
       if (!groups[dateKey]) {
-        groups[dateKey] = [];
+        groups[dateKey] = { dateKey, date: formatLongDate(language, date), entries: [] };
       }
-      groups[dateKey].push(entry);
+      groups[dateKey].entries.push(entry);
     });
 
-    return Object.entries(groups).map(([date, entries]) => ({
-      date,
-      entries,
-      dateKey: date.replace(/[^a-zA-Z0-9]/g, '_'), // Create a valid key for state
-    }));
-  }, [filteredHistory]);
+    return Object.values(groups);
+  }, [filteredHistory, language]);
 
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  const formatTime = (timestamp) => formatClock(language, new Date(timestamp));
 
   const handleHistoryItemPress = (url) => {
     navigation.navigate('Browser');
@@ -137,7 +126,7 @@ const HistoryScreen = ({ navigation }) => {
         </Text>
         {entry.visitCount > 1 && (
           <Text style={[styles.visitCount, { color: colors.textTertiary }]}>
-            Visited {entry.visitCount} times
+            {t('history.visited', { count: entry.visitCount })}
           </Text>
         )}
       </View>
@@ -168,7 +157,7 @@ const HistoryScreen = ({ navigation }) => {
           <View style={styles.sectionHeaderLeft}>
             <Text style={[styles.sectionHeaderText, { color: colors.textSecondary }]}>{item.date}</Text>
             <Text style={[styles.entryCount, { color: colors.textTertiary }]}>
-              ({item.entries.length} {item.entries.length === 1 ? 'entry' : 'entries'})
+              ({t('history.entries', { count: item.entries.length })})
             </Text>
           </View>
           <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
@@ -194,7 +183,7 @@ const HistoryScreen = ({ navigation }) => {
       <Ionicons name="search" size={18} color={colors.textTertiary} />
       <TextInput
         style={[styles.searchInput, { color: colors.text }]}
-        placeholder="Search history"
+        placeholder={t('history.search')}
         placeholderTextColor={colors.textTertiary}
         value={searchQuery}
         onChangeText={setSearchQuery}
@@ -229,7 +218,7 @@ const HistoryScreen = ({ navigation }) => {
                 { color: active ? colors.textOnPrimary : colors.textSecondary },
               ]}
             >
-              {f.label}
+              {t(f.labelKey)}
             </Text>
           </Pressable>
         );
@@ -240,23 +229,11 @@ const HistoryScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
       <View style={[styles.container, { backgroundColor: colors.groupedBackground }]}>
-        <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && { opacity: theme.animation.pressOpacity },
-            ]}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.accent} />
-          </Pressable>
-          <View style={styles.headerContent}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Browsing History</Text>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {filteredHistory.length} {filteredHistory.length === 1 ? 'entry' : 'entries'}
-            </Text>
-          </View>
-        </View>
+        <ScreenHeader
+          title={t('history.title')}
+          subtitle={t('history.entries', { count: filteredHistory.length })}
+          onBack={() => navigation.goBack()}
+        />
         <View style={[styles.searchContainer, { borderBottomColor: colors.separator }]}>
           {renderSearchBar()}
           {renderFilterPills()}
@@ -269,12 +246,12 @@ const HistoryScreen = ({ navigation }) => {
             <View style={styles.emptyContainer}>
               <Ionicons name="time-outline" size={64} color={colors.textTertiary} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                {searchQuery || timeFilter !== 'all' ? 'No matching history' : 'No browsing history yet'}
+                {searchQuery || timeFilter !== 'all' ? t('history.noMatch') : t('history.empty')}
               </Text>
               <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
                 {searchQuery || timeFilter !== 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Your browsing history will appear here'}
+                  ? t('history.noMatchHint')
+                  : t('history.emptyHint')}
               </Text>
             </View>
           )}
@@ -292,33 +269,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 4,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    marginTop: 2,
   },
   searchContainer: {
     paddingHorizontal: 16,

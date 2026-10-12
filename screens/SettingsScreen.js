@@ -8,11 +8,13 @@
  * uses Pressable style functions (scale 0.97 / opacity 0.6) with no haptics.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 import { getTheme } from '../theme';
+import ScreenHeader from '../components/ScreenHeader';
+import { LANGUAGES } from '../i18n';
 
 /**
  * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
@@ -54,6 +56,9 @@ const SettingsScreen = ({ navigation }) => {
     dailyLimitMs,
     strictMode,
     setTimerSettingsPref,
+    language,
+    setLanguagePref,
+    t,
   } = useBrowser();
 
   const theme = getTheme(isDarkMode);
@@ -61,6 +66,8 @@ const SettingsScreen = ({ navigation }) => {
 
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
   const [localLimitMinutes, setLocalLimitMinutes] = useState(Math.round(dailyLimitMs / 60000));
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const currentLanguageName = (LANGUAGES.find((l) => l.code === language) || LANGUAGES[0]).name;
 
   // Keep local picker in sync when context loads from AsyncStorage
   useEffect(() => {
@@ -108,27 +115,34 @@ const SettingsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.groupedBackground }]}>
-      <View style={[styles.header, { backgroundColor: colors.headerBackground, borderBottomColor: colors.separator }]}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: animation.pressOpacity }]}
-          onPress={() => navigation.goBack()}
-          hitSlop={8}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.accent} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-      </View>
+      <ScreenHeader title={t('settings.title')} onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Browser Settings</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.browserSettings')}</Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => setLanguageModalVisible(true)}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="language-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.language')}</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{currentLanguageName}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </View>
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
           <Pressable
             style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="desktop-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Desktop Mode</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.desktopMode')}</Text>
             </View>
             <ThemedSwitch value={desktopMode} onValueChange={setDesktopMode} theme={theme} />
           </Pressable>
@@ -140,7 +154,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="shield-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Ad Blocker</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.adBlocker')}</Text>
             </View>
             <ThemedSwitch value={adBlockEnabled} onValueChange={setAdBlockEnabled} theme={theme} />
           </Pressable>
@@ -153,8 +167,8 @@ const SettingsScreen = ({ navigation }) => {
             <View style={styles.menuItemLeft}>
               <Ionicons name="globe-outline" size={22} color={colors.accent} />
               <View style={styles.menuItemTextWrap}>
-                <Text style={[styles.menuItemText, { color: colors.text }]}>Enhanced Compatibility</Text>
-                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>Helps load sites with Cloudflare protection</Text>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.enhancedCompat')}</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.enhancedCompatHint')}</Text>
               </View>
             </View>
             <ThemedSwitch value={enhancedCompatEnabled !== false} onValueChange={setEnhancedCompatPref} theme={theme} />
@@ -170,8 +184,8 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={styles.menuItemLeft}>
                   <Ionicons name="musical-notes-outline" size={22} color={colors.accent} />
                   <View style={styles.menuItemTextWrap}>
-                    <Text style={[styles.menuItemText, { color: colors.text }]}>Background Playback</Text>
-                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>Keep audio playing in background</Text>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.backgroundPlay')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.backgroundPlayHint')}</Text>
                   </View>
                 </View>
                 <ThemedSwitch value={backgroundPlayEnabled !== false} onValueChange={setBackgroundPlayPref} theme={theme} />
@@ -186,7 +200,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name={isDarkMode ? 'moon' : 'sunny-outline'} size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Dark Mode</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.darkMode')}</Text>
             </View>
             <ThemedSwitch value={isDarkMode} onValueChange={toggleDarkMode} theme={theme} />
           </Pressable>
@@ -198,11 +212,11 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="code-working-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>URL Bar Position</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.urlBarPosition')}</Text>
             </View>
             <View style={styles.positionButtons}>
-              {renderPositionButton('Top', urlBarPosition === 'top', () => setUrlBarPositionPref('top'))}
-              {renderPositionButton('Bottom', urlBarPosition === 'bottom', () => setUrlBarPositionPref('bottom'))}
+              {renderPositionButton(t('settings.top'), urlBarPosition === 'top', () => setUrlBarPositionPref('top'))}
+              {renderPositionButton(t('settings.bottom'), urlBarPosition === 'bottom', () => setUrlBarPositionPref('bottom'))}
             </View>
           </Pressable>
 
@@ -213,13 +227,13 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="eye-off-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Auto-Hide URL Bar</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.autoHideUrlBar')}</Text>
             </View>
             <ThemedSwitch value={autoHideNavBar} onValueChange={setAutoHideNavBarPref} theme={theme} />
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Daily Timer</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.dailyTimer')}</Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <Pressable
@@ -227,7 +241,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="timer-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Daily Browsing Limit</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.dailyLimit')}</Text>
             </View>
             <ThemedSwitch
               value={timerEnabled}
@@ -243,7 +257,7 @@ const SettingsScreen = ({ navigation }) => {
               <View style={styles.menuItemColumn}>
                 <View style={[styles.menuItemLeft, { marginBottom: spacing.sm }]}>
                   <Ionicons name="hourglass-outline" size={22} color={colors.accent} />
-                  <Text style={[styles.menuItemText, { color: colors.text }]}>Time Limit</Text>
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.timeLimit')}</Text>
                 </View>
                 <View style={styles.timerPresets}>
                   {[30, 60, 120, 180, 360].map((mins) => (
@@ -266,7 +280,7 @@ const SettingsScreen = ({ navigation }) => {
                       ]}
                     >
                       <Text style={[styles.positionButtonText, { color: localLimitMinutes === mins ? colors.textOnPrimary : colors.textSecondary }]}>
-                        {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                        {mins < 60 ? `${mins}${t('units.m')}` : `${mins / 60}${t('units.h')}`}
                       </Text>
                       {localLimitMinutes === mins && (
                         <Ionicons name="checkmark" size={14} color={colors.textOnPrimary} style={styles.positionButtonCheck} />
@@ -290,14 +304,14 @@ const SettingsScreen = ({ navigation }) => {
                       },
                     ]}
                   >
-                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>−15m</Text>
+                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>{`−15${t('units.m')}`}</Text>
                   </Pressable>
                   <Text style={[styles.timerCurrentValue, { color: colors.text }]}>
                     {localLimitMinutes < 60
-                      ? `${localLimitMinutes}m`
+                      ? `${localLimitMinutes}${t('units.m')}`
                       : localLimitMinutes % 60 === 0
-                        ? `${localLimitMinutes / 60}h`
-                        : `${Math.floor(localLimitMinutes / 60)}h ${localLimitMinutes % 60}m`}
+                        ? `${localLimitMinutes / 60}${t('units.h')}`
+                        : `${Math.floor(localLimitMinutes / 60)}${t('units.h')} ${localLimitMinutes % 60}${t('units.m')}`}
                   </Text>
                   <Pressable
                     onPress={() => {
@@ -314,7 +328,7 @@ const SettingsScreen = ({ navigation }) => {
                       },
                     ]}
                   >
-                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>+15m</Text>
+                    <Text style={[styles.positionButtonText, { color: colors.textSecondary }]}>{`+15${t('units.m')}`}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -325,7 +339,7 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={styles.menuItemRow}>
                   <View style={styles.menuItemLeft}>
                     <Ionicons name="lock-closed-outline" size={22} color={colors.accent} />
-                    <Text style={[styles.menuItemText, { color: colors.text }]}>Strict Mode</Text>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.strictMode')}</Text>
                   </View>
                   <ThemedSwitch
                     value={strictMode}
@@ -334,14 +348,14 @@ const SettingsScreen = ({ navigation }) => {
                   />
                 </View>
                 <Text style={[styles.menuItemSubtext, { color: colors.warning }]}>
-                  Browser locks until midnight — cannot be bypassed.
+                  {t('settings.strictModeHint')}
                 </Text>
               </View>
             </>
           )}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Quick Access</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.quickAccess')}</Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <Pressable
@@ -350,7 +364,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="time-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Browsing History</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.history')}</Text>
             </View>
             <View style={styles.menuItemRight}>
               <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
@@ -368,7 +382,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="bookmark-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Bookmarks</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.bookmarks')}</Text>
             </View>
             <View style={styles.menuItemRight}>
               <View style={[styles.buttonBadge, { backgroundColor: colors.accent }]}>
@@ -386,13 +400,13 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="apps-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Products</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.products')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>About & Legal</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.aboutLegal')}</Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <Pressable
@@ -401,7 +415,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="shield-half-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Privacy Policy</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.privacy')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>
@@ -414,7 +428,7 @@ const SettingsScreen = ({ navigation }) => {
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="document-text-outline" size={22} color={colors.accent} />
-              <Text style={[styles.menuItemText, { color: colors.text }]}>Terms of Service</Text>
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.terms')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>
@@ -423,11 +437,10 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <View style={styles.aboutContainer}>
             <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
-              SquareBrowser is a mobile internet browser built for those who want to reclaim control over their digital habits.
-              With no incognito or hidden modes, SquareBrowser ensures complete transparency in all your online activity.
+              {t('settings.aboutText1')}
             </Text>
             <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
-              Your history is permanent and your time is precious. Every minute you spend here is recorded for your own accountability.
+              {t('settings.aboutText2')}
             </Text>
           </View>
 
@@ -435,24 +448,63 @@ const SettingsScreen = ({ navigation }) => {
 
           <View style={styles.infoSection}>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>App Name</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('settings.appName')}</Text>
               <Text style={[styles.infoValue, { color: colors.text }]}>SquareBrowser</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Version</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('settings.version')}</Text>
               <Text style={[styles.infoValue, { color: colors.text }]}>{appVersion}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</Text>
-              <Text style={[styles.infoValue, { color: colors.success }]}>Active Accountability</Text>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('settings.status')}</Text>
+              <Text style={[styles.infoValue, { color: colors.success }]}>{t('settings.statusActive')}</Text>
             </View>
           </View>
         </View>
 
         <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-          SquareBrowser v{appVersion} • Honest Browsing
+          {t('settings.footer', { version: appVersion })}
         </Text>
       </ScrollView>
+
+      <Modal
+        visible={languageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLanguageModalVisible(false)}
+      >
+        <Pressable
+          style={[styles.languageOverlay, { backgroundColor: colors.scrim }]}
+          onPress={() => setLanguageModalVisible(false)}
+        >
+          {/* Inner Pressable swallows taps so only the dimmed area closes the picker */}
+          <Pressable style={[styles.languageSheet, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
+            <Text style={[styles.languageTitle, { color: colors.text }]}>{t('settings.chooseLanguage')}</Text>
+            {LANGUAGES.map((lang, index) => {
+              const selected = lang.code === language;
+              return (
+                <View key={lang.code}>
+                  {index > 0 && <View style={[styles.languageHairline, { backgroundColor: colors.separator }]} />}
+                  <Pressable
+                    style={({ pressed }) => [styles.languageRow, pressed && { opacity: animation.pressOpacity }]}
+                    onPress={() => {
+                      setLanguagePref(lang.code);
+                      setLanguageModalVisible(false);
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                  >
+                    <Text style={[styles.languageName, { color: selected ? colors.accent : colors.text, fontWeight: selected ? '600' : '400' }]}>
+                      {lang.name}
+                    </Text>
+                    {selected && <Ionicons name="checkmark" size={20} color={colors.accent} />}
+                  </Pressable>
+                </View>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -460,25 +512,6 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: Platform.OS === 'android' ? 40 : 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  backButton: {
-    padding: 12,
-    marginRight: 8,
-    minHeight: 44,
-    minWidth: 44,
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
   },
   container: {
     flex: 1,
@@ -528,6 +561,40 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 17,
+    flexShrink: 1, // long translations wrap instead of running under the switch
+  },
+  menuItemValue: {
+    fontSize: 17,
+  },
+  languageOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  languageSheet: {
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  languageTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 20,
+  },
+  languageName: {
+    fontSize: 17,
+  },
+  languageHairline: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 20,
   },
   menuItemSubtext: {
     fontSize: 13,

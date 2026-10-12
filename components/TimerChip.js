@@ -2,13 +2,13 @@
  * Copyright (c) 2025 SquareBrowser Contributors
  *
  * TimerChip - Displays remaining daily browsing time in the address bar.
- * Pure presentational component — no context calls.
+ * Pure presentational component — no context calls (the parent passes `t` for the unit labels).
  */
 import { getTheme } from '../theme';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const TimerChip = ({ remainingMs }) => {
+const TimerChip = ({ remainingMs, t }) => {
   const minutes = Math.floor(remainingMs / 60000);
   const seconds = Math.floor((remainingMs % 60000) / 1000);
 
@@ -16,11 +16,13 @@ const TimerChip = ({ remainingMs }) => {
   if (remainingMs >= 3600000) {
     const hours = Math.floor(remainingMs / 3600000);
     const mins = Math.floor((remainingMs % 3600000) / 60000);
-    displayText = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    displayText = mins > 0
+      ? `${hours}${t('units.h')} ${mins}${t('units.m')}`
+      : `${hours}${t('units.h')}`;
   } else if (remainingMs >= 60000) {
-    displayText = `${minutes}m`;
+    displayText = `${minutes}${t('units.m')}`;
   } else {
-    displayText = `${seconds}s`;
+    displayText = `${seconds}${t('units.s')}`;
   }
 
   let chipColor;
