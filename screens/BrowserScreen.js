@@ -43,13 +43,13 @@ const BOT_BYPASS_SCRIPT = `
 (function() {
   try {
     // 1. Clear the webdriver flag
-    Object.defineProperty(navigator, 'webdriver', {
+    if (!/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)) Object.defineProperty(navigator, 'webdriver', {
       get: () => false,
       configurable: false,
     });
 
     // 2. Inject a realistic window.chrome object
-    if (!window.chrome || !window.chrome.runtime) {
+    if (!/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent) && (!window.chrome || !window.chrome.runtime)) {
       const chrome = {
         app: {
           isInstalled: false,
@@ -94,7 +94,10 @@ const BOT_BYPASS_SCRIPT = `
       catch(e) { window.chrome = chrome; }
     }
 
-    // 3. Spoof navigator.plugins with realistic Chrome entries
+    // 3. Spoof navigator.plugins with realistic Chrome entries.
+    // Desktop only: real mobile Chrome has no plugins, so faking PDF viewers behind a
+    // mobile user agent is itself a bot signal (OLX's firewall rejected logins over it).
+    if (/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)) { return; }
     const pluginData = [
       { name: 'PDF Viewer', filename: 'internal-pdf-viewer', description: 'Portable Document Format', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },
       { name: 'Chrome PDF Viewer', filename: 'internal-pdf-viewer', description: '', mimeTypes: [{ type: 'application/pdf', suffixes: 'pdf' }, { type: 'text/pdf', suffixes: 'pdf' }] },

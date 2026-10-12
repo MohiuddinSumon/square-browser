@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Resolved bottom navigation overflow.
 - Fixed the new tab bottom overlay issue.
+- Fixed login errors on sites with strict bot protection (such as OLX) when Enhanced Compatibility is on.
 
 ### Planned
 - iOS support
