@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved bottom navigation overflow.
 - Fixed the new tab bottom overlay issue.
 - Fixed login errors on sites with strict bot protection (such as OLX) when Enhanced Compatibility is on.
+- Fixed pages that could no longer scroll after a full-screen pop-up ad was blocked.
 - Fixed the Products page layout and headers sitting under the status bar or camera on History, Bookmarks and Products.
 
 ### Planned

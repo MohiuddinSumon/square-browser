@@ -128,6 +128,9 @@ The native filter also loads a bundled domain list (`modules/square-adblock/andr
 ### Bot-protection compatibility
 `BOT_BYPASS_SCRIPT` (BrowserScreen.js, shown when Enhanced Compatibility is on) fakes Chrome details for Cloudflare-style checks. On **mobile user agents it does nothing**: real mobile Chrome has no PDF plugins and a different `window.chrome`, and those fakes made OLX's firewall reject logins (`error=waf_blocked`). Only desktop mode (Windows UA) gets the overrides. Re-test OLX and a Cloudflare site if you touch it.
 
+### Popup ads and scroll locks
+Popup ads lock page scrolling (`overflow:hidden`, `position:fixed` body, `modal-open`-style classes). Because the ad blocker deletes the ad instead of letting the page close it, `adBlockScript` calls `releaseScrollLock()` after removing a big layer: it only acts for 8 seconds after a removal and never while another full-screen layer (such as a cookie dialog) is showing. Test pages for the three lock styles plus a real dialog are easy to recreate with a local server; check that the first three scroll afterwards and the dialog stays locked.
+
 ### Screen headers
 Stack screens (Settings, History, Bookmarks, Products, Privacy Policy, Terms) must use `components/ScreenHeader.js`. It pads the top with the real safe-area inset because RN's `SafeAreaView` does nothing on Android (otherwise titles end up behind the status bar or camera cutout). Do not hand-roll a header in a screen.
 

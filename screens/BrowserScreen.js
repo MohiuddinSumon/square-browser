@@ -492,9 +492,72 @@ const BrowserTab = ({
     'iframe[id*="google_ads"]',
   ];
 
+  /* Popup ads lock page scrolling while they are open (overflow:hidden, position:fixed on the
+     body, "modal-open" style classes). The page's own close code would undo that, but we delete
+     the ad instead, so the lock stays and the page can no longer scroll. After removing a big
+     layer we undo the lock - only shortly afterwards, and never while another full-screen layer
+     (for example a real cookie dialog) is still showing. */
+  var _lastOverlayRemoval = 0;
+  var LOCK_CLASSES = ['modal-open','no-scroll','noscroll','no_scroll','scroll-lock','scroll-locked',
+    'lock-scroll','overflow-hidden','is-locked','popup-open','has-popup','body-fixed'];
+
+  function isBigLayer(el) {
+    try {
+      var cs = window.getComputedStyle(el);
+      if (cs.position !== 'fixed' && cs.position !== 'absolute') return false;
+      var r = el.getBoundingClientRect();
+      return r.width >= window.innerWidth * 0.6 && r.height >= window.innerHeight * 0.6;
+    } catch (e) { return false; }
+  }
+
+  function hasFullscreenLayer() {
+    var vw = window.innerWidth, vh = window.innerHeight, found = false;
+    Array.prototype.slice.call(document.body ? document.body.children : []).forEach(function(el) {
+      if (found) return;
+      var cs = window.getComputedStyle(el);
+      if (cs.position !== 'fixed' || cs.display === 'none' || cs.visibility === 'hidden') return;
+      if (parseFloat(cs.opacity) < 0.05) return;
+      var r = el.getBoundingClientRect();
+      if (r.width >= vw * 0.9 && r.height >= vh * 0.9) found = true;
+    });
+    return found;
+  }
+
+  function releaseScrollLock() {
+    try {
+      if (Date.now() - _lastOverlayRemoval > 8000 || hasFullscreenLayer()) return;
+      var restoreTop = null;
+      [document.documentElement, document.body].forEach(function(el) {
+        if (!el) return;
+        var cs = window.getComputedStyle(el);
+        var fixedBody = el === document.body && cs.position === 'fixed';
+        if (cs.overflowY !== 'hidden' && !fixedBody) return;
+        if (fixedBody) restoreTop = parseInt(cs.top) || 0;
+        LOCK_CLASSES.forEach(function(c) { el.classList.remove(c); });
+        ['overflow','overflow-y','position','top','left','right','width'].forEach(function(prop) {
+          if (prop === 'overflow' || prop === 'overflow-y' || fixedBody) el.style.removeProperty(prop);
+        });
+        cs = window.getComputedStyle(el);
+        if (cs.overflowY === 'hidden') el.style.setProperty('overflow-y', 'auto', 'important');
+        if (el === document.body && cs.position === 'fixed') el.style.setProperty('position', 'static', 'important');
+      });
+      if (restoreTop) window.scrollTo(0, -restoreTop);
+    } catch (e) {}
+  }
+
+  function noteOverlayRemoved() {
+    _lastOverlayRemoval = Date.now();
+    [0, 150, 600, 1500].forEach(function(ms) { setTimeout(releaseScrollLock, ms); });
+  }
+
   function removeAds() {
     adSelectors.forEach(function(s) {
-      try { document.querySelectorAll(s).forEach(function(el) { el.remove(); }); }
+      try {
+        document.querySelectorAll(s).forEach(function(el) {
+          if (isBigLayer(el)) noteOverlayRemoved();
+          el.remove();
+        });
+      }
       catch(e) {}
     });
   }
@@ -516,7 +579,7 @@ const BrowserTab = ({
         var textLen = (el.innerText || '').trim().length;
         var hasFrame = !!el.querySelector('iframe');
         var hasLink = !!el.querySelector('a[href]');
-        if (hasFrame || textLen < 40 || (hasLink && textLen < 200)) el.remove();
+        if (hasFrame || textLen < 40 || (hasLink && textLen < 200)) { el.remove(); noteOverlayRemoved(); }
       });
     } catch (e) {}
   }
@@ -530,6 +593,16 @@ const BrowserTab = ({
   removeFullscreenOverlays();
   setTimeout(removeAds, 800);
   setTimeout(removeAds, 2500);
+
+  /* A popup script may re-apply its scroll lock after we removed the layer */
+  try {
+    var _lockObserver = new MutationObserver(function() {
+      if (Date.now() - _lastOverlayRemoval < 8000) releaseScrollLock();
+    });
+    [document.documentElement, document.body].forEach(function(el) {
+      if (el) _lockObserver.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+  } catch(e) {}
 
   /* Watch for dynamically injected ads */
   try {
