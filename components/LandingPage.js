@@ -88,6 +88,13 @@ const LandingPage = ({ navigation }) => {
       url: 'https://www.fellowcoder.com/',
       color: '#2196F3',
     },
+    {
+      icon: 'moon-outline',
+      title: 'Salah Daily',
+      description: 'Prayer times, Qibla and namaz tracker',
+      url: 'https://salahdaily.squarebrowser.com/',
+      color: '#10B981',
+    },
   ];
 
   const screenshots = [
