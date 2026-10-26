@@ -640,7 +640,7 @@
     display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; max-width: 640px; margin: 0 auto;
   }
   .product-cards {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 900px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; max-width: 1000px; margin: 0 auto;
   }
   .scard {
     background: var(--cream); border: 1px solid var(--border); border-radius: var(--r-lg);
@@ -682,6 +682,10 @@
     .testi-grid { grid-template-columns: 1fr 1fr; }
   }
 
+  /* Four product cards: two per row on tablets, one on phones (see the 640px block) */
+  @media (max-width: 960px) {
+    .product-cards { grid-template-columns: repeat(2, 1fr); }
+  }
   @media (max-width: 860px) {
     .hero { grid-template-columns: 1fr; text-align: center; padding-top: 96px; min-height: auto; }
     .hero-sub { max-width: 100%; }
@@ -1226,6 +1230,15 @@
           </a>
         </div>
 
+        <div class="scard reveal" style="transition-delay:.18s">
+          <div class="scard-icon">🕌</div>
+          <div class="scard-title">Salah Daily</div>
+          <p class="scard-desc">Prayer times, Qibla, a daily namaz tracker with streaks, and step-by-step prayer lessons. Free, ad-free and private.</p>
+          <a href="https://salahdaily.squarebrowser.com/" class="scard-btn scard-btn-outline" target="_blank" rel="noopener">
+            Visit Salah Daily
+          </a>
+        </div>
+
       </div>
     </div>
   </section>
@@ -1307,6 +1320,7 @@
           <li><a href="https://loveledger.squarebrowser.com/" target="_blank" rel="noopener">LoveLedger</a></li>
           <li><a href="https://logbook.squarebrowser.com/" target="_blank" rel="noopener">Logbook</a></li>
           <li><a href="https://www.fellowcoder.com/" target="_blank" rel="noopener">Fellow Coder</a></li>
+          <li><a href="https://salahdaily.squarebrowser.com/" target="_blank" rel="noopener">Salah Daily</a></li>
         </ul>
       </div>
       <div>
