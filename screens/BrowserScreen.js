@@ -8,6 +8,7 @@ import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react'
 import { View, StyleSheet, Platform, ToastAndroid, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid, Dimensions, PanResponder, Pressable } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsFocused } from '@react-navigation/native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
@@ -24,6 +25,7 @@ import { darkPagesScript } from './darkPagesScript';
 import { DOWNLOAD_SCRIPT } from './downloadScript';
 import { saveBase64ToDownloads, fileNameFor } from '../modules/square-downloads';
 import { getTheme } from '../theme.js';
+import { formatClock } from '../i18n';
 
 /**
  * Bot-detection bypass script injected BEFORE page content loads.
@@ -403,6 +405,8 @@ const BrowserTab = ({
   darkPagesEnabled,
   textZoom,
   onDownload,
+  inspectUrl,
+  onBlocked,
   theme,
   t,
 }) => {
@@ -413,6 +417,8 @@ const BrowserTab = ({
   const webViewRef = useRef(null);
   const allowedWebUrl = useRef(null);
   const viewTag = useRef(null);
+  // Last SafeSearch redirect, so a site that drops the parameter cannot cause a loop.
+  const lastSafeRedirect = useRef(0);
 
   // Only push a new URL into the WebView when an explicit external navigation was
   // requested (address bar submit). WebView-internal navigations (redirects, link
@@ -840,6 +846,17 @@ true;
             } : null);
             return false;
           }
+          // Block list and SafeSearch (Android reports only top-frame loads here).
+          const verdict = inspectUrl ? inspectUrl(request.url) : {};
+          if (verdict.blocked) {
+            if (request.isTopFrame !== false && onBlocked) onBlocked(request.url, verdict.blocked);
+            return false;
+          }
+          if (verdict.safeUrl && request.isTopFrame !== false && Date.now() - lastSafeRedirect.current > 3000) {
+            lastSafeRedirect.current = Date.now();
+            webViewRef.current?.injectJavaScript(`window.location.replace(${JSON.stringify(verdict.safeUrl)}); true;`);
+            return false;
+          }
           if (!adBlockEnabled) return true;
           try {
             const hostname = new URL(request.url).hostname;
@@ -893,14 +910,40 @@ const BrowserScreen = ({ navigation }) => {
     extensionMs,
     extendTimer,
     setTimerScreenActive,
+    scheduleUntil,
+    commitment,
+    inspectUrl,
+    blockedNotice,
+    setBlockedNotice,
+    language,
     t,
   } = useBrowser();
+  const isFocused = useIsFocused();
 
   const theme = getTheme(isDarkMode);
   const { colors, spacing, borderRadius, animation, typography } = theme;
 
   const showSoftOverlay = timerEnabled && limitReached && !strictMode;
   const showStrictWall = timerEnabled && limitReached && strictMode;
+  // Hidden while another screen is on top, so the wall's "Settings" button can open Settings.
+  const showScheduleWall = !!scheduleUntil && isFocused && !showStrictWall;
+
+  // A page (or the address bar) tried to open a blocked site.
+  useEffect(() => {
+    if (!blockedNotice) return;
+    let host = blockedNotice.url;
+    try { host = new URL(blockedNotice.url).hostname.replace(/^www\./, ''); } catch (e) {}
+    Alert.alert(
+      t('blocking.blockedTitle'),
+      t(blockedNotice.reason === 'adult' ? 'blocking.blockedAdult' : 'blocking.blockedSite', { site: host }),
+      [{ text: t('common.ok') }],
+    );
+    setBlockedNotice(null);
+  }, [blockedNotice, setBlockedNotice, t]);
+
+  const handleBlocked = useCallback((url, reason) => {
+    setBlockedNotice({ url, reason });
+  }, [setBlockedNotice]);
 
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [dontAskAgain, setDontAskAgain] = useState(false);
@@ -1182,8 +1225,8 @@ const BrowserScreen = ({ navigation }) => {
   useEffect(() => {
     // Handle Android hardware back button
     const backAction = () => {
-      // Strict timer wall — consume back press, do nothing
-      if (showStrictWall) return true;
+      // Strict timer wall / schedule wall — consume back press, do nothing
+      if (showStrictWall || showScheduleWall) return true;
 
       if (showTabSwitcher) {
         setShowTabSwitcher(false);
@@ -1226,7 +1269,7 @@ const BrowserScreen = ({ navigation }) => {
     );
 
     return () => backHandler.remove();
-  }, [navigation, currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, exitConfirmationEnabled, setCurrentUrl]);
+  }, [navigation, currentUrl, tabs, activeTabIndex, showTabSwitcher, showStrictWall, showScheduleWall, exitConfirmationEnabled, setCurrentUrl]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.surface }]}>
@@ -1315,6 +1358,8 @@ const BrowserScreen = ({ navigation }) => {
                 darkPagesEnabled={darkPagesEnabled}
                 textZoom={textZoom}
                 onDownload={handleDownload}
+                inspectUrl={inspectUrl}
+                onBlocked={isActive ? handleBlocked : undefined}
                 theme={theme}
                 t={t}
               />
@@ -1383,6 +1428,15 @@ const BrowserScreen = ({ navigation }) => {
 
       <TimerStrictWall
         visible={showStrictWall}
+        theme={theme}
+      />
+
+      <ScheduleWall
+        visible={showScheduleWall}
+        until={scheduleUntil}
+        // Only with the commitment lock off: then the schedule could be removed anyway.
+        onOpenSettings={commitment.mode === 'off' ? () => navigation.navigate('Settings') : null}
+        language={language}
         theme={theme}
       />
     </SafeAreaView>
@@ -1680,6 +1734,47 @@ const TimerStrictWall = ({ visible, theme }) => {
         </Text>
         <Text style={[styles.timerWallCountdown, { color: colors.danger }]}>{countdown}</Text>
         <Text style={[styles.timerWallUntil, { color: colors.textTertiary }]}>{t('browser.untilMidnight')}</Text>
+      </View>
+    </Modal>
+  );
+};
+
+const ScheduleWall = ({ visible, until, onOpenSettings, language, theme }) => {
+  const [now, setNow] = useState(Date.now());
+  const { colors, borderRadius, spacing } = theme;
+  const { t } = useBrowser();
+
+  useEffect(() => {
+    if (!visible) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [visible]);
+
+  if (!until) return null;
+  const left = Math.max(0, until.getTime() - now);
+  const hours = Math.floor(left / 3600000);
+  const minutes = Math.floor((left % 3600000) / 60000);
+  const seconds = Math.floor((left % 60000) / 1000);
+  const countdown = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+  return (
+    <Modal visible={visible} transparent={false} animationType="fade" onRequestClose={() => {}}>
+      <View style={[styles.timerWall, { backgroundColor: colors.groupedBackground }]}>
+        <Ionicons name="moon" size={64} color={colors.accent} />
+        <Text style={[styles.timerWallTitle, { color: colors.text }]}>{t('schedules.wallTitle')}</Text>
+        <Text style={[styles.timerWallSubtext, { color: colors.textSecondary }]}>
+          {t('schedules.wallMessage', { time: formatClock(language, until) })}
+        </Text>
+        <Text style={[styles.timerWallCountdown, { color: colors.accent }]}>{countdown}</Text>
+        {onOpenSettings && (
+          <TouchableOpacity
+            style={[styles.extendButton, { backgroundColor: colors.surface, borderRadius: borderRadius.md, marginTop: spacing.lg }]}
+            onPress={onOpenSettings}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.extendButtonText, { color: colors.accent }]}>{t('schedules.wallSettings')}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </Modal>
   );

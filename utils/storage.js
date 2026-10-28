@@ -64,6 +64,26 @@ export const saveBookmark = async (bookmark) => {
 };
 
 /**
+ * Add many bookmarks at once (import), skipping URLs that are already saved
+ * @param {Array} bookmarks - [{ id, url, title, timestamp }]
+ * @returns {number} How many were added
+ */
+export const saveBookmarks = async (bookmarks) => {
+  try {
+    const existing = await loadBookmarks();
+    const known = new Set(existing.map(b => b.url));
+    const added = bookmarks.filter(b => !known.has(b.url) && known.add(b.url));
+    if (added.length > 0) {
+      await AsyncStorage.setItem(BOOKMARKS_KEY, JSON.stringify([...existing, ...added]));
+    }
+    return added.length;
+  } catch (error) {
+    console.error('Error saving bookmarks:', error);
+    return 0;
+  }
+};
+
+/**
  * Remove a bookmark by ID
  * @param {string} id - Bookmark ID to remove
  */
@@ -300,3 +320,60 @@ export const loadTimerDaily = async (date) => {
     return { totalMs: 0, reminderDismissed: false, date };
   }
 };
+
+/**
+ * Load all saved usage, keyed by date (YYYY-MM-DD) -> { domain: ms }
+ * @returns {Object}
+ */
+export const loadAllUsage = async () => {
+  try {
+    const json = await AsyncStorage.getItem(USAGE_KEY);
+    return json ? JSON.parse(json) : {};
+  } catch (error) {
+    console.error('Error loading usage:', error);
+    return {};
+  }
+};
+
+// Accountability settings (schedules, block list, commitment lock) and changes that are
+// waiting out the commitment delay. Each is one JSON value.
+const SCHEDULES_KEY = '@squarebrowser_schedules';
+const BLOCKING_KEY = '@squarebrowser_blocking';
+const COMMITMENT_KEY = '@squarebrowser_commitment';
+const PENDING_CHANGES_KEY = '@squarebrowser_pending_changes';
+
+const loadJson = async (key, fallback) => {
+  try {
+    const json = await AsyncStorage.getItem(key);
+    return json ? JSON.parse(json) : fallback;
+  } catch (error) {
+    console.error('Error loading ' + key + ':', error);
+    return fallback;
+  }
+};
+
+const saveJson = async (key, value) => {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error('Error saving ' + key + ':', error);
+    return false;
+  }
+};
+
+/** @returns {Array} [{ id, enabled, start, end, days }] */
+export const loadSchedules = () => loadJson(SCHEDULES_KEY, []);
+export const saveSchedules = (schedules) => saveJson(SCHEDULES_KEY, schedules);
+
+/** @returns {Object|null} { sites, adult, safeSearch } */
+export const loadBlocking = () => loadJson(BLOCKING_KEY, null);
+export const saveBlocking = (blocking) => saveJson(BLOCKING_KEY, blocking);
+
+/** @returns {Object|null} { mode, pinHash, salt } */
+export const loadCommitment = () => loadJson(COMMITMENT_KEY, null);
+export const saveCommitment = (commitment) => saveJson(COMMITMENT_KEY, commitment);
+
+/** @returns {Array} [{ type, value, applyAt }] */
+export const loadPendingChanges = () => loadJson(PENDING_CHANGES_KEY, []);
+export const savePendingChanges = (changes) => saveJson(PENDING_CHANGES_KEY, changes);

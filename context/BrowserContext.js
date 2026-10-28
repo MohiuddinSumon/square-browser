@@ -7,9 +7,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex, saveTimerSettings, loadTimerSettings, saveTimerDaily, loadTimerDaily } from '../utils/storage';
+import { loadHistory, saveHistory, loadBookmarks, saveBookmark, saveBookmarks, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex, saveTimerSettings, loadTimerSettings, saveTimerDaily, loadTimerDaily, loadSchedules, saveSchedules, loadBlocking, saveBlocking, loadCommitment, saveCommitment, loadPendingChanges, savePendingChanges } from '../utils/storage';
 import { translate, DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n';
 import { formatInputUrl, DEFAULT_SEARCH_ENGINE, isSupportedSearchEngine } from '../utils/url';
+import {
+  DEFAULT_BLOCKING, DEFAULT_COMMITMENT, COMMITMENT_DELAY_MS,
+  getBlockReason, enforceSafeSearch, scheduleBlockUntil, isLoosening, checkPin,
+} from '../utils/protection';
 
 const BrowserContext = createContext();
 
@@ -57,7 +61,24 @@ export const BrowserProvider = ({ children }) => {
   // Search engine for address-bar searches. The ref lets navigateTo stay a stable callback.
   const [searchEngine, setSearchEngine] = useState(DEFAULT_SEARCH_ENGINE);
   const searchEngineRef = React.useRef(DEFAULT_SEARCH_ENGINE);
-  const formatUrl = useCallback((url) => formatInputUrl(url, searchEngineRef.current), []);
+  const formatUrl = useCallback(
+    (url) => formatInputUrl(url, searchEngineRef.current, blockingRef.current.safeSearch),
+    []
+  );
+
+  // Accountability settings (see utils/protection.js). Refs mirror the state for callbacks
+  // and intervals that must not be re-created.
+  const [schedules, setSchedules] = useState([]);
+  const schedulesRef = React.useRef([]);
+  const [blocking, setBlocking] = useState(DEFAULT_BLOCKING);
+  const blockingRef = React.useRef(DEFAULT_BLOCKING);
+  const [commitment, setCommitment] = useState(DEFAULT_COMMITMENT);
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const pendingChangesRef = React.useRef([]);
+  // Date the current schedule window ends, or null when no schedule is blocking browsing
+  const [scheduleUntil, setScheduleUntil] = useState(null);
+  // { url, reason } for the last navigation the block list stopped; BrowserScreen shows it
+  const [blockedNotice, setBlockedNotice] = useState(null);
 
   // Daily browsing timer state
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -182,6 +203,21 @@ export const BrowserProvider = ({ children }) => {
         setSearchEngine(savedSearchEngine);
       }
 
+      const savedSchedules = await loadSchedules();
+      schedulesRef.current = savedSchedules;
+      setSchedules(savedSchedules);
+      setScheduleUntil(scheduleBlockUntil(savedSchedules));
+
+      const savedBlocking = { ...DEFAULT_BLOCKING, ...(await loadBlocking()) };
+      blockingRef.current = savedBlocking;
+      setBlocking(savedBlocking);
+
+      setCommitment({ ...DEFAULT_COMMITMENT, ...(await loadCommitment()) });
+
+      const savedPending = await loadPendingChanges();
+      pendingChangesRef.current = savedPending;
+      setPendingChanges(savedPending);
+
       // Load timer settings and today's elapsed time
       const timerSettings = await loadTimerSettings();
       setTimerEnabled(timerSettings.enabled);
@@ -286,6 +322,139 @@ export const BrowserProvider = ({ children }) => {
     }
     await saveTimerSettings({ enabled, dailyLimitMs: limitMs, strictMode: strict });
   };
+
+  /**
+   * Accountability settings. Every change goes through requestProtectionChange, which
+   * applies it at once unless the commitment lock says it has to wait (see utils/protection.js).
+   */
+  const applyProtectionChange = useCallback(async (type, value) => {
+    if (type === 'timer') {
+      await setTimerSettingsPref({ enabled: value.enabled, limitMs: value.dailyLimitMs, strict: value.strictMode });
+    } else if (type === 'schedules') {
+      schedulesRef.current = value;
+      setSchedules(value);
+      setScheduleUntil(scheduleBlockUntil(value));
+      await saveSchedules(value);
+    } else if (type === 'blocking') {
+      blockingRef.current = value;
+      setBlocking(value);
+      await saveBlocking(value);
+    } else if (type === 'commitment') {
+      setCommitment(value);
+      await saveCommitment(value);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const setPending = useCallback(async (changes) => {
+    pendingChangesRef.current = changes;
+    setPendingChanges(changes);
+    await savePendingChanges(changes);
+  }, []);
+
+  /**
+   * Resolves { status }: 'applied', 'pending' (with applyAt), 'needPin' or 'badPin'.
+   * options.pin: the partner's PIN; options.wait: skip the PIN and wait out the delay.
+   */
+  const requestProtectionChange = useCallback(async (type, value, options = {}) => {
+    const current = {
+      timer: { enabled: timerEnabled, dailyLimitMs, strictMode },
+      schedules: schedulesRef.current,
+      blocking: blockingRef.current,
+      commitment,
+    }[type];
+    // A newer request replaces one of the same kind that is still waiting.
+    const others = pendingChangesRef.current.filter((c) => c.type !== type);
+    const apply = async () => {
+      await setPending(others);
+      await applyProtectionChange(type, value);
+      return { status: 'applied' };
+    };
+    if (commitment.mode === 'off' || !isLoosening(type, current, value)) return apply();
+    if (commitment.mode === 'pin' && !options.wait) {
+      if (options.pin == null) return { status: 'needPin' };
+      if (!checkPin(options.pin, commitment)) return { status: 'badPin' };
+      return apply();
+    }
+    const applyAt = Date.now() + COMMITMENT_DELAY_MS;
+    await setPending([...others, { type, value, applyAt }]);
+    return { status: 'pending', applyAt };
+  }, [timerEnabled, dailyLimitMs, strictMode, commitment, applyProtectionChange, setPending]);
+
+  const cancelPendingChange = useCallback(async (type) => {
+    await setPending(pendingChangesRef.current.filter((c) => c.type !== type));
+  }, [setPending]);
+
+  // Every 15s: apply changes whose wait is over, and see whether a schedule window started or ended.
+  useEffect(() => {
+    const tick = async () => {
+      const due = pendingChangesRef.current.filter((c) => c.applyAt <= Date.now());
+      if (due.length > 0) {
+        await setPending(pendingChangesRef.current.filter((c) => c.applyAt > Date.now()));
+        for (const change of due) await applyProtectionChange(change.type, change.value);
+      }
+      const until = scheduleBlockUntil(schedulesRef.current);
+      setScheduleUntil((prev) =>
+        (prev ? prev.getTime() : 0) === (until ? until.getTime() : 0) ? prev : until
+      );
+    };
+    tick();
+    const interval = setInterval(tick, 15000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [applyProtectionChange, setPending]);
+
+  /**
+   * Block list + SafeSearch verdict for a URL about to load:
+   * { blocked: 'site' | 'adult' | null, safeUrl: string | null }
+   */
+  const inspectUrl = useCallback((url) => {
+    const current = blockingRef.current;
+    const blocked = getBlockReason(url, current);
+    return { blocked, safeUrl: !blocked && current.safeSearch ? enforceSafeSearch(url) : null };
+  }, []);
+
+  /** Applies the block list / SafeSearch to a URL the app itself is about to open. */
+  const screenUrl = useCallback((url) => {
+    const verdict = inspectUrl(url);
+    if (verdict.blocked) {
+      setBlockedNotice({ url, reason: verdict.blocked });
+      return null;
+    }
+    return verdict.safeUrl || url;
+  }, [inspectUrl]);
+
+  // Catch-all for pages that reached a tab without passing onShouldStartLoadWithRequest:
+  // tabs restored at startup, back/forward, in-page (pushState) navigation, and sites added
+  // to the block list while open. Blocked tabs go back to the home page; search pages get
+  // SafeSearch.
+  // Last SafeSearch rewrite per tab, so a site that drops the parameter cannot cause a reload loop.
+  const safeRewriteAt = React.useRef({});
+  useEffect(() => {
+    if (!tabsInitialized) return;
+    const fixes = {};
+    let notice = null;
+    tabs.forEach((tab, index) => {
+      if (!tab.url || tab.url === 'about:blank') return;
+      const verdict = inspectUrl(tab.url);
+      if (verdict.blocked) {
+        fixes[tab.id] = { url: 'about:blank', canGoBack: false, canGoForward: false };
+        if (index === activeTabIndexRef.current) notice = { url: tab.url, reason: verdict.blocked };
+      } else if (verdict.safeUrl && Date.now() - (safeRewriteAt.current[tab.id] || 0) > 5000) {
+        safeRewriteAt.current[tab.id] = Date.now();
+        fixes[tab.id] = { url: verdict.safeUrl };
+      }
+    });
+    if (Object.keys(fixes).length === 0) return;
+    setTabs(prev => prev.map(tab => (fixes[tab.id]
+      ? { ...tab, ...fixes[tab.id], navRequestId: (tab.navRequestId || 0) + 1 }
+      : tab)));
+    if (notice) setBlockedNotice(notice);
+  }, [tabs, blocking, tabsInitialized, inspectUrl]);
 
   /**
    * Grant 10 extra minutes when user taps "Continue Anyway".
@@ -479,7 +648,8 @@ export const BrowserProvider = ({ children }) => {
    * Navigate to a URL in the current tab
    */
   const navigateTo = useCallback((url) => {
-    const formattedUrl = formatUrl(url);
+    const formattedUrl = screenUrl(formatUrl(url));
+    if (!formattedUrl) return;
 
     // Use functional update and ref to get current active index.
     // navRequestId increments on every external (address-bar) navigation so BrowserTab
@@ -497,13 +667,14 @@ export const BrowserProvider = ({ children }) => {
       }
       return prev;
     });
-  }, [formatUrl]);
+  }, [formatUrl, screenUrl]);
 
   /**
    * Navigate to a URL in a new tab (for external links)
    */
   const navigateToNewTab = useCallback((url) => {
-    const formattedUrl = formatUrl(url);
+    const formattedUrl = screenUrl(formatUrl(url));
+    if (!formattedUrl) return;
 
     // Create new tab with the URL
     const newTab = {
@@ -519,15 +690,17 @@ export const BrowserProvider = ({ children }) => {
       setActiveTabIndex(newIndex);
       return [...prev, newTab];
     });
-  }, [formatUrl]);
+  }, [formatUrl, screenUrl]);
 
   /**
    * Tab Operations
    */
   const addTab = useCallback((url = 'about:blank') => {
+    const screenedUrl = url === 'about:blank' ? url : screenUrl(url);
+    if (!screenedUrl) return;
     const newTab = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      url: url,
+      url: screenedUrl,
       canGoBack: false,
       canGoForward: false
     };
@@ -537,10 +710,11 @@ export const BrowserProvider = ({ children }) => {
       setActiveTabIndex(newIndex);
       return [...prev, newTab];
     });
-  }, []);
+  }, [screenUrl]);
 
   const addTabInBackground = useCallback((url = 'about:blank') => {
-    const formattedUrl = formatUrl(url);
+    const formattedUrl = screenUrl(formatUrl(url));
+    if (!formattedUrl) return;
     const newTab = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       url: formattedUrl,
@@ -548,7 +722,7 @@ export const BrowserProvider = ({ children }) => {
       canGoForward: false,
     };
     setTabs(prev => [...prev, newTab]);
-  }, [formatUrl]);
+  }, [formatUrl, screenUrl]);
 
   const closeTab = useCallback((index) => {
     setTabs(prev => {
@@ -608,6 +782,21 @@ export const BrowserProvider = ({ children }) => {
   }, []);
 
   /**
+   * Import bookmarks ([{ url, title }]); returns how many were new
+   */
+  const importBookmarks = useCallback(async (items) => {
+    const now = new Date().toISOString();
+    const count = await saveBookmarks(items.map((b, i) => ({
+      id: Date.now().toString() + i + Math.random().toString(36).substr(2, 5),
+      url: b.url,
+      title: b.title || b.url,
+      timestamp: now,
+    })));
+    if (count > 0) setBookmarks(await loadBookmarks());
+    return count;
+  }, []);
+
+  /**
    * Check if current URL is bookmarked
    */
   const checkIsBookmarked = useCallback(async (url) => {
@@ -663,6 +852,7 @@ export const BrowserProvider = ({ children }) => {
     setWebViewRef,
     addHistoryEntry,
     toggleBookmark,
+    importBookmarks,
     checkIsBookmarked,
     refresh,
     desktopMode,
@@ -706,16 +896,28 @@ export const BrowserProvider = ({ children }) => {
     setTimerSettingsPref,
     extendTimer,
     setTimerScreenActive,
+    schedules,
+    blocking,
+    commitment,
+    pendingChanges,
+    scheduleUntil,
+    requestProtectionChange,
+    cancelPendingChange,
+    inspectUrl,
+    blockedNotice,
+    setBlockedNotice,
   }), [
     history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
-    addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
+    addHistoryEntry, toggleBookmark, importBookmarks, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
     darkPagesEnabled, textZoom,
     language, t, searchEngine,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
+    schedules, blocking, commitment, pendingChanges, scheduleUntil,
+    requestProtectionChange, cancelPendingChange, inspectUrl, blockedNotice,
   ]);
 
   return (

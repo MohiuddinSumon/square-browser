@@ -8,7 +8,8 @@
  * uses Pressable style functions (scale 0.97 / opacity 0.6) with no haptics.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform, Modal, Alert } from 'react-native';
+import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
@@ -16,6 +17,9 @@ import { getTheme } from '../theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { LANGUAGES } from '../i18n';
 import { SEARCH_ENGINES, getSearchEngine } from '../utils/url';
+import { useProtectedChange } from '../components/ProtectionGate';
+import { historyToCsv, historyToHtml, bookmarksToHtml, parseBookmarks } from '../utils/exportData';
+import { saveTextToDownloads, isDownloadSaveAvailable } from '../modules/square-downloads';
 
 /**
  * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
@@ -59,7 +63,6 @@ const SettingsScreen = ({ navigation }) => {
     timerEnabled,
     dailyLimitMs,
     strictMode,
-    setTimerSettingsPref,
     language,
     setLanguagePref,
     searchEngine,
@@ -68,6 +71,7 @@ const SettingsScreen = ({ navigation }) => {
     setDarkPagesPref,
     textZoom,
     setTextZoomPref,
+    importBookmarks,
     t,
   } = useBrowser();
 
@@ -101,6 +105,46 @@ const SettingsScreen = ({ navigation }) => {
     },
   };
   const openPicker = picker ? pickers[picker] : null;
+
+  // Timer changes go through the commitment lock; if one is held back, show the real limit again.
+  const [requestChange, protectionGate] = useProtectedChange();
+  const changeTimer = async (next) => {
+    const status = await requestChange('timer', next);
+    if (status !== 'applied') setLocalLimitMinutes(Math.round(dailyLimitMs / 60000));
+  };
+
+  // Exports are written to the Downloads folder (Android).
+  const exportFile = async (fileName, mimeType, text) => {
+    if (!isDownloadSaveAvailable) {
+      Alert.alert(t('data.title'), t('data.notAvailable'));
+      return;
+    }
+    try {
+      const saved = await saveTextToDownloads(fileName, mimeType, text);
+      Alert.alert(t('data.title'), t('data.exported', { name: saved }));
+    } catch (e) {
+      Alert.alert(t('data.title'), t('data.exportFailed'));
+    }
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+  const exportHistoryCsv = () =>
+    exportFile(`squarebrowser-history-${today}.csv`, 'text/csv', historyToCsv(history));
+  const exportHistoryHtml = () =>
+    exportFile(`squarebrowser-history-${today}.html`, 'text/html', historyToHtml(history, t('data.historyFileTitle')));
+  const exportBookmarks = () =>
+    exportFile(`squarebrowser-bookmarks-${today}.html`, 'text/html', bookmarksToHtml(bookmarks));
+
+  const handleImportBookmarks = async () => {
+    try {
+      const picked = await File.pickFileAsync({ mimeTypes: ['text/html', 'application/json', 'text/plain'] });
+      if (!picked || picked.canceled || !picked.result) return;
+      const count = await importBookmarks(parseBookmarks(await picked.result.text()));
+      Alert.alert(t('data.title'), count > 0 ? t('data.imported', { count }) : t('data.importNone'));
+    } catch (e) {
+      Alert.alert(t('data.title'), t('data.importFailed'));
+    }
+  };
 
   // Keep local picker in sync when context loads from AsyncStorage
   useEffect(() => {
@@ -329,7 +373,7 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <ThemedSwitch
               value={timerEnabled}
-              onValueChange={(val) => setTimerSettingsPref({ enabled: val, limitMs: localLimitMinutes * 60000, strict: strictMode })}
+              onValueChange={(val) => changeTimer({ enabled: val, dailyLimitMs: localLimitMinutes * 60000, strictMode: strictMode })}
               theme={theme}
             />
           </Pressable>
@@ -349,7 +393,7 @@ const SettingsScreen = ({ navigation }) => {
                       key={mins}
                       onPress={() => {
                         setLocalLimitMinutes(mins);
-                        setTimerSettingsPref({ enabled: true, limitMs: mins * 60000, strict: strictMode });
+                        changeTimer({ enabled: true, dailyLimitMs: mins * 60000, strictMode: strictMode });
                       }}
                       style={({ pressed }) => [
                         styles.positionButton,
@@ -377,7 +421,7 @@ const SettingsScreen = ({ navigation }) => {
                     onPress={() => {
                       const newMins = Math.max(5, localLimitMinutes - 15);
                       setLocalLimitMinutes(newMins);
-                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                      changeTimer({ enabled: true, dailyLimitMs: newMins * 60000, strictMode: strictMode });
                     }}
                     style={({ pressed }) => [
                       styles.positionButton,
@@ -401,7 +445,7 @@ const SettingsScreen = ({ navigation }) => {
                     onPress={() => {
                       const newMins = Math.min(1435, localLimitMinutes + 15);
                       setLocalLimitMinutes(newMins);
-                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                      changeTimer({ enabled: true, dailyLimitMs: newMins * 60000, strictMode: strictMode });
                     }}
                     style={({ pressed }) => [
                       styles.positionButton,
@@ -427,7 +471,7 @@ const SettingsScreen = ({ navigation }) => {
                   </View>
                   <ThemedSwitch
                     value={strictMode}
-                    onValueChange={(val) => setTimerSettingsPref({ enabled: true, limitMs: localLimitMinutes * 60000, strict: val })}
+                    onValueChange={(val) => changeTimer({ enabled: true, dailyLimitMs: localLimitMinutes * 60000, strictMode: val })}
                     theme={theme}
                   />
                 </View>
@@ -437,6 +481,22 @@ const SettingsScreen = ({ navigation }) => {
               </View>
             </>
           )}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('Accountability')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={colors.accent} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{t('accountability.title')}</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('accountability.subtitle')}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.quickAccess')}</Text>
@@ -488,6 +548,31 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('data.title')}</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          {[
+            { icon: 'document-text-outline', label: t('data.exportHistoryCsv'), onPress: exportHistoryCsv },
+            { icon: 'globe-outline', label: t('data.exportHistoryHtml'), onPress: exportHistoryHtml },
+            { icon: 'bookmark-outline', label: t('data.exportBookmarks'), onPress: exportBookmarks },
+            { icon: 'download-outline', label: t('data.importBookmarks'), onPress: handleImportBookmarks },
+          ].map((item, index) => (
+            <View key={item.label}>
+              {index > 0 && <View style={[styles.hairline, { backgroundColor: colors.separator }]} />}
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+                onPress={item.onPress}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name={item.icon} size={22} color={colors.accent} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </Pressable>
+            </View>
+          ))}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.aboutLegal')}</Text>
@@ -589,6 +674,8 @@ const SettingsScreen = ({ navigation }) => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {protectionGate}
     </SafeAreaView>
   );
 };
