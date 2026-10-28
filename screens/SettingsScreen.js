@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import { getTheme } from '../theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { LANGUAGES } from '../i18n';
+import { SEARCH_ENGINES, getSearchEngine } from '../utils/url';
 
 /**
  * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
@@ -33,6 +34,9 @@ const ThemedSwitch = ({ value, onValueChange, theme }) => {
     />
   );
 };
+
+// Web page text sizes offered in Settings (percent; Android only)
+const TEXT_ZOOM_STEPS = [80, 90, 100, 115, 130, 150, 175, 200];
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -58,6 +62,12 @@ const SettingsScreen = ({ navigation }) => {
     setTimerSettingsPref,
     language,
     setLanguagePref,
+    searchEngine,
+    setSearchEnginePref,
+    darkPagesEnabled,
+    setDarkPagesPref,
+    textZoom,
+    setTextZoomPref,
     t,
   } = useBrowser();
 
@@ -66,8 +76,31 @@ const SettingsScreen = ({ navigation }) => {
 
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
   const [localLimitMinutes, setLocalLimitMinutes] = useState(Math.round(dailyLimitMs / 60000));
-  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  // Which option list is open: 'language' | 'search' | 'textZoom' | null
+  const [picker, setPicker] = useState(null);
   const currentLanguageName = (LANGUAGES.find((l) => l.code === language) || LANGUAGES[0]).name;
+
+  const pickers = {
+    language: {
+      title: t('settings.chooseLanguage'),
+      options: LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
+      selected: language,
+      onSelect: setLanguagePref,
+    },
+    search: {
+      title: t('settings.chooseSearchEngine'),
+      options: SEARCH_ENGINES.map((e) => ({ value: e.id, label: e.name })),
+      selected: searchEngine,
+      onSelect: setSearchEnginePref,
+    },
+    textZoom: {
+      title: t('settings.textSize'),
+      options: TEXT_ZOOM_STEPS.map((v) => ({ value: v, label: `${v}%` })),
+      selected: textZoom,
+      onSelect: setTextZoomPref,
+    },
+  };
+  const openPicker = picker ? pickers[picker] : null;
 
   // Keep local picker in sync when context loads from AsyncStorage
   useEffect(() => {
@@ -123,7 +156,7 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <Pressable
             style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
-            onPress={() => setLanguageModalVisible(true)}
+            onPress={() => setPicker('language')}
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="language-outline" size={22} color={colors.accent} />
@@ -131,6 +164,22 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <View style={styles.menuItemRight}>
               <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{currentLanguageName}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </View>
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => setPicker('search')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="search-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.searchEngine')}</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{getSearchEngine(searchEngine).name}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </View>
           </Pressable>
@@ -204,6 +253,41 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <ThemedSwitch value={isDarkMode} onValueChange={toggleDarkMode} theme={theme} />
           </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="contrast-outline" size={22} color={colors.accent} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.darkPages')}</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.darkPagesHint')}</Text>
+              </View>
+            </View>
+            <ThemedSwitch value={darkPagesEnabled} onValueChange={setDarkPagesPref} theme={theme} />
+          </Pressable>
+
+          {Platform.OS === 'android' && (
+            <>
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+                onPress={() => setPicker('textZoom')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="text-outline" size={22} color={colors.accent} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.textSize')}</Text>
+                </View>
+                <View style={styles.menuItemRight}>
+                  <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{`${textZoom}%`}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </View>
+              </Pressable>
+            </>
+          )}
 
           <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
@@ -468,34 +552,34 @@ const SettingsScreen = ({ navigation }) => {
       </ScrollView>
 
       <Modal
-        visible={languageModalVisible}
+        visible={openPicker != null}
         transparent
         animationType="fade"
-        onRequestClose={() => setLanguageModalVisible(false)}
+        onRequestClose={() => setPicker(null)}
       >
         <Pressable
           style={[styles.languageOverlay, { backgroundColor: colors.scrim }]}
-          onPress={() => setLanguageModalVisible(false)}
+          onPress={() => setPicker(null)}
         >
           {/* Inner Pressable swallows taps so only the dimmed area closes the picker */}
           <Pressable style={[styles.languageSheet, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
-            <Text style={[styles.languageTitle, { color: colors.text }]}>{t('settings.chooseLanguage')}</Text>
-            {LANGUAGES.map((lang, index) => {
-              const selected = lang.code === language;
+            <Text style={[styles.languageTitle, { color: colors.text }]}>{openPicker?.title}</Text>
+            {openPicker?.options.map((option, index) => {
+              const selected = option.value === openPicker.selected;
               return (
-                <View key={lang.code}>
+                <View key={String(option.value)}>
                   {index > 0 && <View style={[styles.languageHairline, { backgroundColor: colors.separator }]} />}
                   <Pressable
                     style={({ pressed }) => [styles.languageRow, pressed && { opacity: animation.pressOpacity }]}
                     onPress={() => {
-                      setLanguagePref(lang.code);
-                      setLanguageModalVisible(false);
+                      openPicker.onSelect(option.value);
+                      setPicker(null);
                     }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                   >
                     <Text style={[styles.languageName, { color: selected ? colors.accent : colors.text, fontWeight: selected ? '600' : '400' }]}>
-                      {lang.name}
+                      {option.label}
                     </Text>
                     {selected && <Ionicons name="checkmark" size={20} color={colors.accent} />}
                   </Pressable>

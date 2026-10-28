@@ -9,6 +9,7 @@ import { Platform, AppState, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadHistory, saveHistory, loadBookmarks, saveBookmark, removeBookmark, isBookmarked, saveUsage, loadUsage, saveTabs, loadTabs, saveActiveTabIndex, loadActiveTabIndex, saveTimerSettings, loadTimerSettings, saveTimerDaily, loadTimerDaily } from '../utils/storage';
 import { translate, DEFAULT_LANGUAGE, isSupportedLanguage } from '../i18n';
+import { formatInputUrl, DEFAULT_SEARCH_ENGINE, isSupportedSearchEngine } from '../utils/url';
 
 const BrowserContext = createContext();
 
@@ -46,9 +47,17 @@ export const BrowserProvider = ({ children }) => {
   // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
+  // Show light web pages in dark colors (separate from the app's own dark mode)
+  const [darkPagesEnabled, setDarkPagesEnabled] = useState(false);
+  // Web page text size in percent (Android only)
+  const [textZoom, setTextZoom] = useState(100);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
+  // Search engine for address-bar searches. The ref lets navigateTo stay a stable callback.
+  const [searchEngine, setSearchEngine] = useState(DEFAULT_SEARCH_ENGINE);
+  const searchEngineRef = React.useRef(DEFAULT_SEARCH_ENGINE);
+  const formatUrl = useCallback((url) => formatInputUrl(url, searchEngineRef.current), []);
 
   // Daily browsing timer state
   const [timerEnabled, setTimerEnabled] = useState(false);
@@ -152,9 +161,25 @@ export const BrowserProvider = ({ children }) => {
         setBackgroundPlayEnabled(savedBackgroundPlay !== 'false');
       }
 
+      const savedDarkPages = await AsyncStorage.getItem('@squarebrowser_dark_pages');
+      if (savedDarkPages !== null) {
+        setDarkPagesEnabled(savedDarkPages === 'true');
+      }
+
+      const savedTextZoom = parseInt(await AsyncStorage.getItem('@squarebrowser_text_zoom'), 10);
+      if (savedTextZoom >= 50 && savedTextZoom <= 300) {
+        setTextZoom(savedTextZoom);
+      }
+
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
         setLanguage(savedLanguage);
+      }
+
+      const savedSearchEngine = await AsyncStorage.getItem('@squarebrowser_search_engine');
+      if (savedSearchEngine && isSupportedSearchEngine(savedSearchEngine)) {
+        searchEngineRef.current = savedSearchEngine;
+        setSearchEngine(savedSearchEngine);
       }
 
       // Load timer settings and today's elapsed time
@@ -221,10 +246,27 @@ export const BrowserProvider = ({ children }) => {
     await AsyncStorage.setItem('@squarebrowser_background_play', enabled ? 'true' : 'false');
   };
 
+  const setDarkPagesPref = async (enabled) => {
+    setDarkPagesEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_dark_pages', enabled ? 'true' : 'false');
+  };
+
+  const setTextZoomPref = async (percent) => {
+    setTextZoom(percent);
+    await AsyncStorage.setItem('@squarebrowser_text_zoom', String(percent));
+  };
+
   const setLanguagePref = async (code) => {
     if (!isSupportedLanguage(code)) return;
     setLanguage(code);
     await AsyncStorage.setItem('@squarebrowser_language', code);
+  };
+
+  const setSearchEnginePref = async (id) => {
+    if (!isSupportedSearchEngine(id)) return;
+    searchEngineRef.current = id;
+    setSearchEngine(id);
+    await AsyncStorage.setItem('@squarebrowser_search_engine', id);
   };
 
   /**
@@ -437,25 +479,7 @@ export const BrowserProvider = ({ children }) => {
    * Navigate to a URL in the current tab
    */
   const navigateTo = useCallback((url) => {
-    // Ensure URL has protocol
-    let formattedUrl = url.trim();
-
-    // Handle about:blank
-    if (formattedUrl === 'about:blank' || formattedUrl === '') {
-      formattedUrl = 'about:blank';
-    }
-    // Already has protocol
-    else if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
-      // Keep as is
-    }
-    // Check if it looks like a domain (has dots, no spaces)
-    else if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
-      formattedUrl = 'https://' + formattedUrl;
-    }
-    // Treat as search query
-    else {
-      formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
-    }
+    const formattedUrl = formatUrl(url);
 
     // Use functional update and ref to get current active index.
     // navRequestId increments on every external (address-bar) navigation so BrowserTab
@@ -473,31 +497,13 @@ export const BrowserProvider = ({ children }) => {
       }
       return prev;
     });
-  }, []);
+  }, [formatUrl]);
 
   /**
    * Navigate to a URL in a new tab (for external links)
    */
   const navigateToNewTab = useCallback((url) => {
-    // Ensure URL has protocol
-    let formattedUrl = url.trim();
-
-    // Handle about:blank
-    if (formattedUrl === 'about:blank' || formattedUrl === '') {
-      formattedUrl = 'about:blank';
-    }
-    // Already has protocol
-    else if (formattedUrl.startsWith('http://') || formattedUrl.startsWith('https://')) {
-      // Keep as is
-    }
-    // Check if it looks like a domain (has dots, no spaces)
-    else if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
-      formattedUrl = 'https://' + formattedUrl;
-    }
-    // Treat as search query
-    else {
-      formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
-    }
+    const formattedUrl = formatUrl(url);
 
     // Create new tab with the URL
     const newTab = {
@@ -513,7 +519,7 @@ export const BrowserProvider = ({ children }) => {
       setActiveTabIndex(newIndex);
       return [...prev, newTab];
     });
-  }, []);
+  }, [formatUrl]);
 
   /**
    * Tab Operations
@@ -534,14 +540,7 @@ export const BrowserProvider = ({ children }) => {
   }, []);
 
   const addTabInBackground = useCallback((url = 'about:blank') => {
-    let formattedUrl = url.trim();
-    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
-      if (formattedUrl.includes('.') && !formattedUrl.includes(' ')) {
-        formattedUrl = 'https://' + formattedUrl;
-      } else {
-        formattedUrl = 'https://www.google.com/search?q=' + encodeURIComponent(formattedUrl);
-      }
-    }
+    const formattedUrl = formatUrl(url);
     const newTab = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       url: formattedUrl,
@@ -549,7 +548,7 @@ export const BrowserProvider = ({ children }) => {
       canGoForward: false,
     };
     setTabs(prev => [...prev, newTab]);
-  }, []);
+  }, [formatUrl]);
 
   const closeTab = useCallback((index) => {
     setTabs(prev => {
@@ -686,8 +685,14 @@ export const BrowserProvider = ({ children }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    darkPagesEnabled,
+    setDarkPagesPref,
+    textZoom,
+    setTextZoomPref,
     language,
     setLanguagePref,
+    searchEngine,
+    setSearchEnginePref,
     t,
     userAgent,
     navigateTo,
@@ -707,7 +712,8 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    language, t,
+    darkPagesEnabled, textZoom,
+    language, t, searchEngine,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);

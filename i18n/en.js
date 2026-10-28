@@ -108,6 +108,8 @@ export default {
     title: 'Settings',
     browserSettings: 'Browser Settings',
     language: 'Language',
+    searchEngine: 'Search Engine',
+    chooseSearchEngine: 'Choose search engine',
     chooseLanguage: 'Choose language',
     desktopMode: 'Desktop Mode',
     adBlocker: 'Ad Blocker',
@@ -116,6 +118,9 @@ export default {
     backgroundPlay: 'Background Playback',
     backgroundPlayHint: 'Keep audio playing in background',
     darkMode: 'Dark Mode',
+    darkPages: 'Dark Web Pages',
+    darkPagesHint: 'Show bright websites in dark colors',
+    textSize: 'Text Size',
     urlBarPosition: 'URL Bar Position',
     top: 'Top',
     bottom: 'Bottom',
@@ -141,6 +146,14 @@ export default {
     status: 'Status',
     statusActive: 'Active Accountability',
     footer: 'SquareBrowser v{{version}} • Honest Browsing',
+  },
+
+  downloads: {
+    started: 'Downloading…',
+    noPermission: 'Allow storage access to save downloads.',
+    saved: 'Saved to Downloads: {{name}}',
+    failed: "Couldn't save this file.",
+    tooLarge: 'This file is too big to save here (20 MB max).',
   },
 
   browser: {

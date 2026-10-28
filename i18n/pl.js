@@ -117,6 +117,8 @@ export default {
     title: 'Ustawienia',
     browserSettings: 'Przeglądarka',
     language: 'Język',
+    searchEngine: 'Wyszukiwarka',
+    chooseSearchEngine: 'Wybierz wyszukiwarkę',
     chooseLanguage: 'Wybierz język',
     desktopMode: 'Wersja na komputer',
     adBlocker: 'Blokowanie reklam',
@@ -125,6 +127,9 @@ export default {
     backgroundPlay: 'Odtwarzanie w tle',
     backgroundPlayHint: 'Dźwięk gra dalej w tle',
     darkMode: 'Tryb ciemny',
+    darkPages: 'Ciemne strony',
+    darkPagesHint: 'Pokazuj jasne strony w ciemnych kolorach',
+    textSize: 'Rozmiar tekstu',
     urlBarPosition: 'Pasek adresu',
     top: 'Góra',
     bottom: 'Dół',
@@ -150,6 +155,14 @@ export default {
     status: 'Status',
     statusActive: 'Kontrola włączona',
     footer: 'SquareBrowser v{{version}} • Uczciwe przeglądanie',
+  },
+
+  downloads: {
+    started: 'Pobieranie…',
+    noPermission: 'Zezwól na dostęp do pamięci, żeby zapisywać pliki.',
+    saved: 'Zapisano w Pobranych: {{name}}',
+    failed: 'Nie udało się zapisać pliku.',
+    tooLarge: 'Ten plik jest za duży (maks. 20 MB).',
   },
 
   browser: {

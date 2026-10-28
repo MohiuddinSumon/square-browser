@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Saving to Downloads needs this only on Android 9 and older; newer versions use MediaStore.
+       It also lets react-native-webview's own downloads (DownloadManager) work on those versions. -->
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+</manifest>

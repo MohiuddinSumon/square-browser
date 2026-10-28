@@ -52,7 +52,7 @@
                                                          "usesCleartextTraffic":  true,
                                                          "enableMinifyInReleaseBuilds":  true,
                                                          "enableShrinkResourcesInReleaseBuilds":  true,
-                                                         "extraProguardRules":  "-keep class com.reactnativecommunity.webview.RNCWebView { public boolean keepVisibleInBackground; }\n-keep class com.reactnativecommunity.webview.** { *; }\n-keep class expo.modules.squareadblock.** { *; }\n-keep class expo.modules.squareplayback.** { *; }\n-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod"
+                                                         "extraProguardRules":  "-keep class com.reactnativecommunity.webview.RNCWebView { public boolean keepVisibleInBackground; }\n-keep class com.reactnativecommunity.webview.** { *; }\n-keep class expo.modules.squareadblock.** { *; }\n-keep class expo.modules.squareplayback.** { *; }\n-keep class expo.modules.squaredownloads.** { *; }\n-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod"
                                                      }
                                      }
                                  ],

@@ -117,6 +117,8 @@ export default {
     title: 'Настройки',
     browserSettings: 'Браузер',
     language: 'Язык',
+    searchEngine: 'Поисковик',
+    chooseSearchEngine: 'Выберите поисковик',
     chooseLanguage: 'Выберите язык',
     desktopMode: 'Версия для компьютера',
     adBlocker: 'Блокировка рекламы',
@@ -125,6 +127,9 @@ export default {
     backgroundPlay: 'Фоновое воспроизведение',
     backgroundPlayHint: 'Звук продолжает играть в фоне',
     darkMode: 'Тёмная тема',
+    darkPages: 'Тёмные сайты',
+    darkPagesHint: 'Показывать светлые сайты в тёмных тонах',
+    textSize: 'Размер текста',
     urlBarPosition: 'Адресная строка',
     top: 'Сверху',
     bottom: 'Снизу',
@@ -150,6 +155,14 @@ export default {
     status: 'Статус',
     statusActive: 'Контроль включён',
     footer: 'SquareBrowser v{{version}} • Честный серфинг',
+  },
+
+  downloads: {
+    started: 'Скачивание…',
+    noPermission: 'Разрешите доступ к памяти, чтобы сохранять файлы.',
+    saved: 'Сохранено в «Загрузки»: {{name}}',
+    failed: 'Не получилось сохранить файл.',
+    tooLarge: 'Файл слишком большой (максимум 20 МБ).',
   },
 
   browser: {

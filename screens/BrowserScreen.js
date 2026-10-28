@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid, Dimensions, PanResponder, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, ToastAndroid, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid, Dimensions, PanResponder, Pressable } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -20,6 +20,9 @@ import {
 } from '../modules/square-adblock';
 import { updatePlayback, stopPlaybackService, addMediaActionListener, evaluateInWebView } from '../modules/square-playback';
 import { BACKGROUND_PLAY_SCRIPT } from './backgroundPlayScript';
+import { darkPagesScript } from './darkPagesScript';
+import { DOWNLOAD_SCRIPT } from './downloadScript';
+import { saveBase64ToDownloads, fileNameFor } from '../modules/square-downloads';
 import { getTheme } from '../theme.js';
 
 /**
@@ -397,6 +400,9 @@ const BrowserTab = ({
   onOpenWindow,
   backgroundPlayEnabled,
   onMediaState,
+  darkPagesEnabled,
+  textZoom,
+  onDownload,
   theme,
   t,
 }) => {
@@ -434,6 +440,13 @@ const BrowserTab = ({
   const handleWebViewRef = useCallback((node) => {
     webViewRef.current = node;
   }, []);
+
+  // Flip dark pages on the loaded page right away; new pages get it from the injected script.
+  useEffect(() => {
+    webViewRef.current?.injectJavaScript(
+      `window.__sqSetDark && window.__sqSetDark(${darkPagesEnabled ? 'true' : 'false'}); true;`
+    );
+  }, [darkPagesEnabled]);
 
   // Keep the native request filter in sync with the ad-block setting.
   useEffect(() => {
@@ -619,7 +632,8 @@ const BrowserTab = ({
   document.addEventListener('click', function(e) {
     var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!el) return;
-    var blocked = _isAd(el.href || '') || el.target === '_blank';
+    // Download links may use target="_blank"; those are files, not pop-ups.
+    var blocked = _isAd(el.href || '') || (el.target === '_blank' && !el.hasAttribute('download'));
     if (blocked) {
       e.preventDefault();
       e.stopImmediatePropagation();
@@ -767,6 +781,8 @@ true;
               onLinkLongPress(data.url, data.text);
             } else if (data.type === 'mediaState' && onMediaState) {
               onMediaState(tab.id, data, (js) => evaluateInWebView(viewTag.current, js));
+            } else if (data.type === 'download' && onDownload) {
+              onDownload(data);
             }
           } catch (e) {
             // Ignore non-JSON messages
@@ -777,12 +793,20 @@ true;
         injectedJavaScriptBeforeContentLoaded={
           (enhancedCompatEnabled ? BOT_BYPASS_SCRIPT : 'true;') +
           (adBlockEnabled ? AD_BLOCK_NETWORK_SCRIPT : 'true;') +
-          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : 'true;')
+          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : 'true;') +
+          darkPagesScript(darkPagesEnabled) +
+          (Platform.OS === 'android' ? DOWNLOAD_SCRIPT : '')
         }
         injectedJavaScript={
           adBlockScript + scrollTrackingScript + linkLongPressScript +
-          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : '')
+          (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : '') +
+          darkPagesScript(darkPagesEnabled) +
+          (Platform.OS === 'android' ? DOWNLOAD_SCRIPT : '')
         }
+        textZoom={textZoom}
+        // Shown by react-native-webview for normal (DownloadManager) downloads
+        downloadingMessage={t('downloads.started')}
+        lackPermissionToDownloadMessage={t('downloads.noPermission')}
         javaScriptEnabled={true}
         allowsFullscreenVideo={true}
         mediaPlaybackRequiresUserAction={false}
@@ -844,6 +868,8 @@ const BrowserScreen = ({ navigation }) => {
     adBlockEnabled,
     enhancedCompatEnabled,
     backgroundPlayEnabled,
+    darkPagesEnabled,
+    textZoom,
     userAgent,
     tabs,
     activeTabIndex,
@@ -952,6 +978,21 @@ const BrowserScreen = ({ navigation }) => {
   }, [tabs, syncPlayback]);
 
   useEffect(() => () => stopPlaybackService(), []);
+
+  // Files a page built itself (blob:/data: links), posted by DOWNLOAD_SCRIPT.
+  const handleDownload = useCallback(async (data) => {
+    if (Platform.OS !== 'android') return;
+    if (data.error) {
+      ToastAndroid.show(t(data.error === 'tooLarge' ? 'downloads.tooLarge' : 'downloads.failed'), ToastAndroid.LONG);
+      return;
+    }
+    try {
+      const saved = await saveBase64ToDownloads(fileNameFor(data.name, data.mime), data.mime, data.data);
+      if (saved) ToastAndroid.show(t('downloads.saved', { name: saved }), ToastAndroid.LONG);
+    } catch (e) {
+      ToastAndroid.show(t(e && e.message === 'permission' ? 'downloads.noPermission' : 'downloads.failed'), ToastAndroid.LONG);
+    }
+  }, [t]);
 
   const handleLinkLongPress = useCallback((url, text) => {
     if (!url || url.startsWith('javascript:')) return;
@@ -1271,6 +1312,9 @@ const BrowserScreen = ({ navigation }) => {
                 onOpenWindow={isActive ? addTab : undefined}
                 backgroundPlayEnabled={backgroundPlayEnabled !== false}
                 onMediaState={handleMediaState}
+                darkPagesEnabled={darkPagesEnabled}
+                textZoom={textZoom}
+                onDownload={handleDownload}
                 theme={theme}
                 t={t}
               />
