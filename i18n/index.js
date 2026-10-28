@@ -13,6 +13,7 @@ import en from './en.js';
 import ru from './ru.js';
 import pl from './pl.js';
 import de from './de.js';
+import bn from './bn.js';
 
 export const DEFAULT_LANGUAGE = 'en';
 
@@ -22,15 +23,16 @@ export const LANGUAGES = [
   { code: 'ru', name: 'Русский', locale: 'ru-RU' },
   { code: 'pl', name: 'Polski', locale: 'pl-PL' },
   { code: 'de', name: 'Deutsch', locale: 'de-DE' },
+  { code: 'bn', name: 'বাংলা', locale: 'bn-BD' },
 ];
 
-const DICTIONARIES = { en, ru, pl, de };
+const DICTIONARIES = { en, ru, pl, de, bn };
 
 export const isSupportedLanguage = (code) =>
   Object.prototype.hasOwnProperty.call(DICTIONARIES, code);
 
 /**
- * CLDR plural category for a count. Hand-written for the four shipped languages so it does
+ * CLDR plural category for a count. Hand-written for the shipped languages so it does
  * not depend on Intl.PluralRules being available in the JS engine.
  */
 export const pluralCategory = (lang, count) => {
@@ -48,6 +50,7 @@ export const pluralCategory = (lang, count) => {
     if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'few';
     return 'many';
   }
+  if (lang === 'bn') return n === 0 || n === 1 ? 'one' : 'other';
   // English and German
   return n === 1 ? 'one' : 'other';
 };

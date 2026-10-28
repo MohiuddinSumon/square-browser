@@ -12,9 +12,10 @@ import en from '../i18n/en.js';
 import ru from '../i18n/ru.js';
 import pl from '../i18n/pl.js';
 import de from '../i18n/de.js';
+import bn from '../i18n/bn.js';
 import { translate, pluralCategory, formatDuration, LANGUAGES, isSupportedLanguage } from '../i18n/index.js';
 
-const OTHERS = { ru, pl, de };
+const OTHERS = { ru, pl, de, bn };
 let failures = 0;
 const fail = (message) => {
   failures += 1;
@@ -92,6 +93,8 @@ const expectPlural = (lang, count, expected) => {
   expectPlural('en', n, expected);
   expectPlural('de', n, expected);
 });
+// Bengali: 0 and 1 are "one"
+[[0, 'one'], [1, 'one'], [2, 'other'], [21, 'other']].forEach(([n, expected]) => expectPlural('bn', n, expected));
 
 // translate() behaviour
 try {
@@ -120,7 +123,8 @@ try {
 
   assert.equal(isSupportedLanguage('pl'), true);
   assert.equal(isSupportedLanguage('toString'), false, 'prototype keys are not languages');
-  assert.deepEqual(LANGUAGES.map((l) => l.code), ['en', 'ru', 'pl', 'de']);
+  assert.equal(formatDuration((k, v) => translate('bn', k, v), 80 * 60000), '1 ঘ 20 মি');
+  assert.deepEqual(LANGUAGES.map((l) => l.code), ['en', 'ru', 'pl', 'de', 'bn']);
 } catch (error) {
   fail(error.message);
 }
