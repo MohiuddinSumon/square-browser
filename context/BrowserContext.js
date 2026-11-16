@@ -581,6 +581,13 @@ export const BrowserProvider = ({ children }) => {
     });
   }, []);
 
+  // Close every tab and leave a single Home tab (the app always has at least one tab).
+  const closeAllTabs = useCallback(() => {
+    activeTabIndexRef.current = 0;
+    setActiveTabIndex(0);
+    setTabs([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+  }, []);
+
   const updateTabState = useCallback((index, state) => {
     setTabs(prev => {
       const newTabs = [...prev];
@@ -663,6 +670,7 @@ export const BrowserProvider = ({ children }) => {
     addTab,
     addTabInBackground,
     closeTab,
+    closeAllTabs,
     setActiveTabIndex,
     updateTabState,
     currentUrl,
@@ -715,7 +723,7 @@ export const BrowserProvider = ({ children }) => {
     extendTimer,
     setTimerScreenActive,
   }), [
-    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab,
+    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab, closeAllTabs,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,

@@ -1481,7 +1481,7 @@ const ExitModal = ({ visible, onClose, onConfirm, theme, dontAskAgain, setDontAs
 };
 
 const TabSwitcher = ({ visible, onClose, theme }) => {
-  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, t } = useBrowser();
+  const { tabs, activeTabIndex, setActiveTabIndex, addTab, closeTab, closeAllTabs, t } = useBrowser();
   const [processingIndex, setProcessingIndex] = useState(null);
   const insets = useSafeAreaInsets();
   const { colors, spacing, borderRadius, animation, iosSheet, typography } = theme;
@@ -1545,9 +1545,26 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
     setTimeout(() => setProcessingIndex(null), 300);
   };
 
+  const handleCloseAll = () => {
+    if (processingIndex !== null) return;
+    Alert.alert(t('browser.closeAllTitle'), t('browser.closeAllMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('browser.closeAll'),
+        style: 'destructive',
+        onPress: () => {
+          closeAllTabs();
+          onClose();
+        },
+      },
+    ]);
+  };
+
   if (!mounted) return null;
 
   const hasTabs = tabs.length > 0;
+  // Nothing to close when the only tab is an empty Home tab.
+  const canCloseAll = tabs.length > 1 || (tabs.length === 1 && tabs[0].url !== 'about:blank');
 
   return (
     <Modal visible={mounted} transparent={true} animationType="none" onRequestClose={onClose}>
@@ -1573,13 +1590,26 @@ const TabSwitcher = ({ visible, onClose, theme }) => {
           </View>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.text, fontSize: typography.fontSizes.title3 }]}>{t('browser.tabsTitle', { count: tabs.length })}</Text>
-            <Pressable
-              style={({ pressed }) => [styles.sheetCloseButton, pressed && { opacity: animation.pressOpacity }]}
-              onPress={onClose}
-              hitSlop={8}
-            >
-              <Ionicons name="close" size={22} color={colors.text} />
-            </Pressable>
+            <View style={styles.modalHeaderActions}>
+              {canCloseAll && (
+                <Pressable
+                  style={({ pressed }) => [styles.closeAllButton, pressed && { opacity: animation.pressOpacity }]}
+                  onPress={handleCloseAll}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('browser.closeAll')}
+                >
+                  <Text style={[styles.closeAllButtonText, { color: colors.danger }]}>{t('browser.closeAll')}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={({ pressed }) => [styles.sheetCloseButton, pressed && { opacity: animation.pressOpacity }]}
+                onPress={onClose}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
           </View>
 
           {hasTabs ? (
@@ -1983,6 +2013,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   modalTitle: {
+    fontWeight: '600',
+  },
+  modalHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  closeAllButton: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  closeAllButtonText: {
+    fontSize: 15,
     fontWeight: '600',
   },
   sheetCloseButton: {
