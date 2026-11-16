@@ -46,6 +46,7 @@ export const BrowserProvider = ({ children }) => {
   // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
+  const [pullToRefreshEnabled, setPullToRefreshEnabled] = useState(true);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -152,6 +153,11 @@ export const BrowserProvider = ({ children }) => {
         setBackgroundPlayEnabled(savedBackgroundPlay !== 'false');
       }
 
+      const savedPullToRefresh = await AsyncStorage.getItem('@squarebrowser_pull_to_refresh');
+      if (savedPullToRefresh !== null) {
+        setPullToRefreshEnabled(savedPullToRefresh !== 'false');
+      }
+
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
         setLanguage(savedLanguage);
@@ -219,6 +225,11 @@ export const BrowserProvider = ({ children }) => {
   const setBackgroundPlayPref = async (enabled) => {
     setBackgroundPlayEnabled(enabled);
     await AsyncStorage.setItem('@squarebrowser_background_play', enabled ? 'true' : 'false');
+  };
+
+  const setPullToRefreshPref = async (enabled) => {
+    setPullToRefreshEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_pull_to_refresh', enabled ? 'true' : 'false');
   };
 
   const setLanguagePref = async (code) => {
@@ -686,6 +697,8 @@ export const BrowserProvider = ({ children }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    pullToRefreshEnabled,
+    setPullToRefreshPref,
     language,
     setLanguagePref,
     t,
@@ -707,7 +720,7 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    language, t,
+    pullToRefreshEnabled, language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);

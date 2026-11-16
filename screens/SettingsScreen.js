@@ -52,6 +52,8 @@ const SettingsScreen = ({ navigation }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    pullToRefreshEnabled,
+    setPullToRefreshPref,
     timerEnabled,
     dailyLimitMs,
     strictMode,
@@ -175,6 +177,25 @@ const SettingsScreen = ({ navigation }) => {
           </Pressable>
 
           <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          {Platform.OS !== 'web' && (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="refresh-outline" size={22} color={colors.accent} />
+                  <View style={styles.menuItemTextWrap}>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.pullToRefresh')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.pullToRefreshHint')}</Text>
+                  </View>
+                </View>
+                <ThemedSwitch value={pullToRefreshEnabled !== false} onValueChange={setPullToRefreshPref} theme={theme} />
+              </Pressable>
+
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+            </>
+          )}
 
           {Platform.OS === 'android' && (
             <>

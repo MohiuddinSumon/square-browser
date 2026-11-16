@@ -20,6 +20,7 @@ import {
 } from '../modules/square-adblock';
 import { updatePlayback, stopPlaybackService, addMediaActionListener, evaluateInWebView } from '../modules/square-playback';
 import { BACKGROUND_PLAY_SCRIPT } from './backgroundPlayScript';
+import { PULL_TO_REFRESH_SCRIPT, PULL_THRESHOLD, PULL_MAX } from './pullToRefreshScript';
 import { getTheme } from '../theme.js';
 
 /**
@@ -381,6 +382,47 @@ const isCloudflareChallengePage = (url = '', title = '') => {
   );
 };
 
+// Chrome-style pull-to-refresh spinner. `pull` is the drag distance reported by
+// PULL_TO_REFRESH_SCRIPT; it is driven with setValue so dragging never re-renders the tab.
+const PullIndicator = ({ pull, refreshing, theme }) => {
+  const spin = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!refreshing) return undefined;
+    spin.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(spin, { toValue: 1, duration: 800, useNativeDriver: true, easing: (x) => x })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [refreshing, spin]);
+
+  const { colors } = theme;
+  const translateY = pull.interpolate({ inputRange: [0, PULL_MAX], outputRange: [-44, PULL_MAX - 44], extrapolate: 'clamp' });
+  const opacity = pull.interpolate({ inputRange: [0, 20, PULL_THRESHOLD], outputRange: [0, 0.6, 1], extrapolate: 'clamp' });
+  const dragRotate = pull.interpolate({ inputRange: [0, PULL_MAX], outputRange: ['0deg', '360deg'], extrapolate: 'clamp' });
+  const spinRotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  // Grey while below the threshold, accent once letting go would refresh.
+  const readyOpacity = pull.interpolate({ inputRange: [PULL_THRESHOLD - 1, PULL_THRESHOLD], outputRange: [0, 1], extrapolate: 'clamp' });
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.pullIndicator,
+        { backgroundColor: colors.surface, opacity, transform: [{ translateY }, { rotate: dragRotate }] },
+      ]}
+    >
+      <Animated.View style={{ transform: [{ rotate: refreshing ? spinRotate : '0deg' }] }}>
+        <Ionicons name="refresh" size={22} color={colors.textSecondary} />
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: refreshing ? 1 : readyOpacity }]}>
+          <Ionicons name="refresh" size={22} color={colors.accent} />
+        </Animated.View>
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
 const BrowserTab = ({
   tab,
   isActive,
@@ -396,6 +438,7 @@ const BrowserTab = ({
   onLinkLongPress,
   onOpenWindow,
   backgroundPlayEnabled,
+  pullToRefreshEnabled,
   onMediaState,
   theme,
   t,
@@ -449,6 +492,39 @@ const BrowserTab = ({
 
   const [loadProgress, setLoadProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Pull-to-refresh (Android; iOS uses the WebView's native pullToRefreshEnabled).
+  const usePullScript = Platform.OS === 'android' && pullToRefreshEnabled;
+  const pullDistance = useRef(new Animated.Value(0)).current;
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const pullRefreshingRef = useRef(false);
+  const pullSafetyTimer = useRef(null);
+
+  const hidePullIndicator = useCallback(() => {
+    clearTimeout(pullSafetyTimer.current);
+    pullRefreshingRef.current = false;
+    setPullRefreshing(false);
+    Animated.timing(pullDistance, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+  }, [pullDistance]);
+
+  const handlePullMessage = useCallback((data) => {
+    if (pullRefreshingRef.current) return;
+    if (data.type === 'pull') {
+      pullDistance.setValue(data.distance || 0);
+    } else if (data.refresh) {
+      pullRefreshingRef.current = true;
+      setPullRefreshing(true);
+      Animated.spring(pullDistance, { toValue: PULL_THRESHOLD, useNativeDriver: true, bounciness: 4 }).start();
+      webViewRef.current?.reload();
+      // onLoadEnd hides it; this covers a reload that never reports back.
+      clearTimeout(pullSafetyTimer.current);
+      pullSafetyTimer.current = setTimeout(hidePullIndicator, 15000);
+    } else {
+      Animated.timing(pullDistance, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [pullDistance, hidePullIndicator]);
+
+  useEffect(() => () => clearTimeout(pullSafetyTimer.current), []);
 
   const adBlockScript = adBlockEnabled ? `
 (function() {
@@ -751,6 +827,7 @@ true;
         onLoadEnd={(e) => {
           setIsLoading(false);
           setLoadProgress(1);
+          if (pullRefreshingRef.current) hidePullIndicator();
           // Re-check CF status after page fully loads (title is available here)
           if (onChallengeDetected) {
             const { url = '', title = '' } = e.nativeEvent;
@@ -765,6 +842,8 @@ true;
               onScroll(data.direction, data.scrollY);
             } else if (data.type === 'linkLongPress' && onLinkLongPress) {
               onLinkLongPress(data.url, data.text);
+            } else if ((data.type === 'pull' || data.type === 'pullEnd') && usePullScript) {
+              handlePullMessage(data);
             } else if (data.type === 'mediaState' && onMediaState) {
               onMediaState(tab.id, data, (js) => evaluateInWebView(viewTag.current, js));
             }
@@ -781,6 +860,7 @@ true;
         }
         injectedJavaScript={
           adBlockScript + scrollTrackingScript + linkLongPressScript +
+          (usePullScript ? PULL_TO_REFRESH_SCRIPT : '') +
           (backgroundPlayEnabled ? BACKGROUND_PLAY_SCRIPT : '')
         }
         javaScriptEnabled={true}
@@ -792,7 +872,7 @@ true;
         thirdPartyCookiesEnabled={Platform.OS !== 'web'}
         javaScriptCanOpenWindowsAutomatically={false}
         mixedContentMode="compatibility"
-        pullToRefreshEnabled={true}
+        pullToRefreshEnabled={pullToRefreshEnabled}
         // Popups (window.open / target="_blank"). Our JS overrides only reach the main
         // frame on Android, so ad pop-unders from cross-origin player iframes land here.
         // Without this handler Android hands the URL to the system browser.
@@ -831,6 +911,7 @@ true;
           <View style={[styles.progressBarFill, { width: `${Math.round(loadProgress * 100)}%` }]} />
         </View>
       )}
+      {usePullScript && <PullIndicator pull={pullDistance} refreshing={pullRefreshing} theme={theme} />}
     </View>
   );
 };
@@ -844,6 +925,7 @@ const BrowserScreen = ({ navigation }) => {
     adBlockEnabled,
     enhancedCompatEnabled,
     backgroundPlayEnabled,
+    pullToRefreshEnabled,
     userAgent,
     tabs,
     activeTabIndex,
@@ -1270,6 +1352,7 @@ const BrowserScreen = ({ navigation }) => {
                 onLinkLongPress={isActive ? handleLinkLongPress : undefined}
                 onOpenWindow={isActive ? addTab : undefined}
                 backgroundPlayEnabled={backgroundPlayEnabled !== false}
+                pullToRefreshEnabled={pullToRefreshEnabled !== false}
                 onMediaState={handleMediaState}
                 theme={theme}
                 t={t}
@@ -1816,6 +1899,22 @@ const styles = StyleSheet.create({
   },
   // Thin top progress bar — replaces full-screen loading overlay
   // Uses pointerEvents="none" so it never blocks the page (including CF challenges)
+  pullIndicator: {
+    position: 'absolute',
+    top: 0,
+    alignSelf: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
   progressBarTrack: {
     position: 'absolute',
     top: 0,

@@ -124,6 +124,8 @@ export default {
     enhancedCompatHint: 'Помогает открывать сайты с защитой Cloudflare',
     backgroundPlay: 'Фоновое воспроизведение',
     backgroundPlayHint: 'Звук продолжает играть в фоне',
+    pullToRefresh: 'Потянуть для обновления',
+    pullToRefreshHint: 'Потяните вниз в начале страницы, чтобы перезагрузить её',
     darkMode: 'Тёмная тема',
     urlBarPosition: 'Адресная строка',
     top: 'Сверху',

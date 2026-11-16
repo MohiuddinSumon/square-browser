@@ -124,6 +124,8 @@ export default {
     enhancedCompatHint: 'Pomaga otwierać strony chronione przez Cloudflare',
     backgroundPlay: 'Odtwarzanie w tle',
     backgroundPlayHint: 'Dźwięk gra dalej w tle',
+    pullToRefresh: 'Pociągnij, aby odświeżyć',
+    pullToRefreshHint: 'Pociągnij w dół na górze strony, żeby ją przeładować',
     darkMode: 'Tryb ciemny',
     urlBarPosition: 'Pasek adresu',
     top: 'Góra',

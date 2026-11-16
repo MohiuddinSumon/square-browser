@@ -109,6 +109,8 @@ export default {
     enhancedCompatHint: 'Hilft beim Laden von Seiten mit Cloudflare-Schutz',
     backgroundPlay: 'Wiedergabe im Hintergrund',
     backgroundPlayHint: 'Audio läuft im Hintergrund weiter',
+    pullToRefresh: 'Zum Aktualisieren ziehen',
+    pullToRefreshHint: 'Oben auf der Seite nach unten ziehen, um sie neu zu laden',
     darkMode: 'Dunkles Design',
     urlBarPosition: 'Adressleiste',
     top: 'Oben',

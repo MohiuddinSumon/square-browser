@@ -115,6 +115,8 @@ export default {
     enhancedCompatHint: 'Helps load sites with Cloudflare protection',
     backgroundPlay: 'Background Playback',
     backgroundPlayHint: 'Keep audio playing in background',
+    pullToRefresh: 'Pull to Refresh',
+    pullToRefreshHint: 'Pull down at the top of a page to reload it',
     darkMode: 'Dark Mode',
     urlBarPosition: 'URL Bar Position',
     top: 'Top',

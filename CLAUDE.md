@@ -147,6 +147,9 @@ English is the source of truth and the **default for everyone**; the app never f
 - Wording is deliberately plain and conversational rather than literal. The Privacy Policy and Terms of Service screens stay English (legal text).
 - To add a language: add `i18n/<code>.js` with every key, register it in `LANGUAGES` and `DICTIONARIES` in `i18n/index.js`, and add its plural rule if it needs more than one/other. Right-to-left layouts are not supported yet.
 
+### Pull to Refresh
+react-native-webview's `pullToRefreshEnabled` only works on iOS. On Android, `screens/pullToRefreshScript.js` is injected: it watches for a downward drag that starts at the very top of the page and posts `pull` / `pullEnd` messages, and `BrowserTab` draws the spinner (`PullIndicator`) and calls `reload()`. Like Chrome, it does nothing when the page or an inner scroll box isn't at the top, the page sets `overscroll-behavior-y: none|contain`, the page calls `preventDefault` on the touch, the drag is sideways or two-finger, the page is zoomed, or a video is fullscreen. Controlled by the `pullToRefreshEnabled` setting (`@squarebrowser_pull_to_refresh`, default on).
+
 ### Fullscreen Video
 The WebView has `allowsFullscreenVideo` on, so a site's fullscreen button works (Android only handles it when that prop is set). The react-native-webview patch also makes fullscreen switch to landscape, adds a rotate button (top right), frees rotation once the phone is physically turned, and lets the system back gesture exit fullscreen (`RNCWebViewManagerImpl.kt` in `patches/`). If react-native-webview is upgraded, regenerate the patch.
 
