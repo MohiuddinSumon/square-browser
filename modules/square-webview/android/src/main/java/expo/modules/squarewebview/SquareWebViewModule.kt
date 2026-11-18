@@ -1,0 +1,52 @@
+// Copyright (c) 2025 SquareBrowser Contributors
+package expo.modules.squarewebview
+
+import expo.modules.kotlin.functions.Queues
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+
+/**
+ * SquareBrowser's own WebView component for Android (phase 1 of replacing
+ * react-native-webview there). See modules/square-webview/index.js for the JS side.
+ */
+class SquareWebViewModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name("SquareWebView")
+
+    View(SquareWebView::class) {
+      Events(
+        "onLoadStart",
+        "onLoadProgress",
+        "onLoadEnd",
+        "onNavigationStateChange",
+        "onMessage",
+        "onExternalUrl"
+      )
+
+      Prop("sourceUri") { view: SquareWebView, uri: String? -> view.sourceUri = uri }
+      Prop("userAgent") { view: SquareWebView, ua: String? -> view.userAgent = ua }
+      Prop("documentStartScript") { view: SquareWebView, script: String? ->
+        view.documentStartScript = script ?: ""
+      }
+      Prop("documentEndScript") { view: SquareWebView, script: String? ->
+        view.documentEndScript = script ?: ""
+      }
+
+      // Runs once per prop update, after every changed prop is set, so the user agent and
+      // scripts are in place before the first page load.
+      OnViewDidUpdateProps { view: SquareWebView -> view.applyProps() }
+      OnViewDestroys { view: SquareWebView -> view.destroy() }
+
+      // Ref methods. Same names as react-native-webview's, so BrowserTab, BrowserContext and
+      // the navigation controls work with either engine.
+      AsyncFunction("reload") { view: SquareWebView -> view.reload() }.runOnQueue(Queues.MAIN)
+      AsyncFunction("goBack") { view: SquareWebView -> view.goBack() }.runOnQueue(Queues.MAIN)
+      AsyncFunction("goForward") { view: SquareWebView -> view.goForward() }.runOnQueue(Queues.MAIN)
+      AsyncFunction("stopLoading") { view: SquareWebView -> view.stopLoading() }.runOnQueue(Queues.MAIN)
+      AsyncFunction("injectJavaScript") { view: SquareWebView, script: String ->
+        view.injectJavaScript(script)
+      }.runOnQueue(Queues.MAIN)
+      AsyncFunction("loadUrl") { view: SquareWebView, url: String -> view.loadUrl(url) }.runOnQueue(Queues.MAIN)
+    }
+  }
+}

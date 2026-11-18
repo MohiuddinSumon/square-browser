@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.squarewebview'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.squarewebview"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Document-start scripts (WebViewCompat.addDocumentStartJavaScript).
+  implementation 'androidx.webkit:webkit:1.12.1'
+}

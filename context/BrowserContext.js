@@ -46,6 +46,10 @@ export const BrowserProvider = ({ children }) => {
   // Enhanced Compatibility Mode — injects bot-bypass script to help pass Cloudflare challenges
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
+  const [pullToRefreshEnabled, setPullToRefreshEnabled] = useState(true);
+  // Experimental: SquareBrowser's own Android WebView (modules/square-webview) instead of
+  // react-native-webview. Tabs read it when they are created, so changes apply after a restart.
+  const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(false);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -152,6 +156,14 @@ export const BrowserProvider = ({ children }) => {
         setBackgroundPlayEnabled(savedBackgroundPlay !== 'false');
       }
 
+      const savedPullToRefresh = await AsyncStorage.getItem('@squarebrowser_pull_to_refresh');
+      if (savedPullToRefresh !== null) {
+        setPullToRefreshEnabled(savedPullToRefresh !== 'false');
+      }
+
+      const savedNativeWebView = await AsyncStorage.getItem('@squarebrowser_native_webview');
+      setNativeWebViewEnabled(savedNativeWebView === 'true');
+
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
         setLanguage(savedLanguage);
@@ -219,6 +231,16 @@ export const BrowserProvider = ({ children }) => {
   const setBackgroundPlayPref = async (enabled) => {
     setBackgroundPlayEnabled(enabled);
     await AsyncStorage.setItem('@squarebrowser_background_play', enabled ? 'true' : 'false');
+  };
+
+  const setPullToRefreshPref = async (enabled) => {
+    setPullToRefreshEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_pull_to_refresh', enabled ? 'true' : 'false');
+  };
+
+  const setNativeWebViewPref = async (enabled) => {
+    setNativeWebViewEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_native_webview', enabled ? 'true' : 'false');
   };
 
   const setLanguagePref = async (code) => {
@@ -570,6 +592,13 @@ export const BrowserProvider = ({ children }) => {
     });
   }, []);
 
+  // Close every tab and leave a single Home tab (the app always has at least one tab).
+  const closeAllTabs = useCallback(() => {
+    activeTabIndexRef.current = 0;
+    setActiveTabIndex(0);
+    setTabs([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+  }, []);
+
   const updateTabState = useCallback((index, state) => {
     setTabs(prev => {
       const newTabs = [...prev];
@@ -652,6 +681,7 @@ export const BrowserProvider = ({ children }) => {
     addTab,
     addTabInBackground,
     closeTab,
+    closeAllTabs,
     setActiveTabIndex,
     updateTabState,
     currentUrl,
@@ -686,6 +716,10 @@ export const BrowserProvider = ({ children }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    pullToRefreshEnabled,
+    setPullToRefreshPref,
+    nativeWebViewEnabled,
+    setNativeWebViewPref,
     language,
     setLanguagePref,
     t,
@@ -702,12 +736,12 @@ export const BrowserProvider = ({ children }) => {
     extendTimer,
     setTimerScreenActive,
   }), [
-    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab,
+    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab, closeAllTabs,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    language, t,
+    pullToRefreshEnabled, nativeWebViewEnabled, language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);
