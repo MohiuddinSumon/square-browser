@@ -111,6 +111,8 @@ export default {
     backgroundPlayHint: 'Audio läuft im Hintergrund weiter',
     pullToRefresh: 'Zum Aktualisieren ziehen',
     pullToRefreshHint: 'Oben auf der Seite nach unten ziehen, um sie neu zu laden',
+    nativeEngine: 'Neue Web-Engine (Experiment)',
+    nativeEngineHint: 'SquareBrowsers eigene Web-Ansicht. Starte die App nach dem Ändern neu.',
     darkMode: 'Dunkles Design',
     urlBarPosition: 'Adressleiste',
     top: 'Oben',

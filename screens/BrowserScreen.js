@@ -21,6 +21,7 @@ import {
 import { updatePlayback, stopPlaybackService, addMediaActionListener, evaluateInWebView } from '../modules/square-playback';
 import { BACKGROUND_PLAY_SCRIPT } from './backgroundPlayScript';
 import { PULL_TO_REFRESH_SCRIPT, PULL_THRESHOLD, PULL_MAX } from './pullToRefreshScript';
+import { SquareWebView, isNativeWebViewAvailable } from '../modules/square-webview';
 import { getTheme } from '../theme.js';
 
 /**
@@ -500,10 +501,14 @@ const BrowserTab = ({
   onOpenWindow,
   backgroundPlayEnabled,
   pullToRefreshEnabled,
+  nativeWebViewEnabled,
   onMediaState,
   theme,
   t,
 }) => {
+  // Engine is fixed for the tab's lifetime: switching would remount the WebView and lose
+  // its back/forward history. The Settings switch applies to tabs created after a restart.
+  const [Engine] = useState(() => (nativeWebViewEnabled && isNativeWebViewAvailable ? SquareWebView : WebView));
   // Track the navRequestId we last acted on — avoids reloading on WebView-internal
   // URL changes (redirects, link clicks) that also update tab.url in context.
   const lastNavRequestId = useRef(tab.navRequestId || 0);
@@ -919,8 +924,10 @@ true;
 
   return (
     <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
-      <WebView
+      <Engine
         ref={handleWebViewRef}
+        // Native engine only: whatsapp:, intent:, market: ... links it refused to load.
+        onExternalUrl={({ nativeEvent }) => handleExternalLink(nativeEvent.url)}
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}
@@ -1030,6 +1037,7 @@ const BrowserScreen = ({ navigation }) => {
     enhancedCompatEnabled,
     backgroundPlayEnabled,
     pullToRefreshEnabled,
+    nativeWebViewEnabled,
     userAgent,
     tabs,
     activeTabIndex,
@@ -1457,6 +1465,7 @@ const BrowserScreen = ({ navigation }) => {
                 onOpenWindow={isActive ? addTab : undefined}
                 backgroundPlayEnabled={backgroundPlayEnabled !== false}
                 pullToRefreshEnabled={pullToRefreshEnabled !== false}
+                nativeWebViewEnabled={nativeWebViewEnabled === true}
                 onMediaState={handleMediaState}
                 theme={theme}
                 t={t}

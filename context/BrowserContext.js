@@ -47,6 +47,9 @@ export const BrowserProvider = ({ children }) => {
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
   const [pullToRefreshEnabled, setPullToRefreshEnabled] = useState(true);
+  // Experimental: SquareBrowser's own Android WebView (modules/square-webview) instead of
+  // react-native-webview. Tabs read it when they are created, so changes apply after a restart.
+  const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(false);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -158,6 +161,9 @@ export const BrowserProvider = ({ children }) => {
         setPullToRefreshEnabled(savedPullToRefresh !== 'false');
       }
 
+      const savedNativeWebView = await AsyncStorage.getItem('@squarebrowser_native_webview');
+      setNativeWebViewEnabled(savedNativeWebView === 'true');
+
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
         setLanguage(savedLanguage);
@@ -230,6 +236,11 @@ export const BrowserProvider = ({ children }) => {
   const setPullToRefreshPref = async (enabled) => {
     setPullToRefreshEnabled(enabled);
     await AsyncStorage.setItem('@squarebrowser_pull_to_refresh', enabled ? 'true' : 'false');
+  };
+
+  const setNativeWebViewPref = async (enabled) => {
+    setNativeWebViewEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_native_webview', enabled ? 'true' : 'false');
   };
 
   const setLanguagePref = async (code) => {
@@ -707,6 +718,8 @@ export const BrowserProvider = ({ children }) => {
     setBackgroundPlayPref,
     pullToRefreshEnabled,
     setPullToRefreshPref,
+    nativeWebViewEnabled,
+    setNativeWebViewPref,
     language,
     setLanguagePref,
     t,
@@ -728,7 +741,7 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    pullToRefreshEnabled, language, t,
+    pullToRefreshEnabled, nativeWebViewEnabled, language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);

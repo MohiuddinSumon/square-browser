@@ -126,6 +126,8 @@ export default {
     backgroundPlayHint: 'Звук продолжает играть в фоне',
     pullToRefresh: 'Потянуть для обновления',
     pullToRefreshHint: 'Потяните вниз в начале страницы, чтобы перезагрузить её',
+    nativeEngine: 'Новый движок (эксперимент)',
+    nativeEngineHint: 'Собственный веб-движок SquareBrowser. После изменения перезапустите приложение.',
     darkMode: 'Тёмная тема',
     urlBarPosition: 'Адресная строка',
     top: 'Сверху',

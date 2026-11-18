@@ -126,6 +126,8 @@ export default {
     backgroundPlayHint: 'Dźwięk gra dalej w tle',
     pullToRefresh: 'Pociągnij, aby odświeżyć',
     pullToRefreshHint: 'Pociągnij w dół na górze strony, żeby ją przeładować',
+    nativeEngine: 'Nowy silnik stron (test)',
+    nativeEngineHint: 'Własny silnik stron SquareBrowser. Po zmianie uruchom aplikację ponownie.',
     darkMode: 'Tryb ciemny',
     urlBarPosition: 'Pasek adresu',
     top: 'Góra',

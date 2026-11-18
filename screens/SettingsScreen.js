@@ -15,6 +15,7 @@ import Constants from 'expo-constants';
 import { getTheme } from '../theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { LANGUAGES } from '../i18n';
+import { isNativeWebViewAvailable } from '../modules/square-webview';
 
 /**
  * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
@@ -54,6 +55,8 @@ const SettingsScreen = ({ navigation }) => {
     setBackgroundPlayPref,
     pullToRefreshEnabled,
     setPullToRefreshPref,
+    nativeWebViewEnabled,
+    setNativeWebViewPref,
     timerEnabled,
     dailyLimitMs,
     strictMode,
@@ -210,6 +213,25 @@ const SettingsScreen = ({ navigation }) => {
                   </View>
                 </View>
                 <ThemedSwitch value={backgroundPlayEnabled !== false} onValueChange={setBackgroundPlayPref} theme={theme} />
+              </Pressable>
+
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+            </>
+          )}
+
+          {isNativeWebViewAvailable && (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="flask-outline" size={22} color={colors.accent} />
+                  <View style={styles.menuItemTextWrap}>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.nativeEngine')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.nativeEngineHint')}</Text>
+                  </View>
+                </View>
+                <ThemedSwitch value={nativeWebViewEnabled === true} onValueChange={setNativeWebViewPref} theme={theme} />
               </Pressable>
 
               <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
