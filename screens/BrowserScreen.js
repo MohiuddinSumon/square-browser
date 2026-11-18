@@ -195,32 +195,78 @@ const AD_DOMAINS = [
 setBlockedDomains(AD_DOMAINS);
 
 // Schemes the WebView handles itself; everything else is an "open in app" link.
-const INTERNAL_SCHEMES = ['http', 'https', 'about', 'data', 'blob', 'javascript', 'file', 'content', 'ws', 'wss'];
+const INTERNAL_SCHEMES = ['http', 'https', 'about', 'data', 'blob', 'javascript', 'ws', 'wss'];
+// Local-file schemes a web page must never navigate to.
+const BLOCKED_NAV_SCHEMES = ['file', 'content'];
+
+// Friendly names for the prompt; anything else shows its scheme or package name.
+const APP_NAMES = {
+  whatsapp: 'WhatsApp', 'com.whatsapp': 'WhatsApp', 'com.whatsapp.w4b': 'WhatsApp Business',
+  market: 'Play Store', 'com.android.vending': 'Play Store',
+  tg: 'Telegram', 'org.telegram.messenger': 'Telegram',
+  fb: 'Facebook', 'com.facebook.katana': 'Facebook', 'fb-messenger': 'Messenger', 'com.facebook.orca': 'Messenger',
+  instagram: 'Instagram', 'com.instagram.android': 'Instagram',
+  viber: 'Viber', 'com.viber.voip': 'Viber',
+  'com.google.android.youtube': 'YouTube', vnd_youtube: 'YouTube',
+  'com.google.android.apps.maps': 'Google Maps', geo: 'Maps',
+  'com.spotify.music': 'Spotify', spotify: 'Spotify',
+};
+const appName = (key) => APP_NAMES[key] || key;
+
+const getScheme = (url = '') => (url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1]?.toLowerCase();
+
+/** Web links that the matching app opens directly in other browsers (Android App Links). */
+const getAppForWebLink = (u) => {
+  const host = u.hostname.replace(/^www\./, '');
+  if ((host === 'play.google.com' && u.pathname.startsWith('/store/apps')) || host === 'market.android.com') {
+    const id = u.searchParams.get('id');
+    if (id) return { label: 'Play Store', openUrl: `market://details?id=${encodeURIComponent(id)}` };
+    return null;
+  }
+  // WhatsApp click-to-chat and group invites. whatsapp:// also opens WhatsApp Business.
+  if (host === 'wa.me') {
+    const phone = u.pathname.slice(1).split('/')[0];
+    if (!/^\d+$/.test(phone)) return null; // wa.me/message/... short links have no app equivalent
+    const text = u.searchParams.get('text');
+    return {
+      label: 'WhatsApp',
+      openUrl: `whatsapp://send?phone=${phone}` + (text ? `&text=${encodeURIComponent(text)}` : ''),
+      packageName: 'com.whatsapp',
+    };
+  }
+  if (host === 'api.whatsapp.com' && u.pathname.startsWith('/send')) {
+    return { label: 'WhatsApp', openUrl: `whatsapp://send${u.search}`, packageName: 'com.whatsapp' };
+  }
+  if (host === 'chat.whatsapp.com') {
+    const code = u.pathname.slice(1).split('/')[0];
+    if (!code) return null;
+    return { label: 'WhatsApp', openUrl: `whatsapp://chat?code=${encodeURIComponent(code)}`, packageName: 'com.whatsapp' };
+  }
+  return null;
+};
 
 /**
  * Classifies a URL the WebView is about to load. Returns null for normal pages, or
- * { label, openUrl, packageName, stayUrl } for links that should open another app:
+ * { label, openUrl, packageName, stayUrl, fallbackUrl } for links that should open another app:
  *   - custom schemes (whatsapp:, tg:, upi:, mailto:, tel:, market:, ...)
  *   - Android intent:// links (converted to their real scheme)
- *   - Play Store web links (converted to market://)
- * `stayUrl` is set when the page can also be loaded in the browser.
+ *   - Play Store and WhatsApp web links (converted to market:// / whatsapp://)
+ * `stayUrl` is set when the page can also be loaded in the browser; `fallbackUrl` is the
+ * page an intent:// link asks for when its app isn't installed.
  */
 const getExternalAppLink = (url = '') => {
   if (Platform.OS !== 'android') return null;
-  const scheme = (url.match(/^([a-z][a-z0-9+.-]*):/i) || [])[1]?.toLowerCase();
+  const scheme = getScheme(url);
   if (!scheme) return null;
 
   if (scheme === 'http' || scheme === 'https') {
     try {
-      const u = new URL(url);
-      if (u.hostname === 'play.google.com' && u.pathname.startsWith('/store/apps')) {
-        const id = u.searchParams.get('id');
-        if (id) return { label: 'Play Store', openUrl: `market://details?id=${encodeURIComponent(id)}`, stayUrl: url };
-      }
+      const app = getAppForWebLink(new URL(url));
+      if (app) return { ...app, stayUrl: url };
     } catch (e) {}
     return null;
   }
-  if (INTERNAL_SCHEMES.includes(scheme)) return null;
+  if (INTERNAL_SCHEMES.includes(scheme) || BLOCKED_NAV_SCHEMES.includes(scheme)) return null;
 
   if (scheme === 'intent') {
     // intent://host/path#Intent;scheme=xyz;package=com.app;S.browser_fallback_url=...;end
@@ -228,28 +274,43 @@ const getExternalAppLink = (url = '') => {
     const get = (key) => (extras.match(new RegExp('(?:^|;)' + key + '=([^;]*)')) || [])[1];
     const realScheme = get('scheme');
     const packageName = get('package');
+    let fallbackUrl = get('S.browser_fallback_url');
+    try { fallbackUrl = fallbackUrl && decodeURIComponent(fallbackUrl); } catch (e) { fallbackUrl = null; }
+    if (fallbackUrl && !/^https?:/i.test(fallbackUrl)) fallbackUrl = null;
     if (!realScheme) return packageName
-      ? { label: packageName, openUrl: `market://details?id=${packageName}`, packageName }
+      ? { label: appName(packageName), openUrl: `market://details?id=${packageName}`, packageName, fallbackUrl }
       : null;
+    // intent://wa.me/123#Intent;scheme=https;... is just a web link: treat it like one.
+    if (realScheme === 'http' || realScheme === 'https') {
+      const webUrl = realScheme + ':' + base.slice('intent:'.length);
+      return getExternalAppLink(webUrl) || { label: appName(packageName || 'app'), openUrl: webUrl, packageName, fallbackUrl: fallbackUrl || webUrl };
+    }
     return {
-      label: packageName || realScheme,
+      label: appName(packageName || realScheme),
       openUrl: realScheme + ':' + base.slice('intent:'.length),
       packageName,
+      fallbackUrl,
     };
   }
-  return { label: scheme === 'market' ? 'Play Store' : scheme, openUrl: url };
+  return { label: appName(scheme), openUrl: url };
 };
 
 let externalPromptVisible = false;
 
-/** Asks the user whether to open a link in another app (one prompt at a time) */
-const promptOpenInApp = (t, { label, openUrl, packageName }, onStayInBrowser) => {
+/**
+ * Asks the user whether to open a link in another app (one prompt at a time).
+ * If the app isn't installed: load the link's fallback page if it has one, otherwise
+ * offer the app's Play Store page, otherwise say no app can open it.
+ */
+const promptOpenInApp = (t, { label, openUrl, packageName, fallbackUrl }, { onStayInBrowser, onFallback } = {}) => {
   if (externalPromptVisible) return;
   externalPromptVisible = true;
   const done = () => { externalPromptVisible = false; };
   const open = () => {
     Linking.openURL(openUrl).catch(() => {
-      if (packageName) {
+      if (fallbackUrl && onFallback) {
+        onFallback(fallbackUrl);
+      } else if (packageName) {
         Linking.openURL(`market://details?id=${packageName}`).catch(() => {});
       } else {
         Alert.alert(t('browser.externalNoAppTitle'), t('browser.externalNoAppMessage'));
@@ -448,7 +509,7 @@ const BrowserTab = ({
   const lastNavRequestId = useRef(tab.navRequestId || 0);
   const [sourceUrl, setSourceUrl] = useState(tab.url);
   const webViewRef = useRef(null);
-  const allowedWebUrl = useRef(null);
+  const stayInBrowser = useRef(null);
   const viewTag = useRef(null);
 
   // Only push a new URL into the WebView when an explicit external navigation was
@@ -463,6 +524,37 @@ const BrowserTab = ({
   }, [tab.navRequestId, tab.url]);
 
   const webViewSource = useMemo(() => ({ uri: sourceUrl }), [sourceUrl]);
+
+  // Load a URL in this tab from inside the page (goes through onShouldStartLoadWithRequest).
+  const loadInPage = useCallback((url) => {
+    webViewRef.current?.injectJavaScript(`window.location.href = ${JSON.stringify(url)}; true;`);
+  }, []);
+
+  /** Offers to open app links (WhatsApp, Play Store, intent://, ...) in their app.
+   *  Returns true when the link was taken over and the WebView must not load it. */
+  const handleExternalLink = useCallback((url) => {
+    const external = getExternalAppLink(url);
+    if (!external) return false;
+    // After "Stay in browser", let that app's web pages load for a few seconds so the page
+    // and its redirects (wa.me -> api.whatsapp.com/send) don't ask again.
+    const stayed = stayInBrowser.current;
+    if (external.stayUrl && stayed && stayed.label === external.label && Date.now() < stayed.until) {
+      return false;
+    }
+    const stayFor = (label) => { stayInBrowser.current = { label, until: Date.now() + 5000 }; };
+    promptOpenInApp(t, external, {
+      onStayInBrowser: external.stayUrl ? () => {
+        stayFor(external.label);
+        loadInPage(external.stayUrl);
+      } : null,
+      onFallback: (fallbackUrl) => {
+        const fallbackApp = getExternalAppLink(fallbackUrl);
+        if (fallbackApp) stayFor(fallbackApp.label);
+        loadInPage(fallbackUrl);
+      },
+    });
+    return true;
+  }, [t, loadInPage]);
 
   const handleNavigationStateChange = useCallback((navState) => {
     // Notify parent to update context/tab state (url, canGoBack, canGoForward)
@@ -690,15 +782,31 @@ const BrowserTab = ({
     }).observe(document.documentElement, { childList: true, subtree: true });
   } catch(e) {}
 
+  var APP_LINK_PREFIXES = ['play.google.com/store/apps', 'wa.me/', 'api.whatsapp.com/send', 'chat.whatsapp.com/'];
+  function _isAppLink(url) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') return u.protocol !== 'javascript:';
+      var hp = u.hostname.replace(/^www[.]/, '') + u.pathname;
+      return APP_LINK_PREFIXES.some(function(p) { return hp.indexOf(p) === 0; });
+    } catch (e) { return false; }
+  }
+
   /* Block click-through to ad domains AND all target="_blank" pop-up attempts.
      Runs in capture phase so it fires before any page click handler. */
   document.addEventListener('click', function(e) {
     var el = e.target && e.target.closest ? e.target.closest('a[href]') : null;
     if (!el) return;
-    var blocked = _isAd(el.href || '') || el.target === '_blank';
+    var href = el.href || '';
+    var blocked = _isAd(href) || el.target === '_blank';
     if (blocked) {
       e.preventDefault();
       e.stopImmediatePropagation();
+      /* A real app link (Play Store / WhatsApp / app scheme) in a new window: open it in this
+         tab instead so the browser can offer to open the app. */
+      if (!_isAd(href) && el.target === '_blank' && _isAppLink(href)) {
+        window.location.href = href;
+      }
     }
   }, true);
 
@@ -878,24 +986,20 @@ true;
         // Without this handler Android hands the URL to the system browser.
         onOpenWindow={({ nativeEvent }) => {
           if (adBlockEnabled) return;
+          // "Get it on Google Play" badges and the like open in a new window: offer the app
+          // instead of opening its web page in a new tab.
+          if (handleExternalLink(nativeEvent.targetUrl)) return;
           if (onOpenWindow) onOpenWindow(nativeEvent.targetUrl);
         }}
+        // By default react-native-webview only passes http(s) URLs to
+        // onShouldStartLoadWithRequest and tries to open everything else itself with
+        // Linking.canOpenURL, which is always false on Android 11+ (package visibility) and
+        // can't handle intent:// at all, so whatsapp:/intent:/market: buttons did nothing.
+        // Let every URL through on Android so handleExternalLink sees them.
+        originWhitelist={Platform.OS === 'android' ? ['*'] : undefined}
         onShouldStartLoadWithRequest={(request) => {
-          const external = getExternalAppLink(request.url);
-          if (external) {
-            // One-shot bypass so "Stay in browser" can load the web page.
-            if (allowedWebUrl.current === request.url) {
-              allowedWebUrl.current = null;
-              return true;
-            }
-            promptOpenInApp(t, external, external.stayUrl ? () => {
-              allowedWebUrl.current = request.url;
-              webViewRef.current?.injectJavaScript(
-                `window.location.href = ${JSON.stringify(request.url)}; true;`
-              );
-            } : null);
-            return false;
-          }
+          if (BLOCKED_NAV_SCHEMES.includes(getScheme(request.url))) return false;
+          if (handleExternalLink(request.url)) return false;
           if (!adBlockEnabled) return true;
           try {
             const hostname = new URL(request.url).hostname;
