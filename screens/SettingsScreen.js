@@ -56,6 +56,7 @@ const SettingsScreen = ({ navigation }) => {
     pullToRefreshEnabled,
     setPullToRefreshPref,
     nativeWebViewEnabled,
+    nativeWebViewActive,
     setNativeWebViewPref,
     timerEnabled,
     dailyLimitMs,
@@ -229,6 +230,11 @@ const SettingsScreen = ({ navigation }) => {
                   <View style={styles.menuItemTextWrap}>
                     <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.nativeEngine')}</Text>
                     <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.nativeEngineHint')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: nativeWebViewEnabled !== nativeWebViewActive ? colors.warning : colors.accent }]}>
+                      {nativeWebViewEnabled !== nativeWebViewActive
+                        ? t('settings.nativeEngineRestart')
+                        : t(nativeWebViewActive ? 'settings.nativeEngineInUse' : 'settings.standardEngineInUse')}
+                    </Text>
                   </View>
                 </View>
                 <ThemedSwitch value={nativeWebViewEnabled === true} onValueChange={setNativeWebViewPref} theme={theme} />

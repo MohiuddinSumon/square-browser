@@ -50,6 +50,8 @@ export const BrowserProvider = ({ children }) => {
   // Experimental: SquareBrowser's own Android WebView (modules/square-webview) instead of
   // react-native-webview. Tabs read it when they are created, so changes apply after a restart.
   const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(false);
+  // What tabs actually use this session (the saved value at startup).
+  const [nativeWebViewActive, setNativeWebViewActive] = useState(false);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -163,6 +165,7 @@ export const BrowserProvider = ({ children }) => {
 
       const savedNativeWebView = await AsyncStorage.getItem('@squarebrowser_native_webview');
       setNativeWebViewEnabled(savedNativeWebView === 'true');
+      setNativeWebViewActive(savedNativeWebView === 'true');
 
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
@@ -719,6 +722,7 @@ export const BrowserProvider = ({ children }) => {
     pullToRefreshEnabled,
     setPullToRefreshPref,
     nativeWebViewEnabled,
+    nativeWebViewActive,
     setNativeWebViewPref,
     language,
     setLanguagePref,
@@ -741,7 +745,7 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    pullToRefreshEnabled, nativeWebViewEnabled, language, t,
+    pullToRefreshEnabled, nativeWebViewEnabled, nativeWebViewActive, language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);
