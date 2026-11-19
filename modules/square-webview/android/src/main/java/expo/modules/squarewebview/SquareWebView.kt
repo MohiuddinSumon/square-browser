@@ -4,6 +4,7 @@ package expo.modules.squarewebview
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Message
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
@@ -40,6 +41,8 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
 
   var webView: BrowserWebView = createWebView()
     private set
+
+  private val fullscreen = FullscreenVideo { appContext.currentActivity }
 
   // Props (applied together in applyProps, after React has set all of them).
   var sourceUri: String? = null
@@ -100,6 +103,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   fun loadUrl(url: String) = webView.loadUrl(url)
 
   fun destroy() {
+    fullscreen.hide()
     startScriptHandler?.remove()
     startScriptHandler = null
     webView.stopLoading()
@@ -182,6 +186,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
     // so swap in a fresh one and reload the page instead of letting the app crash.
     override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
       if (view !== webView) return true
+      fullscreen.hide()
       val url = view.url
       startScriptHandler = null
       appliedStartScript = null
@@ -196,6 +201,16 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   }
 
   private inner class ChromeClient : WebChromeClient() {
+    // A site's fullscreen button (video players). See FullscreenVideo.
+    override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+      fullscreen.show(webView, view, callback)
+    }
+
+    override fun onHideCustomView() = fullscreen.hide()
+
+    // Without this, Android draws a grey "play" placeholder for videos without a poster.
+    override fun getDefaultVideoPoster(): Bitmap? = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888)
+
     // window.open / target="_blank". The URL is only known once the new window starts loading,
     // so hand Chromium a throwaway WebView, catch its first URL, report it and drop it.
     // JS decides: new tab, open-in-app prompt, or nothing (ad blocker on).

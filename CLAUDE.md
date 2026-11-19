@@ -155,8 +155,8 @@ English is the source of truth and the **default for everyone**; the app never f
 
 - **Phase 1** (done): browsing, scripts, navigation state (including pushState), messages, a fresh WebView after a renderer crash.
 - **Phase 2** (done): `shouldOverrideUrlLoading` decides main-frame navigations natively with `LinkRules.kt` (unit-tested in `src/test`): links to `blockedHosts` (the JS `AD_DOMAINS`, passed while Ad Blocker is on) are refused; app schemes and Play Store/WhatsApp web links are refused and sent to JS as `onExternalUrl` (`web: true` for web links: JS calls `ref.loadUrl(url)` when the user chose "Stay in browser"). Keep `LinkRules.isAppWebLink` in step with `getAppForWebLink()` in BrowserScreen.js. Popups go through `onCreateWindow`: a throwaway WebView catches the URL and `onOpenWindow` reports `{ targetUrl, userGesture }` to the existing handler.
-- **Phase 3** (next): background video (`keepVisibleInBackground` on `BrowserWebView`, set directly by the playback service) and fullscreen video (port the patch's `onShowCustomView`).
-- **Phase 4**: file uploads, downloads, page permissions (camera, microphone, location), native pull to refresh.
+- **Phase 3** (done): background video: `BrowserWebView.keepVisibleInBackground` (static, like the patched `RNCWebView` field) is set by `PlaybackService`'s `WebViewKeepVisible`, which flips both engines' flags by class name. Fullscreen video: `FullscreenVideo.kt` is the patch's fullscreen code (landscape on enter, rotate button, free rotation once the phone turns, system back leaves fullscreen), driven by `onShowCustomView`/`onHideCustomView`; it also leaves fullscreen when the tab is destroyed or its renderer dies.
+- **Phase 4** (next): file uploads, downloads, page permissions (camera, microphone, location), native pull to refresh.
 
 `tools/engine-test/` is a page for comparing the engines on a phone (see its README).
 
@@ -190,7 +190,7 @@ The WebView has `allowsFullscreenVideo` on, so a site's fullscreen button works 
 ### Android
 - Package name: `com.squarebrowser.app`
 - Production signing is applied by the `plugins/withReleaseSigning.js` config plugin on every prebuild (`android/` is regenerated, so never edit its signing config by hand). It reads `keystore.properties` from the project root (or the path in `SQUARE_KEYSTORE_PROPERTIES`); the keystore and properties file are git-ignored, so keep backups elsewhere
-- Release builds use R8 minify + resource shrinking (set in `app.json` via `expo-build-properties`; Play Console flags "DEX code optimization" otherwise). `extraProguardRules` keeps `RNCWebView` (the playback service reads `keepVisibleInBackground` by reflection) and both local modules. Smoke-test a release build (tabs, ad blocking, background playback, fullscreen video) after changing native code or adding reflection, and add keep rules for it. Needs `npx expo prebuild --clean`
+- Release builds use R8 minify + resource shrinking (set in `app.json` via `expo-build-properties`; Play Console flags "DEX code optimization" otherwise). `extraProguardRules` keeps `RNCWebView` and `expo.modules.squarewebview.**` (the playback service sets `keepVisibleInBackground` on both by reflection) and the local modules. Smoke-test a release build (tabs, ad blocking, background playback, fullscreen video) after changing native code or adding reflection, and add keep rules for it. Needs `npx expo prebuild --clean`
 - Version info must match between `app.json` and `package.json`
 - `release.bat` (runs `release.ps1`) bumps the version in `app.json`, `package.json` and `android/app/build.gradle`, builds the AAB and APK, checks the AAB is not debug-signed, and copies both to `release/v<name>-<code>/` as `squarebrowser-<name>-<code>.aab/.apk` (the folder is git-ignored and replaced on a rebuild of the same version)
 - Use Expo Dev Client for development builds

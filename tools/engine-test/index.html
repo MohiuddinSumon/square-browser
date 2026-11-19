@@ -62,10 +62,11 @@
 <button onclick="window.open('https://example.com/?popup=tap')">window.open on tap</button>
 <button onclick="setTimeout(function(){ window.open('https://example.com/?popup=delayed'); }, 1500)">window.open 1.5 s after tap (pop-under style)</button>
 
-<h2>6. Not in the new engine yet</h2>
-<p class="note">Expected to work only in the old engine until phases 3–4.</p>
+<h2>6. Video</h2>
+<p class="note">Both engines: fullscreen turns the phone to landscape with a rotate button top right, and back leaves fullscreen. With Background Playback on, start the video, then leave the app: it keeps playing and the notification controls work.</p>
 <video controls playsinline width="100%" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>
-<p class="note">Fullscreen button, then background the app while playing (video should keep playing in the old engine).</p>
+<h2>6b. Not in the new engine yet (phase 4)</h2>
+<p class="note">Old engine only for now.</p>
 <label class="btn">File upload <input type="file"></label>
 <a class="btn" href="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" download>Download a file</a>
 <button onclick="navigator.geolocation.getCurrentPosition(function(p){ log('location ok'); }, function(e){ log('location error: ' + e.message); })">Ask for location</button>
