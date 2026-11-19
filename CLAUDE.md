@@ -185,6 +185,7 @@ The WebView has `allowsFullscreenVideo` on, so a site's fullscreen button works 
 - Production signing is applied by the `plugins/withReleaseSigning.js` config plugin on every prebuild (`android/` is regenerated, so never edit its signing config by hand). It reads `keystore.properties` from the project root (or the path in `SQUARE_KEYSTORE_PROPERTIES`); the keystore and properties file are git-ignored, so keep backups elsewhere
 - Release builds use R8 minify + resource shrinking (set in `app.json` via `expo-build-properties`; Play Console flags "DEX code optimization" otherwise). `extraProguardRules` keeps `RNCWebView` (the playback service reads `keepVisibleInBackground` by reflection) and both local modules. Smoke-test a release build (tabs, ad blocking, background playback, fullscreen video) after changing native code or adding reflection, and add keep rules for it. Needs `npx expo prebuild --clean`
 - Version info must match between `app.json` and `package.json`
+- `release.bat` (runs `release.ps1`) bumps the version in `app.json`, `package.json` and `android/app/build.gradle`, builds the AAB and APK, checks the AAB is not debug-signed, and copies both to `release/v<name>-<code>/` as `squarebrowser-<name>-<code>.aab/.apk` (the folder is git-ignored and replaced on a rebuild of the same version)
 - Use Expo Dev Client for development builds
 
 ### Version Management
