@@ -926,8 +926,15 @@ true;
     <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
       <Engine
         ref={handleWebViewRef}
-        // Native engine only: whatsapp:, intent:, market: ... links it refused to load.
-        onExternalUrl={({ nativeEvent }) => handleExternalLink(nativeEvent.url)}
+        // Native engine only: app links it refused to load. A web link (Play Store, wa.me) the
+        // user already chose to stay on is loaded after all.
+        onExternalUrl={({ nativeEvent }) => {
+          if (!handleExternalLink(nativeEvent.url) && nativeEvent.web) {
+            webViewRef.current?.loadUrl(nativeEvent.url);
+          }
+        }}
+        // Native engine only: pages on these domains can't be opened by tapping a link.
+        blockedHosts={adBlockEnabled ? AD_DOMAINS : undefined}
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}

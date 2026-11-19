@@ -3,6 +3,7 @@ package expo.modules.squarewebview
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Message
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.RenderProcessGoneDetail
@@ -35,6 +36,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private val onNavigationStateChange by EventDispatcher()
   private val onMessage by EventDispatcher()
   private val onExternalUrl by EventDispatcher()
+  private val onOpenWindow by EventDispatcher()
 
   var webView: BrowserWebView = createWebView()
     private set
@@ -44,6 +46,8 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   var userAgent: String? = null
   var documentStartScript: String = ""
   var documentEndScript: String = ""
+  /** Ad/tracker domains: tapping a link to one of them (main frame) is silently refused. */
+  var blockedHosts: Set<String> = emptySet()
 
   private var loadedSourceUri: String? = null
   private var appliedStartScript: String? = null
@@ -118,10 +122,25 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private var isLoading = false
 
   private inner class Client : WebViewClient() {
+    // Decided here, synchronously. react-native-webview asked JS and waited up to 250 ms, then let
+    // the navigation through if JS was busy.
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-      val scheme = request.url.scheme?.lowercase() ?: return false
+      val uri = request.url
+      val scheme = uri.scheme?.lowercase() ?: return false
       return when (scheme) {
-        in WEB_SCHEMES -> false // phase 2 moves app-link and ad-host checks for http(s) here
+        "http", "https" -> {
+          if (!request.isForMainFrame) return false
+          when {
+            LinkRules.isBlockedHost(uri.host, blockedHosts) -> true
+            // Play Store / WhatsApp web links: JS asks "Open in app?" and calls loadUrl to stay.
+            LinkRules.isAppWebLink(uri.host, uri.path, uri.getQueryParameter("id") != null) -> {
+              onExternalUrl(mapOf("target" to id, "url" to uri.toString(), "web" to true))
+              true
+            }
+            else -> false
+          }
+        }
+        in WEB_SCHEMES -> false
         in BLOCKED_SCHEMES -> true
         else -> {
           // whatsapp:, intent:, market:, tel: ... JS shows the "Open in app?" prompt.
@@ -177,6 +196,37 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   }
 
   private inner class ChromeClient : WebChromeClient() {
+    // window.open / target="_blank". The URL is only known once the new window starts loading,
+    // so hand Chromium a throwaway WebView, catch its first URL, report it and drop it.
+    // JS decides: new tab, open-in-app prompt, or nothing (ad blocker on).
+    override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
+      val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+      val popup = WebView(view.context)
+      var done = false
+      fun finish(url: String?) {
+        if (done) return
+        done = true
+        if (!url.isNullOrEmpty() && url != "about:blank") {
+          onOpenWindow(mapOf("target" to id, "targetUrl" to url, "userGesture" to isUserGesture))
+        }
+        popup.post { popup.stopLoading(); popup.destroy() }
+      }
+      popup.webViewClient = object : WebViewClient() {
+        override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
+          finish(r.url.toString())
+          return true
+        }
+        override fun onPageStarted(v: WebView, url: String?, favicon: Bitmap?) {
+          if (url != null && url != "about:blank") finish(url)
+        }
+      }
+      // A popup that never navigates (window.open('') + document.write) is just dropped.
+      popup.postDelayed({ finish(null) }, 5000)
+      transport.webView = popup
+      resultMsg.sendToTarget()
+      return true
+    }
+
     override fun onProgressChanged(view: WebView, newProgress: Int) {
       onLoadProgress(mapOf("target" to id, "url" to (view.url ?: ""), "progress" to newProgress / 100.0))
     }

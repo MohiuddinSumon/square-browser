@@ -17,4 +17,6 @@ android {
 dependencies {
   // Document-start scripts (WebViewCompat.addDocumentStartJavaScript).
   implementation 'androidx.webkit:webkit:1.12.1'
+  // Plain JVM tests for LinkRules: ./gradlew :square-webview:testDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
 }

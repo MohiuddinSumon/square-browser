@@ -20,7 +20,8 @@ class SquareWebViewModule : Module() {
         "onLoadEnd",
         "onNavigationStateChange",
         "onMessage",
-        "onExternalUrl"
+        "onExternalUrl",
+        "onOpenWindow"
       )
 
       Prop("sourceUri") { view: SquareWebView, uri: String? -> view.sourceUri = uri }
@@ -30,6 +31,9 @@ class SquareWebViewModule : Module() {
       }
       Prop("documentEndScript") { view: SquareWebView, script: String? ->
         view.documentEndScript = script ?: ""
+      }
+      Prop("blockedHosts") { view: SquareWebView, hosts: List<String>? ->
+        view.blockedHosts = hosts.orEmpty().map { it.lowercase() }.toSet()
       }
 
       // Runs once per prop update, after every changed prop is set, so the user agent and

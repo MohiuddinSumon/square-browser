@@ -22,9 +22,8 @@ class BrowserWebView(context: Context) : WebView(context) {
       mediaPlaybackRequiresUserGesture = false
       mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
       javaScriptCanOpenWindowsAutomatically = false
-      // Phase 1: target="_blank" and window.open load in the same tab. Real popups
-      // (onCreateWindow) come in phase 2.
-      setSupportMultipleWindows(false)
+      // Popups go to SquareWebView's onCreateWindow, which reports the URL to JS (new tab or blocked).
+      setSupportMultipleWindows(true)
       setSupportZoom(true)
       builtInZoomControls = true
       displayZoomControls = false
