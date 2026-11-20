@@ -1,0 +1,14 @@
+<!doctype html>
+<!-- Copyright (c) 2025 SquareBrowser Contributors -->
+<meta charset="utf-8">
+<body style="font: 14px system-ui, sans-serif; margin: 8px">
+<div id="r"></div>
+<script>
+  // Checked after load so both kinds of injected script would have had their chance.
+  setTimeout(function () {
+    var injected = !!(window.__sqBgPlay || window.__sqPullToRefresh);
+    document.getElementById('r').innerHTML = injected
+      ? '<b style="color:#c62828">SquareBrowser scripts ran inside this frame</b>'
+      : '<b style="color:#1a7f37">Scripts ran on the main page only</b>';
+  }, 1500);
+</script>

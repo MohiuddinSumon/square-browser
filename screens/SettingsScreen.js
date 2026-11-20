@@ -20,6 +20,7 @@ import { SEARCH_ENGINES, getSearchEngine } from '../utils/url';
 import { useProtectedChange } from '../components/ProtectionGate';
 import { historyToCsv, historyToHtml, bookmarksToHtml, parseBookmarks } from '../utils/exportData';
 import { saveTextToDownloads, isDownloadSaveAvailable } from '../modules/square-downloads';
+import { isNativeWebViewAvailable } from '../modules/square-webview';
 
 /**
  * ThemedSwitch — derives track/thumb colors from theme tokens instead of the
@@ -60,6 +61,11 @@ const SettingsScreen = ({ navigation }) => {
     setEnhancedCompatPref,
     backgroundPlayEnabled,
     setBackgroundPlayPref,
+    pullToRefreshEnabled,
+    setPullToRefreshPref,
+    nativeWebViewEnabled,
+    nativeWebViewActive,
+    setNativeWebViewPref,
     timerEnabled,
     dailyLimitMs,
     strictMode,
@@ -269,6 +275,25 @@ const SettingsScreen = ({ navigation }) => {
 
           <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
 
+          {Platform.OS !== 'web' && (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="refresh-outline" size={22} color={colors.accent} />
+                  <View style={styles.menuItemTextWrap}>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.pullToRefresh')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.pullToRefreshHint')}</Text>
+                  </View>
+                </View>
+                <ThemedSwitch value={pullToRefreshEnabled !== false} onValueChange={setPullToRefreshPref} theme={theme} />
+              </Pressable>
+
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+            </>
+          )}
+
           {Platform.OS === 'android' && (
             <>
               <Pressable
@@ -282,6 +307,31 @@ const SettingsScreen = ({ navigation }) => {
                   </View>
                 </View>
                 <ThemedSwitch value={backgroundPlayEnabled !== false} onValueChange={setBackgroundPlayPref} theme={theme} />
+              </Pressable>
+
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+            </>
+          )}
+
+          {isNativeWebViewAvailable && (
+            <>
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="flask-outline" size={22} color={colors.accent} />
+                  <View style={styles.menuItemTextWrap}>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.classicEngine')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.classicEngineHint')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: nativeWebViewEnabled !== nativeWebViewActive ? colors.warning : colors.accent }]}>
+                      {nativeWebViewEnabled !== nativeWebViewActive
+                        ? t('settings.engineRestart')
+                        : t(nativeWebViewActive ? 'settings.newEngineInUse' : 'settings.classicEngineInUse')}
+                    </Text>
+                  </View>
+                </View>
+                {/* On = classic engine (react-native-webview); off = SquareBrowser's own engine, the default. */}
+                <ThemedSwitch value={nativeWebViewEnabled === false} onValueChange={(classic) => setNativeWebViewPref(!classic)} theme={theme} />
               </Pressable>
 
               <View style={[styles.hairline, { backgroundColor: colors.separator }]} />

@@ -177,13 +177,48 @@ if ($LASTEXITCODE -ne 0) {
 
 Set-Location ..
 
+# ---- Collect the build into release\v<name>-<code>\ ----------------------------
+Write-Host ""
+Write-Host "============================================"
+Write-Host " Collecting files..."
+Write-Host "============================================"
+Write-Host ""
+
+$builtAab = "android\app\build\outputs\bundle\release\app-release.aab"
+$builtApk = "android\app\build\outputs\apk\release\app-release.apk"
+if (-not (Test-Path $builtAab)) { Write-Host "ERROR: Expected $builtAab was not produced."; Read-Host "Press Enter to exit"; exit 1 }
+if (-not (Test-Path $builtApk)) { Write-Host "ERROR: Expected $builtApk was not produced."; Read-Host "Press Enter to exit"; exit 1 }
+
+# Play rejects a debug-signed bundle (happens when keystore.properties is missing at prebuild).
+if (Get-Command keytool -ErrorAction SilentlyContinue) {
+    $cert = (& keytool -printcert -jarfile $builtAab | Out-String)
+    if ($cert -match 'Android Debug' -or $cert -notmatch 'SHA256') {
+        Write-Host "ERROR: The bundle is debug-signed or unsigned. Check keystore.properties and run 'npx expo prebuild --clean'." -ForegroundColor Red
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+    $cert -split "`r?`n" | Where-Object { $_ -match 'Owner|SHA256' } | ForEach-Object { Write-Host "   $_" }
+} else {
+    Write-Host "   WARNING: keytool not on PATH, skipping the signature check." -ForegroundColor Yellow
+}
+
+$out = Join-Path $PSScriptRoot "release\v$VersionName-$codeInt"
+if (Test-Path $out) { Remove-Item $out -Recurse -Force }
+New-Item -ItemType Directory -Path $out | Out-Null
+$base = "squarebrowser-$VersionName-$codeInt"
+Copy-Item $builtAab (Join-Path $out "$base.aab")
+Copy-Item $builtApk (Join-Path $out "$base.apk")
+Write-Host "   Copied to $out" -ForegroundColor Green
+
 Write-Host ""
 Write-Host "============================================"
 Write-Host " Build complete!"
 Write-Host "============================================"
 Write-Host " Version : $VersionName (code $codeInt)"
-Write-Host " AAB     : android\app\build\outputs\bundle\release\app-release.aab"
-Write-Host " APK     : android\app\build\outputs\apk\release\app-release.apk"
+Write-Host " Folder  : $out"
+Write-Host " AAB     : $base.aab  (upload to Play Console)"
+Write-Host " APK     : $base.apk  (sideload / testing)"
 Write-Host "============================================"
+Start-Process explorer.exe $out
 Write-Host ""
 Read-Host "Press Enter to exit"

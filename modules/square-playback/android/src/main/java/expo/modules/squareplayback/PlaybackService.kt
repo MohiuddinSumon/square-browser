@@ -39,19 +39,26 @@ data class MediaInfo(
 
 /** Hands notification / headset button presses to the module (and on to JS). */
 /**
- * Chromium pauses <video> playback in a hidden WebView. react-native-webview is patched
- * (patches/react-native-webview+*.patch) with a static flag that makes its WebViews keep
- * reporting themselves as visible; we flip it while the playback service is running.
- * Reflection keeps this module independent of react-native-webview at build time.
+ * Chromium pauses <video> playback in a hidden WebView. Both web engines have a static flag
+ * that makes their WebViews keep reporting themselves as visible; we flip it while the
+ * playback service is running:
+ *  - react-native-webview, via patches/react-native-webview+*.patch
+ *  - SquareBrowser's own engine (modules/square-webview, BrowserWebView)
+ * Reflection keeps this module independent of both at build time (R8 keep rules in app.json).
  */
 object WebViewKeepVisible {
+  private val ENGINES = listOf(
+    "com.reactnativecommunity.webview.RNCWebView",
+    "expo.modules.squarewebview.BrowserWebView",
+  )
+
   fun set(on: Boolean) {
-    try {
-      Class.forName("com.reactnativecommunity.webview.RNCWebView")
-        .getField("keepVisibleInBackground")
-        .setBoolean(null, on)
-    } catch (e: Exception) {
-      // react-native-webview not patched: background video playback will pause.
+    for (name in ENGINES) {
+      try {
+        Class.forName(name).getField("keepVisibleInBackground").setBoolean(null, on)
+      } catch (e: Exception) {
+        // Engine not in this build (or react-native-webview not patched): its video pauses in the background.
+      }
     }
   }
 }

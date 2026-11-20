@@ -55,6 +55,13 @@ export const BrowserProvider = ({ children }) => {
   const [darkPagesEnabled, setDarkPagesEnabled] = useState(false);
   // Web page text size in percent (Android only)
   const [textZoom, setTextZoom] = useState(100);
+  const [pullToRefreshEnabled, setPullToRefreshEnabled] = useState(true);
+  // Android web engine: SquareBrowser's own WebView (modules/square-webview) by default;
+  // Settings > Classic web engine switches back to react-native-webview. Tabs read it when they
+  // are created, so changes apply after a restart.
+  const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(true);
+  // What tabs actually use this session (the saved value at startup).
+  const [nativeWebViewActive, setNativeWebViewActive] = useState(true);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -191,6 +198,17 @@ export const BrowserProvider = ({ children }) => {
       if (savedTextZoom >= 50 && savedTextZoom <= 300) {
         setTextZoom(savedTextZoom);
       }
+      const savedPullToRefresh = await AsyncStorage.getItem('@squarebrowser_pull_to_refresh');
+      if (savedPullToRefresh !== null) {
+        setPullToRefreshEnabled(savedPullToRefresh !== 'false');
+      }
+
+      // Only an explicit "classic" choice turns the new engine off. The old opt-in key from the
+      // experimental phase is dropped, so testers who left it off get the new default too.
+      const useClassicEngine = (await AsyncStorage.getItem('@squarebrowser_classic_webview')) === 'true';
+      setNativeWebViewEnabled(!useClassicEngine);
+      setNativeWebViewActive(!useClassicEngine);
+      AsyncStorage.removeItem('@squarebrowser_native_webview').catch(() => {});
 
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
@@ -290,6 +308,16 @@ export const BrowserProvider = ({ children }) => {
   const setTextZoomPref = async (percent) => {
     setTextZoom(percent);
     await AsyncStorage.setItem('@squarebrowser_text_zoom', String(percent));
+  };
+
+  const setPullToRefreshPref = async (enabled) => {
+    setPullToRefreshEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_pull_to_refresh', enabled ? 'true' : 'false');
+  };
+
+  const setNativeWebViewPref = async (enabled) => {
+    setNativeWebViewEnabled(enabled);
+    await AsyncStorage.setItem('@squarebrowser_classic_webview', enabled ? 'false' : 'true');
   };
 
   const setLanguagePref = async (code) => {
@@ -743,6 +771,13 @@ export const BrowserProvider = ({ children }) => {
     });
   }, []);
 
+  // Close every tab and leave a single Home tab (the app always has at least one tab).
+  const closeAllTabs = useCallback(() => {
+    activeTabIndexRef.current = 0;
+    setActiveTabIndex(0);
+    setTabs([{ id: Date.now().toString(), url: 'about:blank', canGoBack: false, canGoForward: false }]);
+  }, []);
+
   const updateTabState = useCallback((index, state) => {
     setTabs(prev => {
       const newTabs = [...prev];
@@ -840,6 +875,7 @@ export const BrowserProvider = ({ children }) => {
     addTab,
     addTabInBackground,
     closeTab,
+    closeAllTabs,
     setActiveTabIndex,
     updateTabState,
     currentUrl,
@@ -879,6 +915,11 @@ export const BrowserProvider = ({ children }) => {
     setDarkPagesPref,
     textZoom,
     setTextZoomPref,
+    pullToRefreshEnabled,
+    setPullToRefreshPref,
+    nativeWebViewEnabled,
+    nativeWebViewActive,
+    setNativeWebViewPref,
     language,
     setLanguagePref,
     searchEngine,
@@ -907,12 +948,12 @@ export const BrowserProvider = ({ children }) => {
     blockedNotice,
     setBlockedNotice,
   }), [
-    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab,
+    history, bookmarks, tabs, activeTabIndex, activeTab, addTab, addTabInBackground, closeTab, closeAllTabs,
     setActiveTabIndex, updateTabState, currentUrl, navigateTo, navigateToNewTab, webViewRef,
     addHistoryEntry, toggleBookmark, importBookmarks, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    darkPagesEnabled, textZoom,
+    darkPagesEnabled, textZoom, pullToRefreshEnabled, nativeWebViewEnabled, nativeWebViewActive,
     language, t, searchEngine,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,

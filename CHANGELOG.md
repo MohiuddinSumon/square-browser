@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smoother tab switcher animation.
 - Language setting with Russian, Polish and German (English stays the default).
 - One shared screen header, so every page has the same spacing and design.
+- Pull to refresh on Android (can be turned off in Settings).
+- Close All button in the tab switcher.
+- SquareBrowser's own web engine on Android, now the default: its built-in scripts (ad blocking, background playback) reliably run before the page's own scripts, link and popup decisions are made instantly, file uploads, downloads to the Downloads folder, and recovery when a page's renderer crashes. Settings > Classic Web Engine switches back if a site misbehaves.
+- `release.bat` collects each build in `release/v<version>-<code>/`.
 - Search engine choice: Google, DuckDuckGo, Bing or Brave Search.
 - Dark Web Pages: shows bright websites in dark colors.
 - Text Size setting for web pages (Android).
@@ -37,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed login errors on sites with strict bot protection (such as OLX) when Enhanced Compatibility is on.
 - Fixed pages that could no longer scroll after a full-screen pop-up ad was blocked.
 - Fixed the Products page layout and headers sitting under the status bar or camera on History, Bookmarks and Products.
+- WhatsApp, Play Store and other app buttons on websites now open their apps (they silently did nothing on Android 11+).
 
 ### Planned
 - iOS support
