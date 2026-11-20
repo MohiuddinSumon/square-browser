@@ -158,6 +158,8 @@ export default {
     closeAll: 'Close All',
     closeAllTitle: 'Close all tabs?',
     closeAllMessage: 'Every open tab will be closed. Your history stays saved.',
+    downloadStarted: 'Downloading {{name}}',
+    downloadFailed: 'This file can\'t be downloaded here.',
     newTab: 'New Tab',
     noTabs: 'No open tabs — tap New Tab to start',
     homeTab: 'Home',

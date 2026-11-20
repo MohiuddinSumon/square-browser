@@ -3,15 +3,21 @@ package expo.modules.squarewebview
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Message
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -38,6 +44,14 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private val onMessage by EventDispatcher()
   private val onExternalUrl by EventDispatcher()
   private val onOpenWindow by EventDispatcher()
+  private val onFileDownload by EventDispatcher()
+
+  // Native pull to refresh around the WebView. See PullGuard for when a pull is allowed.
+  private val pullGuard = PullGuard()
+  private val swipe = SwipeRefreshLayout(context).also {
+    addView(it, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+  }
+  private val stopRefreshing = Runnable { swipe.isRefreshing = false }
 
   var webView: BrowserWebView = createWebView()
     private set
@@ -51,6 +65,11 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   var documentEndScript: String = ""
   /** Ad/tracker domains: tapping a link to one of them (main frame) is silently refused. */
   var blockedHosts: Set<String> = emptySet()
+  var pullToRefreshEnabled: Boolean = true
+    set(value) {
+      field = value
+      swipe.isEnabled = value
+    }
 
   private var loadedSourceUri: String? = null
   private var appliedStartScript: String? = null
@@ -58,14 +77,39 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private val documentStartSupported =
     WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
 
+  init {
+    swipe.setColorSchemeColors(ACCENT)
+    swipe.setOnChildScrollUpCallback { _, _ -> webView.scrollY > 0 || !pullGuard.allowed }
+    swipe.setOnRefreshListener {
+      webView.reload()
+      // onPageFinished stops the spinner; this covers a reload that never finishes.
+      removeCallbacks(stopRefreshing)
+      postDelayed(stopRefreshing, 15000)
+    }
+  }
+
   private fun createWebView(): BrowserWebView {
     val view = BrowserWebView(context)
     view.webViewClient = Client()
     view.webChromeClient = ChromeClient()
     view.addJavascriptInterface(Bridge(), BRIDGE_NAME)
-    addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    view.addJavascriptInterface(pullGuard, PullGuard.NAME)
+    view.setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
+      val name = Downloads.start(context, url, userAgent, contentDisposition, mimeType, view.url)
+      onFileDownload(mapOf("target" to id, "url" to url, "fileName" to (name ?: ""), "started" to (name != null)))
+    }
+    swipe.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     return view
   }
+
+  // Each new touch starts as "no pull" until the page's PullGuard script says otherwise.
+  override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+    if (ev.actionMasked == MotionEvent.ACTION_DOWN) pullGuard.allowed = false
+    return super.dispatchTouchEvent(ev)
+  }
+
+  /** What runs at document start: the pull guard plus BrowserTab's scripts. */
+  private fun startScripts() = PullGuard.SCRIPT + "\n" + documentStartScript
 
   fun applyProps() {
     val ua = userAgent
@@ -82,15 +126,11 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
 
   /** Re-registers the document-start script when it changes; it applies from the next page load. */
   private fun applyDocumentStartScript() {
-    if (!documentStartSupported || appliedStartScript == documentStartScript) return
+    val scripts = startScripts()
+    if (!documentStartSupported || appliedStartScript == scripts) return
     startScriptHandler?.remove()
-    startScriptHandler = null
-    appliedStartScript = documentStartScript
-    if (documentStartScript.isNotBlank()) {
-      startScriptHandler = WebViewCompat.addDocumentStartJavaScript(
-        webView, wrapForTopFrame(documentStartScript), setOf("*")
-      )
-    }
+    appliedStartScript = scripts
+    startScriptHandler = WebViewCompat.addDocumentStartJavaScript(webView, wrapForTopFrame(scripts), setOf("*"))
   }
 
   // --- Methods called from JS through the component ref ------------------------------------
@@ -108,7 +148,9 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
     startScriptHandler = null
     webView.stopLoading()
     webView.removeJavascriptInterface(BRIDGE_NAME)
-    removeView(webView)
+    webView.removeJavascriptInterface(PullGuard.NAME)
+    removeCallbacks(stopRefreshing)
+    swipe.removeView(webView)
     webView.destroy()
   }
 
@@ -159,8 +201,8 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
     override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
       isLoading = true
       // Older WebViews without document-start support: inject as early as we can.
-      if (!documentStartSupported && documentStartScript.isNotBlank()) {
-        view.evaluateJavascript(wrapForTopFrame(documentStartScript), null)
+      if (!documentStartSupported) {
+        view.evaluateJavascript(wrapForTopFrame(startScripts()), null)
       }
       val event = state(url, true)
       onLoadStart(event)
@@ -169,6 +211,8 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
 
     override fun onPageFinished(view: WebView, url: String?) {
       isLoading = false
+      removeCallbacks(stopRefreshing)
+      swipe.isRefreshing = false
       if (documentEndScript.isNotBlank()) {
         view.evaluateJavascript(wrapForTopFrame(documentEndScript), null)
       }
@@ -191,7 +235,8 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
       startScriptHandler = null
       appliedStartScript = null
       view.removeJavascriptInterface(BRIDGE_NAME)
-      removeView(view)
+      view.removeJavascriptInterface(PullGuard.NAME)
+      swipe.removeView(view)
       view.destroy()
       webView = createWebView()
       applyProps()
@@ -207,6 +252,18 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
     }
 
     override fun onHideCustomView() = fullscreen.hide()
+
+    // <input type="file">
+    override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams?) =
+      FileChooser.open(appContext.currentActivity, callback, params)
+
+    // SquareBrowser has no camera, microphone or location permission: sites are told no, the
+    // same as with the old engine. Explicit so a future library default can't change that.
+    override fun onPermissionRequest(request: PermissionRequest) = request.deny()
+
+    override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
+      callback?.invoke(origin, false, false)
+    }
 
     // Without this, Android draws a grey "play" placeholder for videos without a poster.
     override fun getDefaultVideoPoster(): Bitmap? = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888)
@@ -263,6 +320,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
     const val BRIDGE_NAME = "ReactNativeWebView"
     private val WEB_SCHEMES = setOf("http", "https", "about", "data", "blob", "javascript")
     private val BLOCKED_SCHEMES = setOf("file", "content")
+    private const val ACCENT = 0xFF007AFF.toInt() // theme.js accent
 
     /** Main frame only (like react-native-webview's injected scripts), each in its own scope. */
     fun wrapForTopFrame(script: String) =

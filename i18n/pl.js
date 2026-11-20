@@ -167,6 +167,8 @@ export default {
     closeAll: 'Zamknij wszystkie',
     closeAllTitle: 'Zamknąć wszystkie karty?',
     closeAllMessage: 'Wszystkie otwarte karty zostaną zamknięte. Historia zostanie zachowana.',
+    downloadStarted: 'Pobieranie: {{name}}',
+    downloadFailed: 'Tego pliku nie da się tu pobrać.',
     newTab: 'Nowa karta',
     noTabs: 'Brak otwartych kart — kliknij „Nowa karta”',
     homeTab: 'Strona główna',

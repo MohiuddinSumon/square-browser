@@ -13,6 +13,11 @@ class SquareWebViewModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SquareWebView")
 
+    // The file picker for <input type="file"> reports back here.
+    OnActivityResult { _, payload ->
+      FileChooser.onResult(payload.requestCode, payload.resultCode, payload.data)
+    }
+
     View(SquareWebView::class) {
       Events(
         "onLoadStart",
@@ -21,7 +26,8 @@ class SquareWebViewModule : Module() {
         "onNavigationStateChange",
         "onMessage",
         "onExternalUrl",
-        "onOpenWindow"
+        "onOpenWindow",
+        "onFileDownload"
       )
 
       Prop("sourceUri") { view: SquareWebView, uri: String? -> view.sourceUri = uri }
@@ -31,6 +37,9 @@ class SquareWebViewModule : Module() {
       }
       Prop("documentEndScript") { view: SquareWebView, script: String? ->
         view.documentEndScript = script ?: ""
+      }
+      Prop("pullToRefreshEnabled") { view: SquareWebView, enabled: Boolean? ->
+        view.pullToRefreshEnabled = enabled ?: true
       }
       Prop("blockedHosts") { view: SquareWebView, hosts: List<String>? ->
         view.blockedHosts = hosts.orEmpty().map { it.lowercase() }.toSet()

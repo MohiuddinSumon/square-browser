@@ -167,6 +167,8 @@ export default {
     closeAll: 'Закрыть все',
     closeAllTitle: 'Закрыть все вкладки?',
     closeAllMessage: 'Все открытые вкладки закроются. История останется.',
+    downloadStarted: 'Загружается {{name}}',
+    downloadFailed: 'Этот файл здесь не скачать.',
     newTab: 'Новая вкладка',
     noTabs: 'Нет открытых вкладок — нажмите «Новая вкладка»',
     homeTab: 'Главная',

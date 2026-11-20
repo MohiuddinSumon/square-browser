@@ -152,6 +152,8 @@ export default {
     closeAll: 'Alle schließen',
     closeAllTitle: 'Alle Tabs schließen?',
     closeAllMessage: 'Alle offenen Tabs werden geschlossen. Dein Verlauf bleibt erhalten.',
+    downloadStarted: '{{name}} wird heruntergeladen',
+    downloadFailed: 'Diese Datei lässt sich hier nicht herunterladen.',
     newTab: 'Neuer Tab',
     noTabs: 'Keine offenen Tabs – tippe auf „Neuer Tab“',
     homeTab: 'Startseite',

@@ -65,14 +65,14 @@
 <h2>6. Video</h2>
 <p class="note">Both engines: fullscreen turns the phone to landscape with a rotate button top right, and back leaves fullscreen. With Background Playback on, start the video, then leave the app: it keeps playing and the notification controls work.</p>
 <video controls playsinline width="100%" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>
-<h2>6b. Not in the new engine yet (phase 4)</h2>
-<p class="note">Old engine only for now.</p>
+<h2>6b. Files and permissions</h2>
+<p class="note">File upload opens Android's picker in both engines. Download: the new engine shows "Downloading …" and the file lands in Downloads. Location: both engines say no (SquareBrowser has no location permission).</p>
 <label class="btn">File upload <input type="file"></label>
 <a class="btn" href="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" download>Download a file</a>
 <button onclick="navigator.geolocation.getCurrentPosition(function(p){ log('location ok'); }, function(e){ log('location error: ' + e.message); })">Ask for location</button>
 
 <h2>7. Pull to refresh</h2>
-<p class="note">Pull down from the top: the counter below goes up by one per refresh.</p>
+<p class="note">Pull down from the top: the counter below goes up by one per refresh. Old engine: SquareBrowser's own spinner. New engine: Android's standard spinner.</p>
 <div class="row"><span>Loads of this page (this session)</span><span id="loads"></span></div>
 
 <h2>Log</h2>

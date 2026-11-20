@@ -14,6 +14,9 @@
  *     ref.loadUrl(url) to load it anyway ("Stay in browser").
  *   onOpenWindow({ nativeEvent: { targetUrl, userGesture } }) for window.open / target="_blank"
  *   blockedHosts: domains whose pages a tapped link may not open (suffix match)
+ *   pullToRefreshEnabled: Android's own pull to refresh (default on)
+ *   onFileDownload({ nativeEvent: { url, fileName, started } }): a download was handed to
+ *     Android's download manager (started) or couldn't be (blob:/data: links, errors)
  *
  * Ref methods: reload, goBack, goForward, stopLoading, injectJavaScript(js), loadUrl(url).
  * Other react-native-webview props are ignored; the native side applies the settings
@@ -45,6 +48,8 @@ export const SquareWebView = forwardRef(function SquareWebView(
     onMessage,
     onExternalUrl,
     onOpenWindow,
+    onFileDownload,
+    pullToRefreshEnabled = true,
     blockedHosts,
   },
   ref
@@ -66,6 +71,8 @@ export const SquareWebView = forwardRef(function SquareWebView(
       onMessage={onMessage}
       onExternalUrl={onExternalUrl}
       onOpenWindow={onOpenWindow}
+      onFileDownload={onFileDownload}
+      pullToRefreshEnabled={pullToRefreshEnabled}
       blockedHosts={blockedHosts || NO_HOSTS}
     />
   );
