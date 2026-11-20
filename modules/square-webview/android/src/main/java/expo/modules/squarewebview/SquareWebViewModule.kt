@@ -27,7 +27,8 @@ class SquareWebViewModule : Module() {
         "onMessage",
         "onExternalUrl",
         "onOpenWindow",
-        "onFileDownload"
+        "onFileDownload",
+        "onBlockedUrl"
       )
 
       Prop("sourceUri") { view: SquareWebView, uri: String? -> view.sourceUri = uri }
@@ -44,6 +45,10 @@ class SquareWebViewModule : Module() {
       Prop("blockedHosts") { view: SquareWebView, hosts: List<String>? ->
         view.blockedHosts = hosts.orEmpty().map { it.lowercase() }.toSet()
       }
+      Prop("userBlockedHosts") { view: SquareWebView, hosts: List<String>? ->
+        view.userBlockedHosts = hosts.orEmpty().map { it.lowercase() }.toSet()
+      }
+      Prop("textZoom") { view: SquareWebView, percent: Int? -> view.textZoom = percent ?: 100 }
 
       // Runs once per prop update, after every changed prop is set, so the user agent and
       // scripts are in place before the first page load.

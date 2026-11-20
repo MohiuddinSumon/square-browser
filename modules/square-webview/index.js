@@ -14,6 +14,9 @@
  *     ref.loadUrl(url) to load it anyway ("Stay in browser").
  *   onOpenWindow({ nativeEvent: { targetUrl, userGesture } }) for window.open / target="_blank"
  *   blockedHosts: domains whose pages a tapped link may not open (suffix match)
+ *   userBlockedHosts: the user's block list; a link there is refused and reported through
+ *     onBlockedUrl({ nativeEvent: { url } })
+ *   textZoom: web page text size in percent
  *   pullToRefreshEnabled: Android's own pull to refresh (default on)
  *   onFileDownload({ nativeEvent: { url, fileName, started } }): a download was handed to
  *     Android's download manager (started) or couldn't be (blob:/data: links, errors)
@@ -51,6 +54,9 @@ export const SquareWebView = forwardRef(function SquareWebView(
     onFileDownload,
     pullToRefreshEnabled = true,
     blockedHosts,
+    userBlockedHosts,
+    onBlockedUrl,
+    textZoom = 100,
   },
   ref
 ) {
@@ -74,6 +80,9 @@ export const SquareWebView = forwardRef(function SquareWebView(
       onFileDownload={onFileDownload}
       pullToRefreshEnabled={pullToRefreshEnabled}
       blockedHosts={blockedHosts || NO_HOSTS}
+      userBlockedHosts={userBlockedHosts || NO_HOSTS}
+      onBlockedUrl={onBlockedUrl}
+      textZoom={textZoom}
     />
   );
 });

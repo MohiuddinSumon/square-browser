@@ -12,14 +12,78 @@ Write-Host " SquareBrowser Release Builder"
 Write-Host "============================================"
 Write-Host ""
 
-if (-not $VersionName) { $VersionName = Read-Host "Enter version name (e.g. 1.0.8)" }
-if (-not $VersionCode) { $VersionCode = Read-Host "Enter version code (e.g. 8)" }
+function Exit-WithError([string]$Message) {
+    Write-Host "ERROR: $Message"
+    Read-Host "Press Enter to exit"
+    exit 1
+}
 
-if (-not $VersionName) { Write-Host "ERROR: Version name cannot be empty."; Read-Host "Press Enter to exit"; exit 1 }
-if (-not $VersionCode) { Write-Host "ERROR: Version code cannot be empty."; Read-Host "Press Enter to exit"; exit 1 }
-if ($VersionCode -notmatch '^\d+$') { Write-Host "ERROR: Version code must be a number."; Read-Host "Press Enter to exit"; exit 1 }
+# Asks a yes/no question; anything but y/yes stops the release.
+function Confirm-OrExit([string]$Question) {
+    $answer = Read-Host "$Question (y/N)"
+    if ($answer -notmatch '^(y|yes)$') {
+        Write-Host "Release cancelled."
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+}
+
+# "1.0.9" -> [version] 1.0.9; $null when it is not a dotted number.
+function ConvertTo-Version([string]$Name) {
+    if ($Name -notmatch '^\d+(\.\d+){1,3}$') { return $null }
+    return [version]$Name
+}
+
+# Current release, from app.json (the version source Expo uses)
+$currentJson = Get-Content (Resolve-Path "app.json") -Raw | ConvertFrom-Json
+$currentName = [string]$currentJson.expo.version
+$currentCode = [int]$currentJson.expo.android.versionCode
+
+# Next release: last part of the version name + 1 (1.0.9 -> 1.0.10), version code + 1
+$nameParts = $currentName.Split('.')
+$nameParts[-1] = [string]([int]$nameParts[-1] + 1)
+$suggestedName = $nameParts -join '.'
+$suggestedCode = $currentCode + 1
+
+Write-Host "Current release : $currentName (code $currentCode)"
+Write-Host "Next release    : $suggestedName (code $suggestedCode)"
+Write-Host ""
+
+if (-not $VersionName) {
+    $VersionName = Read-Host "Enter version name, or press Enter for $suggestedName"
+    if (-not $VersionName) { $VersionName = $suggestedName }
+}
+if (-not $VersionCode) {
+    $VersionCode = Read-Host "Enter version code, or press Enter for $suggestedCode"
+    if (-not $VersionCode) { $VersionCode = [string]$suggestedCode }
+}
+
+if ($VersionCode -notmatch '^\d+$') { Exit-WithError "Version code must be a number." }
+$newName = ConvertTo-Version $VersionName
+if (-not $newName) { Exit-WithError "Version name must look like 1.0.10." }
 
 $codeInt = [int]$VersionCode
+$oldName = ConvertTo-Version $currentName
+
+# Building the same release again, or going backwards, needs a yes.
+if ($codeInt -eq $currentCode) {
+    Write-Host ""
+    Write-Host "WARNING: Version code $codeInt is the current release. Google Play rejects an upload with a version code it already has."
+    Confirm-OrExit "Build version code $codeInt again?"
+} elseif ($codeInt -lt $currentCode) {
+    Write-Host ""
+    Write-Host "WARNING: Version code $codeInt is LOWER than the current release ($currentCode). Google Play only accepts higher version codes."
+    Confirm-OrExit "Build with the lower version code $codeInt?"
+}
+if ($oldName -and $newName -eq $oldName) {
+    Write-Host ""
+    Write-Host "WARNING: Version name $VersionName is the current release."
+    Confirm-OrExit "Build version $VersionName again?"
+} elseif ($oldName -and $newName -lt $oldName) {
+    Write-Host ""
+    Write-Host "WARNING: Version name $VersionName is LOWER than the current release ($currentName)."
+    Confirm-OrExit "Build with the lower version $VersionName?"
+}
 
 Write-Host ""
 Write-Host "Updating to version $VersionName (code $codeInt)..."

@@ -8,13 +8,18 @@
  * uses Pressable style functions (scale 0.97 / opacity 0.6) with no haptics.
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, SafeAreaView, Switch, Platform, Modal, Alert } from 'react-native';
+import { File } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { useBrowser } from '../context/BrowserContext';
 import Constants from 'expo-constants';
 import { getTheme } from '../theme';
 import ScreenHeader from '../components/ScreenHeader';
 import { LANGUAGES } from '../i18n';
+import { SEARCH_ENGINES, getSearchEngine } from '../utils/url';
+import { useProtectedChange } from '../components/ProtectionGate';
+import { historyToCsv, historyToHtml, bookmarksToHtml, parseBookmarks } from '../utils/exportData';
+import { saveTextToDownloads, isDownloadSaveAvailable } from '../modules/square-downloads';
 import { isNativeWebViewAvailable } from '../modules/square-webview';
 
 /**
@@ -34,6 +39,9 @@ const ThemedSwitch = ({ value, onValueChange, theme }) => {
     />
   );
 };
+
+// Web page text sizes offered in Settings (percent; Android only)
+const TEXT_ZOOM_STEPS = [80, 90, 100, 115, 130, 150, 175, 200];
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -61,9 +69,15 @@ const SettingsScreen = ({ navigation }) => {
     timerEnabled,
     dailyLimitMs,
     strictMode,
-    setTimerSettingsPref,
     language,
     setLanguagePref,
+    searchEngine,
+    setSearchEnginePref,
+    darkPagesEnabled,
+    setDarkPagesPref,
+    textZoom,
+    setTextZoomPref,
+    importBookmarks,
     t,
   } = useBrowser();
 
@@ -72,8 +86,71 @@ const SettingsScreen = ({ navigation }) => {
 
   const [appVersion, setAppVersion] = useState(Constants?.expoConfig?.version || Constants?.manifest?.version || '1.0.0');
   const [localLimitMinutes, setLocalLimitMinutes] = useState(Math.round(dailyLimitMs / 60000));
-  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  // Which option list is open: 'language' | 'search' | 'textZoom' | null
+  const [picker, setPicker] = useState(null);
   const currentLanguageName = (LANGUAGES.find((l) => l.code === language) || LANGUAGES[0]).name;
+
+  const pickers = {
+    language: {
+      title: t('settings.chooseLanguage'),
+      options: LANGUAGES.map((l) => ({ value: l.code, label: l.name })),
+      selected: language,
+      onSelect: setLanguagePref,
+    },
+    search: {
+      title: t('settings.chooseSearchEngine'),
+      options: SEARCH_ENGINES.map((e) => ({ value: e.id, label: e.name })),
+      selected: searchEngine,
+      onSelect: setSearchEnginePref,
+    },
+    textZoom: {
+      title: t('settings.textSize'),
+      options: TEXT_ZOOM_STEPS.map((v) => ({ value: v, label: `${v}%` })),
+      selected: textZoom,
+      onSelect: setTextZoomPref,
+    },
+  };
+  const openPicker = picker ? pickers[picker] : null;
+
+  // Timer changes go through the commitment lock; if one is held back, show the real limit again.
+  const [requestChange, protectionGate] = useProtectedChange();
+  const changeTimer = async (next) => {
+    const status = await requestChange('timer', next);
+    if (status !== 'applied') setLocalLimitMinutes(Math.round(dailyLimitMs / 60000));
+  };
+
+  // Exports are written to the Downloads folder (Android).
+  const exportFile = async (fileName, mimeType, text) => {
+    if (!isDownloadSaveAvailable) {
+      Alert.alert(t('data.title'), t('data.notAvailable'));
+      return;
+    }
+    try {
+      const saved = await saveTextToDownloads(fileName, mimeType, text);
+      Alert.alert(t('data.title'), t('data.exported', { name: saved }));
+    } catch (e) {
+      Alert.alert(t('data.title'), t('data.exportFailed'));
+    }
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+  const exportHistoryCsv = () =>
+    exportFile(`squarebrowser-history-${today}.csv`, 'text/csv', historyToCsv(history));
+  const exportHistoryHtml = () =>
+    exportFile(`squarebrowser-history-${today}.html`, 'text/html', historyToHtml(history, t('data.historyFileTitle')));
+  const exportBookmarks = () =>
+    exportFile(`squarebrowser-bookmarks-${today}.html`, 'text/html', bookmarksToHtml(bookmarks));
+
+  const handleImportBookmarks = async () => {
+    try {
+      const picked = await File.pickFileAsync({ mimeTypes: ['text/html', 'application/json', 'text/plain'] });
+      if (!picked || picked.canceled || !picked.result) return;
+      const count = await importBookmarks(parseBookmarks(await picked.result.text()));
+      Alert.alert(t('data.title'), count > 0 ? t('data.imported', { count }) : t('data.importNone'));
+    } catch (e) {
+      Alert.alert(t('data.title'), t('data.importFailed'));
+    }
+  };
 
   // Keep local picker in sync when context loads from AsyncStorage
   useEffect(() => {
@@ -129,7 +206,7 @@ const SettingsScreen = ({ navigation }) => {
         <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
           <Pressable
             style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
-            onPress={() => setLanguageModalVisible(true)}
+            onPress={() => setPicker('language')}
           >
             <View style={styles.menuItemLeft}>
               <Ionicons name="language-outline" size={22} color={colors.accent} />
@@ -137,6 +214,22 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <View style={styles.menuItemRight}>
               <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{currentLanguageName}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </View>
+          </Pressable>
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => setPicker('search')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="search-outline" size={22} color={colors.accent} />
+              <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.searchEngine')}</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{getSearchEngine(searchEngine).name}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </View>
           </Pressable>
@@ -261,6 +354,41 @@ const SettingsScreen = ({ navigation }) => {
             style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
           >
             <View style={styles.menuItemLeft}>
+              <Ionicons name="contrast-outline" size={22} color={colors.accent} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.darkPages')}</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.darkPagesHint')}</Text>
+              </View>
+            </View>
+            <ThemedSwitch value={darkPagesEnabled} onValueChange={setDarkPagesPref} theme={theme} />
+          </Pressable>
+
+          {Platform.OS === 'android' && (
+            <>
+              <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+                onPress={() => setPicker('textZoom')}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name="text-outline" size={22} color={colors.accent} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.textSize')}</Text>
+                </View>
+                <View style={styles.menuItemRight}>
+                  <Text style={[styles.menuItemValue, { color: colors.textSecondary }]}>{`${textZoom}%`}</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+                </View>
+              </Pressable>
+            </>
+          )}
+
+          <View style={[styles.hairline, { backgroundColor: colors.separator }]} />
+
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+          >
+            <View style={styles.menuItemLeft}>
               <Ionicons name="code-working-outline" size={22} color={colors.accent} />
               <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.urlBarPosition')}</Text>
             </View>
@@ -295,7 +423,7 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <ThemedSwitch
               value={timerEnabled}
-              onValueChange={(val) => setTimerSettingsPref({ enabled: val, limitMs: localLimitMinutes * 60000, strict: strictMode })}
+              onValueChange={(val) => changeTimer({ enabled: val, dailyLimitMs: localLimitMinutes * 60000, strictMode: strictMode })}
               theme={theme}
             />
           </Pressable>
@@ -315,7 +443,7 @@ const SettingsScreen = ({ navigation }) => {
                       key={mins}
                       onPress={() => {
                         setLocalLimitMinutes(mins);
-                        setTimerSettingsPref({ enabled: true, limitMs: mins * 60000, strict: strictMode });
+                        changeTimer({ enabled: true, dailyLimitMs: mins * 60000, strictMode: strictMode });
                       }}
                       style={({ pressed }) => [
                         styles.positionButton,
@@ -343,7 +471,7 @@ const SettingsScreen = ({ navigation }) => {
                     onPress={() => {
                       const newMins = Math.max(5, localLimitMinutes - 15);
                       setLocalLimitMinutes(newMins);
-                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                      changeTimer({ enabled: true, dailyLimitMs: newMins * 60000, strictMode: strictMode });
                     }}
                     style={({ pressed }) => [
                       styles.positionButton,
@@ -367,7 +495,7 @@ const SettingsScreen = ({ navigation }) => {
                     onPress={() => {
                       const newMins = Math.min(1435, localLimitMinutes + 15);
                       setLocalLimitMinutes(newMins);
-                      setTimerSettingsPref({ enabled: true, limitMs: newMins * 60000, strict: strictMode });
+                      changeTimer({ enabled: true, dailyLimitMs: newMins * 60000, strictMode: strictMode });
                     }}
                     style={({ pressed }) => [
                       styles.positionButton,
@@ -393,7 +521,7 @@ const SettingsScreen = ({ navigation }) => {
                   </View>
                   <ThemedSwitch
                     value={strictMode}
-                    onValueChange={(val) => setTimerSettingsPref({ enabled: true, limitMs: localLimitMinutes * 60000, strict: val })}
+                    onValueChange={(val) => changeTimer({ enabled: true, dailyLimitMs: localLimitMinutes * 60000, strictMode: val })}
                     theme={theme}
                   />
                 </View>
@@ -403,6 +531,22 @@ const SettingsScreen = ({ navigation }) => {
               </View>
             </>
           )}
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          <Pressable
+            style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+            onPress={() => navigation.navigate('Accountability')}
+          >
+            <View style={styles.menuItemLeft}>
+              <Ionicons name="shield-checkmark-outline" size={22} color={colors.accent} />
+              <View style={styles.menuItemTextWrap}>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{t('accountability.title')}</Text>
+                <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('accountability.subtitle')}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.quickAccess')}</Text>
@@ -454,6 +598,31 @@ const SettingsScreen = ({ navigation }) => {
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </Pressable>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('data.title')}</Text>
+
+        <View style={[styles.card, { backgroundColor: colors.surface, borderRadius: borderRadius.md, ...shadows.sm }]}>
+          {[
+            { icon: 'document-text-outline', label: t('data.exportHistoryCsv'), onPress: exportHistoryCsv },
+            { icon: 'globe-outline', label: t('data.exportHistoryHtml'), onPress: exportHistoryHtml },
+            { icon: 'bookmark-outline', label: t('data.exportBookmarks'), onPress: exportBookmarks },
+            { icon: 'download-outline', label: t('data.importBookmarks'), onPress: handleImportBookmarks },
+          ].map((item, index) => (
+            <View key={item.label}>
+              {index > 0 && <View style={[styles.hairline, { backgroundColor: colors.separator }]} />}
+              <Pressable
+                style={({ pressed }) => [styles.menuItem, pressed && { opacity: animation.pressOpacity }]}
+                onPress={item.onPress}
+              >
+                <View style={styles.menuItemLeft}>
+                  <Ionicons name={item.icon} size={22} color={colors.accent} />
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>{item.label}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+              </Pressable>
+            </View>
+          ))}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t('settings.aboutLegal')}</Text>
@@ -518,34 +687,34 @@ const SettingsScreen = ({ navigation }) => {
       </ScrollView>
 
       <Modal
-        visible={languageModalVisible}
+        visible={openPicker != null}
         transparent
         animationType="fade"
-        onRequestClose={() => setLanguageModalVisible(false)}
+        onRequestClose={() => setPicker(null)}
       >
         <Pressable
           style={[styles.languageOverlay, { backgroundColor: colors.scrim }]}
-          onPress={() => setLanguageModalVisible(false)}
+          onPress={() => setPicker(null)}
         >
           {/* Inner Pressable swallows taps so only the dimmed area closes the picker */}
           <Pressable style={[styles.languageSheet, { backgroundColor: colors.surface, borderRadius: borderRadius.md }]}>
-            <Text style={[styles.languageTitle, { color: colors.text }]}>{t('settings.chooseLanguage')}</Text>
-            {LANGUAGES.map((lang, index) => {
-              const selected = lang.code === language;
+            <Text style={[styles.languageTitle, { color: colors.text }]}>{openPicker?.title}</Text>
+            {openPicker?.options.map((option, index) => {
+              const selected = option.value === openPicker.selected;
               return (
-                <View key={lang.code}>
+                <View key={String(option.value)}>
                   {index > 0 && <View style={[styles.languageHairline, { backgroundColor: colors.separator }]} />}
                   <Pressable
                     style={({ pressed }) => [styles.languageRow, pressed && { opacity: animation.pressOpacity }]}
                     onPress={() => {
-                      setLanguagePref(lang.code);
-                      setLanguageModalVisible(false);
+                      openPicker.onSelect(option.value);
+                      setPicker(null);
                     }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                   >
                     <Text style={[styles.languageName, { color: selected ? colors.accent : colors.text, fontWeight: selected ? '600' : '400' }]}>
-                      {lang.name}
+                      {option.label}
                     </Text>
                     {selected && <Ionicons name="checkmark" size={20} color={colors.accent} />}
                   </Pressable>
@@ -555,6 +724,8 @@ const SettingsScreen = ({ navigation }) => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {protectionGate}
     </SafeAreaView>
   );
 };

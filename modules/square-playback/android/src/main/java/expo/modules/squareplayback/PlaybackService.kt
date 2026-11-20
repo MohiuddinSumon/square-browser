@@ -183,8 +183,7 @@ class PlaybackService : Service() {
     if (!url.startsWith("http")) return
     Thread {
       try {
-        val conn = URL(url).openConnection().apply { connectTimeout = 5000; readTimeout = 5000 }
-        val bitmap = conn.getInputStream().use { BitmapFactory.decodeStream(it) }
+        val bitmap = downloadArtwork(url) ?: return@Thread
         main.post {
           if (artworkFor == url && instance === this@PlaybackService) {
             artwork = bitmap
@@ -193,6 +192,38 @@ class PlaybackService : Service() {
         }
       } catch (e: Exception) {}
     }.start()
+  }
+
+  /**
+   * Downloads the page's artwork and decodes it scaled down to about notification size.
+   * Pages often point at full-size images (4K thumbnails, og:image banners); decoding those
+   * at full resolution costs tens of MB for a 256px picture. Oversized downloads are skipped.
+   */
+  private fun downloadArtwork(url: String): Bitmap? {
+    val conn = URL(url).openConnection().apply { connectTimeout = 5000; readTimeout = 5000 }
+    val bytes = conn.getInputStream().use { input ->
+      val buffer = java.io.ByteArrayOutputStream()
+      val chunk = ByteArray(16 * 1024)
+      while (true) {
+        val n = input.read(chunk)
+        if (n < 0) break
+        buffer.write(chunk, 0, n)
+        if (buffer.size() > MAX_ARTWORK_BYTES) return null
+      }
+      buffer.toByteArray()
+    }
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    var sample = 1
+    while (bounds.outWidth / (sample * 2) >= ARTWORK_SIZE_PX && bounds.outHeight / (sample * 2) >= ARTWORK_SIZE_PX) {
+      sample *= 2
+    }
+    val options = BitmapFactory.Options().apply {
+      inSampleSize = sample
+      inPreferredConfig = Bitmap.Config.RGB_565
+    }
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
   }
 
   private fun action(code: Int, icon: Int, label: String, name: String): Notification.Action {
@@ -267,6 +298,9 @@ class PlaybackService : Service() {
     // Safety nets so a missed "stop" can never hold the CPU or notification forever.
     private const val MAX_WAKE_MS = 6L * 60 * 60 * 1000
     private const val IDLE_STOP_MS = 10L * 60 * 1000
+    // Artwork is decoded at roughly this size (the media notification shows it smaller).
+    private const val ARTWORK_SIZE_PX = 512
+    private const val MAX_ARTWORK_BYTES = 4 * 1024 * 1024
 
     @Volatile var instance: PlaybackService? = null
     @Volatile var info: MediaInfo = MediaInfo()

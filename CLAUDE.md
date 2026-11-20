@@ -51,18 +51,25 @@ cd android && ./gradlew bundleRelease
 SquareBrowser/
 ├── App.js                    # Main entry point, navigation setup, URL handling
 ├── context/BrowserContext.js # Global state management (tabs, history, bookmarks, settings)
-├── i18n/                     # Translations (en.js is the source; ru.js, pl.js, de.js)
+├── i18n/                     # Translations (en.js is the source; ru.js, pl.js, de.js, bn.js)
 ├── components/               # Reusable UI components
 │   ├── AddressBar.js        # URL input with navigation controls
 │   ├── HomeScreen.js        # Home screen with quick actions
 │   ├── NavigationControls.js # Browser control buttons
+│   ├── ProtectionGate.js    # PIN / 24-hour-wait prompt for accountability changes
 │   └── ScreenHeader.js      # The one header all stack screens use (safe-area aware)
 ├── screens/                  # Screen components
 │   ├── BrowserScreen.js     # Main browsing interface with tab management
 │   ├── BookmarksScreen.js   # Bookmark management
 │   ├── HistoryScreen.js     # Permanent browsing history (read-only)
+│   ├── AccountabilityScreen.js # Schedules, block list, SafeSearch, commitment lock, weekly summary
 │   └── SettingsScreen.js    # App settings and preferences
-└── utils/storage.js          # AsyncStorage helpers for persistence
+└── utils/
+    ├── storage.js            # AsyncStorage helpers for persistence
+    ├── url.js                # Address-bar input -> URL, search engines
+    ├── protection.js         # Rules for schedules, block list, SafeSearch, commitment lock
+    ├── adultDomains.js       # Curated adult-site list (opt-in filter)
+    └── exportData.js         # History/bookmark export + import, weekly summary text
 ```
 
 ## Key Architecture Patterns
@@ -105,6 +112,8 @@ All data is stored locally using AsyncStorage with consistent prefixes:
 - `@squarebrowser_usage_` - Daily usage statistics per domain
 - `@squarebrowser_theme` - Dark/light mode preference
 - `@squarebrowser_exit_confirm` - Exit confirmation setting
+- `@squarebrowser_search_engine`, `@squarebrowser_dark_pages`, `@squarebrowser_text_zoom` - Browser settings
+- `@squarebrowser_schedules`, `@squarebrowser_blocking`, `@squarebrowser_commitment`, `@squarebrowser_pending_changes` - Accountability settings
 
 ## Important Constraints
 
@@ -132,7 +141,7 @@ The native filter also loads a bundled domain list (`modules/square-adblock/andr
 Popup ads lock page scrolling (`overflow:hidden`, `position:fixed` body, `modal-open`-style classes). Because the ad blocker deletes the ad instead of letting the page close it, `adBlockScript` calls `releaseScrollLock()` after removing a big layer: it only acts for 8 seconds after a removal and never while another full-screen layer (such as a cookie dialog) is showing. Test pages for the three lock styles plus a real dialog are easy to recreate with a local server; check that the first three scroll afterwards and the dialog stays locked.
 
 ### Screen headers
-Stack screens (Settings, History, Bookmarks, Products, Privacy Policy, Terms) must use `components/ScreenHeader.js`. It pads the top with the real safe-area inset because RN's `SafeAreaView` does nothing on Android (otherwise titles end up behind the status bar or camera cutout). Do not hand-roll a header in a screen.
+Stack screens (Settings, Accountability, History, Bookmarks, Products, Privacy Policy, Terms) must use `components/ScreenHeader.js`. It pads the top with the real safe-area inset because RN's `SafeAreaView` does nothing on Android (otherwise titles end up behind the status bar or camera cutout). Do not hand-roll a header in a screen.
 
 ### Background Playback
 `modules/square-playback` (Android, Kotlin) runs a `mediaPlayback` foreground service with a media notification (title, thumbnail, back/play-pause/forward) backed by a `MediaSession`, so audio keeps playing when the app is backgrounded. `screens/backgroundPlayScript.js` is injected into every page: it reports media state per tab (`mediaState` messages), exposes `window.__sqMediaControl(action)` for the notification buttons, and, on YouTube only, hides visibility/blur/freeze events so the site doesn't pause itself. The WebView has **no Media Session API**, so title/thumbnail come from the page (`document.title`, `og:image`, YouTube thumbnail from `?v=`), and previous/next seek -10s/+10s. **Chromium pauses `<video>` in a hidden WebView** (audio-only elements keep playing), so `patches/react-native-webview+13.16.1.patch` (applied by `patch-package` on `npm install`) adds `RNCWebView.keepVisibleInBackground`, which makes the WebView keep reporting itself visible; `PlaybackService` flips it by reflection while running. If react-native-webview is upgraded, regenerate the patch. YouTube's own Previous/Next buttons (`aria-label` "Previous video"/"Next video") are clicked for the notification's skip buttons. The service stops 30s after the last media disappears, since skipping to the previous video navigates the page and a service cannot be restarted from the background. The service starts when a tab starts playing (must happen in the foreground, Android 12+) and follows the playing tab. Controlled by the `backgroundPlayEnabled` setting. Notification buttons reach the page through `evaluateInWebView(viewTag, js)` (native `evaluateJavascript`), not `ref.injectJavaScript`, because React Native's UI command queue stalls in the background. The WebView ref is an imperative handle, so native modules get the view tag from `e.nativeEvent.target` (e.g. in `onLoadStart`), never `findNodeHandle`.
@@ -140,13 +149,21 @@ Stack screens (Settings, History, Bookmarks, Products, Privacy Policy, Terms) mu
 ### Translations (i18n/)
 English is the source of truth and the **default for everyone**; the app never follows the device language. The user opts in from Settings > Language (stored as `@squarebrowser_language`). `BrowserContext` owns `language` and exposes `t(key, vars)`, so UI code does `const { t } = useBrowser()`. Module-level helpers (such as `promptOpenInApp`) take `t` as a parameter.
 
-- Strings live in `i18n/<code>.js`, grouped by screen. Missing keys fall back to English, but run `npm run check:i18n` — it fails on missing/extra keys and on `{{placeholder}}` mismatches.
+- Strings live in `i18n/<code>.js`, grouped by screen (English, Russian, Polish, German, Bengali). Missing keys fall back to English, but run `npm run check:i18n` — it fails on missing/extra keys and on `{{placeholder}}` mismatches.
 - Plurals use objects (`one/few/many/other`) chosen by `vars.count`; the rules for ru/pl are hand-written in `i18n/index.js` (no `Intl.PluralRules`). `home.quotes` is a list in the same order as `QUOTE_STYLES` in `HomeScreen.js`.
 - Unit labels come from `units.h/m/s` and may include a leading space (`' мин'`).
 - Dates/times go through `formatLongDate` / `formatClock`. History groups by ISO date key, so non-Latin month names can never merge groups.
 - Wording is deliberately plain and conversational rather than literal. The Privacy Policy and Terms of Service screens stay English (legal text).
 - To add a language: add `i18n/<code>.js` with every key, register it in `LANGUAGES` and `DICTIONARIES` in `i18n/index.js`, and add its plural rule if it needs more than one/other. Right-to-left layouts are not supported yet.
 
+### Search engines, dark pages, text size
+`utils/url.js` turns address-bar input into a URL (one place; don't re-add copies) using the engine picked in Settings (Google, DuckDuckGo, Bing, Brave). "Dark Web Pages" (`screens/darkPagesScript.js`) inverts light pages with CSS and leaves pages that are already dark alone; the WebView's own force-dark flag does nothing on Android 13+. `window.__sqSetDark(on)` flips it without a reload. Text size uses the Android-only `textZoom` prop (both engines).
+
+### Downloads
+Normal http(s) downloads go to Android's DownloadManager (through react-native-webview, or `Downloads.kt` with the native engine). Pages that build a file themselves (blob:/data: links, including links clicked without being added to the page) are caught by `screens/downloadScript.js`, posted to the app as base64 (20 MB cap) and saved by `modules/square-downloads` (MediaStore on Android 10+, a direct file plus `WRITE_EXTERNAL_STORAGE` on older versions (the module asks up to API 28; Expo's template raises the merged limit to 32); that permission also makes react-native-webview's own downloads work there). The same module saves history/bookmark exports. Changing it needs `npx expo prebuild --clean`.
+
+### Accountability (schedules, block list, SafeSearch, commitment lock)
+Rules are pure functions in `utils/protection.js` (checked by `npm run check:protection`). State lives in `BrowserContext`; **every change goes through `requestProtectionChange(type, value)`** (UI: `useProtectedChange` in `components/ProtectionGate.js`). When the commitment lock is on, a change that makes limits weaker (`isLoosening`) waits 24 hours (`pendingChanges`, applied by a 15s tick) or needs the friend's PIN (salted SHA-256, `utils/sha256.js`); stricter changes always apply at once. Schedules can never leave less than 4 open hours a day or block more than 20 hours in a row, so nobody locks themselves out. Blocking is checked in three places: `navigateTo`/`addTab` (address bar, links from other apps), in-page navigation (`onShouldStartLoadWithRequest` on the classic engine; the native engine refuses links to `userBlockedHosts` in `shouldOverrideUrlLoading` and reports them as `onBlockedUrl`), and a sweep over all tabs (restored tabs, back/forward, pushState, sites added while open). SafeSearch rewrites search URLs (with a loop guard for sites that drop the parameter). YouTube Restricted Mode is not covered (it can't be set by URL).
 ### Open in app (WhatsApp, Play Store, intent:// links)
 `getExternalAppLink()` (BrowserScreen.js) turns app links into something `Linking.openURL` can open: custom schemes (`whatsapp:`, `tg:`, `market:`...), Android `intent://` links (converted to their real scheme; `S.browser_fallback_url` is loaded if the app isn't installed), and web links that other browsers hand to the app (Play Store, `wa.me`, `api.whatsapp.com/send`, `chat.whatsapp.com`). `handleExternalLink()` in `BrowserTab` asks the user, with "Stay in browser" for web links. **The WebView must keep `originWhitelist={['*']}` on Android**: with the default, react-native-webview never passes non-http URLs to `onShouldStartLoadWithRequest` and instead calls `Linking.canOpenURL`, which is always false on Android 11+, so app buttons silently do nothing. `file:`/`content:` navigations are refused. New-window links (`onOpenWindow`, and `target="_blank"` app links that the ad blocker would otherwise drop) go through the same prompt.
 
@@ -156,7 +173,7 @@ English is the source of truth and the **default for everyone**; the app never f
 - **Phase 1** (done): browsing, scripts, navigation state (including pushState), messages, a fresh WebView after a renderer crash.
 - **Phase 2** (done): `shouldOverrideUrlLoading` decides main-frame navigations natively with `LinkRules.kt` (unit-tested in `src/test`): links to `blockedHosts` (the JS `AD_DOMAINS`, passed while Ad Blocker is on) are refused; app schemes and Play Store/WhatsApp web links are refused and sent to JS as `onExternalUrl` (`web: true` for web links: JS calls `ref.loadUrl(url)` when the user chose "Stay in browser"). Keep `LinkRules.isAppWebLink` in step with `getAppForWebLink()` in BrowserScreen.js. Popups go through `onCreateWindow`: a throwaway WebView catches the URL and `onOpenWindow` reports `{ targetUrl, userGesture }` to the existing handler.
 - **Phase 3** (done): background video: `BrowserWebView.keepVisibleInBackground` (static, like the patched `RNCWebView` field) is set by `PlaybackService`'s `WebViewKeepVisible`, which flips both engines' flags by class name. Fullscreen video: `FullscreenVideo.kt` is the patch's fullscreen code (landscape on enter, rotate button, free rotation once the phone turns, system back leaves fullscreen), driven by `onShowCustomView`/`onHideCustomView`; it also leaves fullscreen when the tab is destroyed or its renderer dies.
-- **Phase 4** (done): file uploads (`FileChooser.kt`, result through the module's `OnActivityResult`; no camera capture), downloads (`Downloads.kt`: Android's DownloadManager with the page's cookies, user agent and referer; public Downloads folder on Android 10+, the app's own Downloads folder below that since there is no storage permission; `onFileDownload` shows a toast; `blob:`/`data:` downloads are not supported), page permissions (camera, microphone, location are always refused, as with the old engine: the app has none of those permissions, by choice), and native pull to refresh (see Pull to Refresh).
+- **Phase 4** (done): file uploads (`FileChooser.kt`, result through the module's `OnActivityResult`; no camera capture), downloads (`Downloads.kt`: Android's DownloadManager with the page's cookies, user agent and referer; public Downloads folder on Android 10+, the app's own Downloads folder below that since there is no storage permission; `onFileDownload` shows a toast; `blob:`/`data:` downloads are caught in the page by `screens/downloadScript.js`, see Downloads), page permissions (camera, microphone, location are always refused, as with the old engine: the app has none of those permissions, by choice), and native pull to refresh (see Pull to Refresh).
 - **Default switch** (done): new engine on by default, classic engine as a Settings fallback.
 - **Next**: once a release or two runs without needing the fallback, remove the classic engine on Android: the Settings switch, `patches/` and patch-package, the injected pull-to-refresh script path and the `RNCWebView` keep rules (react-native-webview itself stays for iOS).
 
@@ -194,13 +211,15 @@ The WebView has `allowsFullscreenVideo` on, so a site's fullscreen button works 
 ### Android
 - Package name: `com.squarebrowser.app`
 - Production signing is applied by the `plugins/withReleaseSigning.js` config plugin on every prebuild (`android/` is regenerated, so never edit its signing config by hand). It reads `keystore.properties` from the project root (or the path in `SQUARE_KEYSTORE_PROPERTIES`); the keystore and properties file are git-ignored, so keep backups elsewhere
-- Release builds use R8 minify + resource shrinking (set in `app.json` via `expo-build-properties`; Play Console flags "DEX code optimization" otherwise). `extraProguardRules` keeps `RNCWebView` and `expo.modules.squarewebview.**` (the playback service sets `keepVisibleInBackground` on both by reflection) and the local modules. Smoke-test a release build (tabs, ad blocking, background playback, fullscreen video) after changing native code or adding reflection, and add keep rules for it. Needs `npx expo prebuild --clean`
+- Release builds use R8 minify + resource shrinking (set in `app.json` via `expo-build-properties`; Play Console flags "DEX code optimization" otherwise). `plugins/withR8Optimization.js` also switches to `proguard-android-optimize.txt` (full R8 optimization) and turns on `android.r8.optimizedResourceShrinking`, so code reached only by reflection must have a keep rule. `extraProguardRules` keeps `RNCWebView` and `expo.modules.squarewebview.**` (the playback service sets `keepVisibleInBackground` on both by reflection) and the local modules. Smoke-test a release build (tabs, ad blocking, background playback, fullscreen video, downloads) after changing native code or adding reflection, and add keep rules for it. Needs `npx expo prebuild --clean`
 - Version info must match between `app.json` and `package.json`
 - `release.bat` (runs `release.ps1`) bumps the version in `app.json`, `package.json` and `android/app/build.gradle`, builds the AAB and APK, checks the AAB is not debug-signed, and copies both to `release/v<name>-<code>/` as `squarebrowser-<name>-<code>.aab/.apk` (the folder is git-ignored and replaced on a rebuild of the same version)
 - Use Expo Dev Client for development builds
 
 ### Version Management
-When updating versions:
+`release.ps1` (or `release.bat`) reads the current release from `app.json` and offers the next one (1.0.9 / code 9 -> 1.0.10 / code 10; press Enter to accept). Typing the current or a lower version name or code asks for confirmation first.
+
+When updating versions by hand:
 1. Update `version` in `package.json`
 2. Update `version` and `versionCode` in `app.json`
 3. Update `android/app/build.gradle` if manually versioning

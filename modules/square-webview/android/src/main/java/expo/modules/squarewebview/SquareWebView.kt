@@ -45,6 +45,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private val onExternalUrl by EventDispatcher()
   private val onOpenWindow by EventDispatcher()
   private val onFileDownload by EventDispatcher()
+  private val onBlockedUrl by EventDispatcher()
 
   // Native pull to refresh around the WebView. See PullGuard for when a pull is allowed.
   private val pullGuard = PullGuard()
@@ -65,6 +66,10 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   var documentEndScript: String = ""
   /** Ad/tracker domains: tapping a link to one of them (main frame) is silently refused. */
   var blockedHosts: Set<String> = emptySet()
+  /** The user's block list (and adult filter): links there are refused and reported to JS. */
+  var userBlockedHosts: Set<String> = emptySet()
+  /** Web page text size in percent (Settings > Text Size). */
+  var textZoom: Int = 100
   var pullToRefreshEnabled: Boolean = true
     set(value) {
       field = value
@@ -112,6 +117,7 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
   private fun startScripts() = PullGuard.SCRIPT + "\n" + documentStartScript
 
   fun applyProps() {
+    if (webView.settings.textZoom != textZoom) webView.settings.textZoom = textZoom
     val ua = userAgent
     if (!ua.isNullOrEmpty() && webView.settings.userAgentString != ua) {
       webView.settings.userAgentString = ua
@@ -178,6 +184,10 @@ class SquareWebView(context: Context, appContext: AppContext) : ExpoView(context
           if (!request.isForMainFrame) return false
           when {
             LinkRules.isBlockedHost(uri.host, blockedHosts) -> true
+            LinkRules.isBlockedHost(uri.host, userBlockedHosts) -> {
+              onBlockedUrl(mapOf("target" to id, "url" to uri.toString()))
+              true
+            }
             // Play Store / WhatsApp web links: JS asks "Open in app?" and calls loadUrl to stay.
             LinkRules.isAppWebLink(uri.host, uri.path, uri.getQueryParameter("id") != null) -> {
               onExternalUrl(mapOf("target" to id, "url" to uri.toString(), "web" to true))

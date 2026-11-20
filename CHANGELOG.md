@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Close All button in the tab switcher.
 - SquareBrowser's own web engine on Android, now the default: its built-in scripts (ad blocking, background playback) reliably run before the page's own scripts, link and popup decisions are made instantly, file uploads, downloads to the Downloads folder, and recovery when a page's renderer crashes. Settings > Classic Web Engine switches back if a site misbehaves.
 - `release.bat` collects each build in `release/v<version>-<code>/`.
+- Search engine choice: Google, DuckDuckGo, Bing or Brave Search.
+- Dark Web Pages: shows bright websites in dark colors.
+- Text Size setting for web pages (Android).
+- Downloads that a page creates itself (generated PDFs, tickets, exports) are now saved to Downloads; downloads also work on Android 8 and 9.
+- Bengali (বাংলা) translation.
+- Schedules: pause browsing at set times (study, sleep, prayer).
+- Commitment lock: weakening your limits waits 24 hours or needs a PIN a friend keeps.
+- Block list for sites you want to avoid, an optional adult-site filter, and forced SafeSearch.
+- Export history (CSV or web page) and bookmarks; import bookmarks from any browser.
+- Weekly summary you can send to an accountability partner (no servers involved).
 
 ### Changed
 - Moved project documentation into the `docs/` directory.
@@ -36,10 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - iOS support
 - Enhanced ad blocking
-- Custom search engines
-- Export/import bookmarks
 - Reading mode
-- Download manager
 
 ## [1.0.2] - 2025-01-XX
 
