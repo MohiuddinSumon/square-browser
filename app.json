@@ -45,6 +45,7 @@
                  "plugins":  [
                                  "./plugins/withReleaseSigning",
                                  "./plugins/withAndroidSdkPath",
+                                 "./plugins/withR8Optimization",
                                  [
                                      "expo-build-properties",
                                      {
