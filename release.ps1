@@ -139,8 +139,18 @@ if (-not $nodePath) {
 }
 Write-Host "   Found: $nodePath"
 
+# React Native 0.86 / Metro need Node 20.19.4 or newer. Older versions still build here but
+# flood npm install with EBADENGINE warnings, so say it once and clearly instead.
+$nodeVersion = [version]((& node --version).TrimStart('v'))
+if ($nodeVersion -lt [version]"20.19.4") {
+    Write-Host "   WARNING: Node $nodeVersion is older than 20.19.4, which React Native needs." -ForegroundColor Yellow
+    Write-Host "   Install the current Node LTS (22.x) from https://nodejs.org to remove the warnings." -ForegroundColor Yellow
+}
+
 Write-Host "Running npm install..."
-npm install
+# Errors only: no audit/funding summaries (npm audit fix would move Expo's pinned versions anyway)
+# and no per-package engine warnings (covered by the Node check above).
+npm install --no-audit --no-fund --loglevel=error
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: npm install failed."
     Read-Host "Press Enter to exit"
@@ -155,6 +165,9 @@ Write-Host "============================================"
 Write-Host ""
 
 Set-Location android
+
+# expo-constants reads NODE_ENV while bundling; without it, it warns and only loads .env.local/.env.
+$env:NODE_ENV = "production"
 
 Write-Host "Running bundleRelease..."
 & .\gradlew.bat bundleRelease
