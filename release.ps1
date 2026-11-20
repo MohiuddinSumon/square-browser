@@ -144,7 +144,7 @@ Write-Host "   Found: $nodePath"
 $nodeVersion = [version]((& node --version).TrimStart('v'))
 if ($nodeVersion -lt [version]"20.19.4") {
     Write-Host "   WARNING: Node $nodeVersion is older than 20.19.4, which React Native needs." -ForegroundColor Yellow
-    Write-Host "   Install the current Node LTS (22.x) from https://nodejs.org to remove the warnings." -ForegroundColor Yellow
+    Write-Host "   Install Node 22.13+ or 24.3+ (LTS) from https://nodejs.org to remove the warnings." -ForegroundColor Yellow
 }
 
 Write-Host "Running npm install..."
@@ -169,24 +169,28 @@ Set-Location android
 # expo-constants reads NODE_ENV while bundling; without it, it warns and only loads .env.local/.env.
 $env:NODE_ENV = "production"
 
-Write-Host "Running bundleRelease..."
-& .\gradlew.bat bundleRelease
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: bundleRelease failed."
-    Set-Location ..
-    Read-Host "Press Enter to exit"
-    exit 1
+# Remove outputs from earlier builds, so a failed step can never pass off an old file as new.
+$aabOut = "app\build\outputs\bundle\release\app-release.aab"
+$apkOut = "app\build\outputs\apk\release\app-release.apk"
+Remove-Item $aabOut, $apkOut -ErrorAction SilentlyContinue
+
+# Runs one Gradle task and stops the release unless it succeeded AND produced its file.
+# (gradlew.bat can report success after the Gradle daemon itself crashed, e.g. out of memory.)
+function Invoke-GradleStep([string]$Task, [string]$Output) {
+    Write-Host ""
+    Write-Host "Running $Task..."
+    & .\gradlew.bat $Task
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $Output)) {
+        Write-Host ""
+        Write-Host "ERROR: $Task failed (no $Output was produced). See the Gradle output above." -ForegroundColor Red
+        Set-Location ..
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
 }
 
-Write-Host ""
-Write-Host "Running assembleRelease..."
-& .\gradlew.bat assembleRelease
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: assembleRelease failed."
-    Set-Location ..
-    Read-Host "Press Enter to exit"
-    exit 1
-}
+Invoke-GradleStep "bundleRelease" $aabOut
+Invoke-GradleStep "assembleRelease" $apkOut
 
 Set-Location ..
 
