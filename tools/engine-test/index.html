@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- Copyright (c) 2025 SquareBrowser Contributors -->
+<!-- Engine test page: open it in SquareBrowser with the old and the new web engine and compare. See README.md. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SquareBrowser engine test</title>
+<script>
+  // Runs before anything else on this page. With the new engine the injected
+  // "document start" scripts have already run here; the old engine races them.
+  window.__earliest = {
+    bgPlay: !!window.__sqBgPlay,
+    windowOpenPatched: !/\[native code\]/.test(String(window.open)),
+    bridge: !!window.ReactNativeWebView,
+    at: Math.round(performance.now()),
+  };
+</script>
+<style>
+  :root { color-scheme: light dark; --ok: #1a7f37; --bad: #c62828; --muted: #777; }
+  body { font: 16px/1.45 system-ui, sans-serif; margin: 0; padding: 16px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 24px 0 6px; }
+  p.note { color: var(--muted); margin: 4px 0 8px; font-size: 14px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #8883; }
+  .ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; }
+  a.btn, button { display: block; width: 100%; box-sizing: border-box; margin: 6px 0; padding: 12px;
+    border-radius: 10px; border: 1px solid #8886; background: #8881; color: inherit; font: inherit; text-align: left; text-decoration: none; }
+  iframe { width: 100%; height: 90px; border: 1px dashed #8886; }
+  #log { font: 13px ui-monospace, monospace; white-space: pre-wrap; color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Engine test</h1>
+<p class="note">Open this page once with Settings &gt; Classic Web Engine on and once with it off (restart the app in between). Compare the green/red results.</p>
+
+<h2>1. Scripts before the page</h2>
+<p class="note">Needs Background Playback and Ad Blocker on. New engine: both green every time. Old engine: often red (it races the page). Reload a few times.</p>
+<div id="early"></div>
+
+<h2>2. Scripts in frames</h2>
+<p class="note">Both engines should show "main page only": SquareBrowser's scripts must not run inside embedded frames.</p>
+<iframe src="frame.html"></iframe>
+
+<h2>3. Address bar on in-page navigation</h2>
+<p class="note">Tap, then check the address bar shows ?step=N. Both engines should update it.</p>
+<button onclick="history.pushState({}, '', '?step=' + (++step))">Change URL without loading (pushState)</button>
+
+<h2>4. Open in app</h2>
+<p class="note">Each should ask "Open in app?" in both engines. "Stay in browser" on a web link should load the page without asking again.</p>
+<a class="btn" href="whatsapp://send?text=SquareBrowser%20test">whatsapp:// link</a>
+<a class="btn" href="intent://send/?text=hi#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwww.whatsapp.com%2Fdownload;end">intent:// link (WhatsApp, with fallback page)</a>
+<a class="btn" href="market://details?id=com.whatsapp">market:// link</a>
+<a class="btn" href="https://play.google.com/store/apps/details?id=com.whatsapp">Play Store web link</a>
+<a class="btn" href="https://wa.me/15550000000?text=SquareBrowser%20test">wa.me web link (made-up number)</a>
+<a class="btn" href="https://play.google.com/store/apps/details?id=com.whatsapp" target="_blank">Play Store badge (new window)</a>
+<a class="btn" href="file:///sdcard/">file:// link (must do nothing)</a>
+<a class="btn" href="https://doubleclick.net/">Link to an ad domain (must do nothing with Ad Blocker on)</a>
+
+<h2>5. Popups</h2>
+<p class="note">Turn Ad Blocker off for this section (with it on, both engines block every popup). Both engines: the tapped one opens a new tab; the delayed one is blocked by the WebView's popup blocker.</p>
+<button onclick="window.open('https://example.com/?popup=tap')">window.open on tap</button>
+<button onclick="setTimeout(function(){ window.open('https://example.com/?popup=delayed'); }, 1500)">window.open 1.5 s after tap (pop-under style)</button>
+
+<h2>6. Video</h2>
+<p class="note">Both engines: fullscreen turns the phone to landscape with a rotate button top right, and back leaves fullscreen. With Background Playback on, start the video, then leave the app: it keeps playing and the notification controls work.</p>
+<video controls playsinline width="100%" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"></video>
+<h2>6b. Files and permissions</h2>
+<p class="note">File upload opens Android's picker in both engines. Download: the new engine shows "Downloading …" and the file lands in Downloads. Location: both engines say no (SquareBrowser has no location permission).</p>
+<label class="btn">File upload <input type="file"></label>
+<a class="btn" href="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" download>Download a file</a>
+<button onclick="navigator.geolocation.getCurrentPosition(function(p){ log('location ok'); }, function(e){ log('location error: ' + e.message); })">Ask for location</button>
+
+<h2>7. Pull to refresh</h2>
+<p class="note">Pull down from the top: the counter below goes up by one per refresh. Old engine: SquareBrowser's own spinner. New engine: Android's standard spinner.</p>
+<div class="row"><span>Loads of this page (this session)</span><span id="loads"></span></div>
+
+<h2>Log</h2>
+<div id="log"></div>
+<div style="height: 60vh"></div>
+
+<script>
+  var step = 0;
+  function log(m) { document.getElementById('log').textContent += m + '\n'; }
+  function row(label, ok, okText, badText) {
+    return '<div class="row"><span>' + label + '</span><span class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? okText : badText) + '</span></div>';
+  }
+  var e = window.__earliest;
+  document.getElementById('early').innerHTML =
+    row('Background-play script ran before page scripts', e.bgPlay, 'yes', 'no') +
+    row('Ad-block network script ran before page scripts', e.windowOpenPatched, 'yes', 'no') +
+    row('App bridge (ReactNativeWebView) present', e.bridge, 'yes', 'no') +
+    row('Page script start time', true, e.at + ' ms', '');
+  try {
+    var n = (parseInt(sessionStorage.getItem('loads') || '0', 10) || 0) + 1;
+    sessionStorage.setItem('loads', String(n));
+    document.getElementById('loads').textContent = n;
+  } catch (err) {}
+  window.addEventListener('message', function(ev) { if (ev.data && ev.data.frame) log('frame: ' + ev.data.frame); });
+</script>
+</body>
+</html>

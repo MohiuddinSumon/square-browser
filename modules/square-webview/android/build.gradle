@@ -17,4 +17,10 @@ android {
 dependencies {
   // Document-start scripts (WebViewCompat.addDocumentStartJavaScript).
   implementation 'androidx.webkit:webkit:1.12.1'
+  // System back gesture leaves fullscreen video (OnBackPressedDispatcher).
+  implementation 'androidx.activity:activity:1.10.1'
+  // Native pull to refresh.
+  implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+  // Plain JVM tests for LinkRules: ./gradlew :square-webview:testDebugUnitTest
+  testImplementation 'junit:junit:4.13.2'
 }

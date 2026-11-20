@@ -56,6 +56,7 @@ const SettingsScreen = ({ navigation }) => {
     pullToRefreshEnabled,
     setPullToRefreshPref,
     nativeWebViewEnabled,
+    nativeWebViewActive,
     setNativeWebViewPref,
     timerEnabled,
     dailyLimitMs,
@@ -227,11 +228,17 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={styles.menuItemLeft}>
                   <Ionicons name="flask-outline" size={22} color={colors.accent} />
                   <View style={styles.menuItemTextWrap}>
-                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.nativeEngine')}</Text>
-                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.nativeEngineHint')}</Text>
+                    <Text style={[styles.menuItemText, { color: colors.text }]}>{t('settings.classicEngine')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: colors.textSecondary }]}>{t('settings.classicEngineHint')}</Text>
+                    <Text style={[styles.menuItemSubtext, { color: nativeWebViewEnabled !== nativeWebViewActive ? colors.warning : colors.accent }]}>
+                      {nativeWebViewEnabled !== nativeWebViewActive
+                        ? t('settings.engineRestart')
+                        : t(nativeWebViewActive ? 'settings.newEngineInUse' : 'settings.classicEngineInUse')}
+                    </Text>
                   </View>
                 </View>
-                <ThemedSwitch value={nativeWebViewEnabled === true} onValueChange={setNativeWebViewPref} theme={theme} />
+                {/* On = classic engine (react-native-webview); off = SquareBrowser's own engine, the default. */}
+                <ThemedSwitch value={nativeWebViewEnabled === false} onValueChange={(classic) => setNativeWebViewPref(!classic)} theme={theme} />
               </Pressable>
 
               <View style={[styles.hairline, { backgroundColor: colors.separator }]} />

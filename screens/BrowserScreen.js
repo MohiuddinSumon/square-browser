@@ -5,7 +5,7 @@
  * Handles tab management, WebView rendering, and navigation
  */
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid, Dimensions, PanResponder, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, KeyboardAvoidingView, SafeAreaView, StatusBar, RefreshControl, ScrollView, Modal, Text, TouchableOpacity, FlatList, BackHandler, Alert, Animated, Keyboard, Share, Linking, PermissionsAndroid, Dimensions, PanResponder, Pressable, ToastAndroid } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
@@ -591,7 +591,8 @@ const BrowserTab = ({
   const [isLoading, setIsLoading] = useState(false);
 
   // Pull-to-refresh (Android; iOS uses the WebView's native pullToRefreshEnabled).
-  const usePullScript = Platform.OS === 'android' && pullToRefreshEnabled;
+  // The new engine has Android's own pull to refresh; the old one needs the injected gesture script.
+  const usePullScript = Platform.OS === 'android' && pullToRefreshEnabled && Engine !== SquareWebView;
   const pullDistance = useRef(new Animated.Value(0)).current;
   const [pullRefreshing, setPullRefreshing] = useState(false);
   const pullRefreshingRef = useRef(false);
@@ -926,8 +927,24 @@ true;
     <View style={[styles.webviewContainer, { display: isActive ? 'flex' : 'none' }]}>
       <Engine
         ref={handleWebViewRef}
-        // Native engine only: whatsapp:, intent:, market: ... links it refused to load.
-        onExternalUrl={({ nativeEvent }) => handleExternalLink(nativeEvent.url)}
+        // Native engine only: app links it refused to load. A web link (Play Store, wa.me) the
+        // user already chose to stay on is loaded after all.
+        onExternalUrl={({ nativeEvent }) => {
+          if (!handleExternalLink(nativeEvent.url) && nativeEvent.web) {
+            webViewRef.current?.loadUrl(nativeEvent.url);
+          }
+        }}
+        // Native engine only: a page started a download (Android's download manager has it).
+        onFileDownload={({ nativeEvent }) => {
+          ToastAndroid.show(
+            nativeEvent.started
+              ? t('browser.downloadStarted', { name: nativeEvent.fileName })
+              : t('browser.downloadFailed'),
+            ToastAndroid.SHORT
+          );
+        }}
+        // Native engine only: pages on these domains can't be opened by tapping a link.
+        blockedHosts={adBlockEnabled ? AD_DOMAINS : undefined}
         source={webViewSource}
         style={styles.webview}
         onNavigationStateChange={handleNavigationStateChange}

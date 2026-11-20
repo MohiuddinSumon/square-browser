@@ -47,9 +47,12 @@ export const BrowserProvider = ({ children }) => {
   const [enhancedCompatEnabled, setEnhancedCompatEnabled] = useState(true);
   const [backgroundPlayEnabled, setBackgroundPlayEnabled] = useState(true);
   const [pullToRefreshEnabled, setPullToRefreshEnabled] = useState(true);
-  // Experimental: SquareBrowser's own Android WebView (modules/square-webview) instead of
-  // react-native-webview. Tabs read it when they are created, so changes apply after a restart.
-  const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(false);
+  // Android web engine: SquareBrowser's own WebView (modules/square-webview) by default;
+  // Settings > Classic web engine switches back to react-native-webview. Tabs read it when they
+  // are created, so changes apply after a restart.
+  const [nativeWebViewEnabled, setNativeWebViewEnabled] = useState(true);
+  // What tabs actually use this session (the saved value at startup).
+  const [nativeWebViewActive, setNativeWebViewActive] = useState(true);
   // UI language. English unless the user picks another one in Settings (never follows the device).
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const t = useMemo(() => (key, vars) => translate(language, key, vars), [language]);
@@ -161,8 +164,12 @@ export const BrowserProvider = ({ children }) => {
         setPullToRefreshEnabled(savedPullToRefresh !== 'false');
       }
 
-      const savedNativeWebView = await AsyncStorage.getItem('@squarebrowser_native_webview');
-      setNativeWebViewEnabled(savedNativeWebView === 'true');
+      // Only an explicit "classic" choice turns the new engine off. The old opt-in key from the
+      // experimental phase is dropped, so testers who left it off get the new default too.
+      const useClassicEngine = (await AsyncStorage.getItem('@squarebrowser_classic_webview')) === 'true';
+      setNativeWebViewEnabled(!useClassicEngine);
+      setNativeWebViewActive(!useClassicEngine);
+      AsyncStorage.removeItem('@squarebrowser_native_webview').catch(() => {});
 
       const savedLanguage = await AsyncStorage.getItem('@squarebrowser_language');
       if (savedLanguage && isSupportedLanguage(savedLanguage)) {
@@ -240,7 +247,7 @@ export const BrowserProvider = ({ children }) => {
 
   const setNativeWebViewPref = async (enabled) => {
     setNativeWebViewEnabled(enabled);
-    await AsyncStorage.setItem('@squarebrowser_native_webview', enabled ? 'true' : 'false');
+    await AsyncStorage.setItem('@squarebrowser_classic_webview', enabled ? 'false' : 'true');
   };
 
   const setLanguagePref = async (code) => {
@@ -719,6 +726,7 @@ export const BrowserProvider = ({ children }) => {
     pullToRefreshEnabled,
     setPullToRefreshPref,
     nativeWebViewEnabled,
+    nativeWebViewActive,
     setNativeWebViewPref,
     language,
     setLanguagePref,
@@ -741,7 +749,7 @@ export const BrowserProvider = ({ children }) => {
     addHistoryEntry, toggleBookmark, checkIsBookmarked, refresh, desktopMode,
     adBlockEnabled, showTabSwitcher, todayStats, yesterdayStats, userAgent,
     isDarkMode, exitConfirmationEnabled, urlBarPosition, autoHideNavBar, enhancedCompatEnabled, backgroundPlayEnabled,
-    pullToRefreshEnabled, nativeWebViewEnabled, language, t,
+    pullToRefreshEnabled, nativeWebViewEnabled, nativeWebViewActive, language, t,
     timerEnabled, dailyLimitMs, strictMode, todayElapsedMs, limitReached,
     extensionMs, extendTimer, setTimerScreenActive,
   ]);
