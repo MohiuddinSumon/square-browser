@@ -46,6 +46,7 @@
                                  "./plugins/withReleaseSigning",
                                  "./plugins/withAndroidSdkPath",
                                  "./plugins/withR8Optimization",
+                                 "./plugins/withGradleMemory",
                                  [
                                      "expo-build-properties",
                                      {
